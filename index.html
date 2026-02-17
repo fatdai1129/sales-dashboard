@@ -30,8 +30,7 @@
         textarea { width:100%; height:300px; margin: 15px 0; font-family: monospace; border: 1px solid #ccc; padding: 10px; }
     </style>
 </head>
-<body>
-<div id="modal-overlay" onclick="closeModal()"></div>
+<body class="notranslate"> <div id="modal-overlay" onclick="closeModal()"></div>
 <div id="update-modal">
     <h3>データ一括更新</h3>
     <textarea id="import-data"></textarea>
@@ -76,15 +75,15 @@
         </table>
     </div>
     <div class="card">
-        <h2 id="sales-chart-title">売上推移グラフ</h2>
+        <h2>売上推移グラフ</h2>
         <div class="chart-box"><canvas id="salesChart"></canvas></div>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 40px 0;">
-        <h2 id="waiting-chart-title">待機者・待機原価推移</h2>
+        <h2>待機者・待機原価推移</h2>
         <div class="chart-box"><canvas id="waitingChart"></canvas></div>
     </div>
 </div>
 <script>
-    // グラフ描画エンジン
+    // データの初期化
     const defaultData = {
         west: {
             budget: {
@@ -97,11 +96,11 @@
                 bpCount:[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             },
             actual: {
-                sales: [30240, 29690, 27037, 28765, 25365, 26662, 26564, 26894],
-                kCost: [22264, 21563, 20898, 21214, 19139, 20401, 21000, 21983],
-                aProfit:[7976, 8127, 6139, 7551, 6226, 6261, 5564, 4911],
-                workers:[48, 47, 45, 45, 42, 44, 45, 46],
-                waiting:[3, 4, 5, 5, 9, 7, 6, 3],
+                sales: [52118, 53784, 53482, 54900, 51031, 52918, 52234, 52234],
+                kCost: [41247, 42324, 43162, 43810, 41640, 43963, 43311, 43311],
+                aProfit:[10870, 11460, 10320, 11090, 9391, 8955, 8923, 8923],
+                workers:[83, 83, 85, 86, 83, 87, 85, 91],
+                waiting:[6, 7, 6, 6, 10, 8, 7, 7],
                 waitCost:[1329, 2030, 2361, 2045, 4120, 3358, 2462, 558],
                 bpCount:[0, 0, 0, 0, 0, 0, 0, 0]
             }
@@ -170,18 +169,18 @@
             for(let i=0; i<12; i++) {
                 const bVal = data.budget[cat.key][i] || 0, aVal = data.actual[cat.key][i];
                 if(isBP) rowB += `<td class="no-budget">-</td>`;
-                else if(i < 8) rowB += `<td class="fixed-val" id="b_${cat.key}_${i}">${bVal.toLocaleString()}</td>`;
+                else if(i < 8) rowB += `<td class="fixed-val">${bVal.toLocaleString()}</td>`;
                 else rowB += `<td><input type="number" id="b_${cat.key}_${i}" value="${bVal}" oninput="updateAll()"></td>`;
-                if(i < 8) rowA += `<td class="fixed-val" id="a_${cat.key}_${i}">${aVal !== null ? aVal.toLocaleString() : "-"}</td>`;
+                if(i < 8) rowA += `<td class="fixed-val">${aVal !== null ? aVal.toLocaleString() : "-"}</td>`;
                 else rowA += `<td><input type="number" id="a_${cat.key}_${i}" value="${aVal !== null ? aVal : ''}" oninput="updateAll()"></td>`;
                 if(!isBP) rowR += `<td id="r_${cat.key}_${i}">-</td>`;
                 if(i === 5) {
-                    rowB += `<td class="total-col" id="b_sum1_${cat.key}">${isBP ? '-' : '0'}</td>`;
+                    rowB += `<td class="total-col" id="b_sum1_${cat.key}">0</td>`;
                     rowA += `<td class="total-col" id="a_sum1_${cat.key}">0</td>`;
                     if(!isBP) rowR += `<td class="total-col" id="r_sum1_${cat.key}">-</td>`;
                 }
             }
-            rowB += `<td class="total-col" id="b_sum2_${cat.key}">${isBP ? '-' : '0'}</td><td class="total-col" id="b_sumT_${cat.key}">${isBP ? '-' : '0'}</td></tr>`;
+            rowB += `<td class="total-col" id="b_sum2_${cat.key}">0</td><td class="total-col" id="b_sumT_${cat.key}">0</td></tr>`;
             rowA += `<td class="total-col" id="a_sum2_${cat.key}">0</td><td class="total-col" id="a_sumT_${cat.key}">0</td></tr>`;
             if(!isBP) rowR += `<td class="total-col" id="r_sum2_${cat.key}">-</td><td class="total-col" id="r_sumT_${cat.key}">-</td></tr>`;
             tbody.innerHTML += rowB + rowA + rowR;
@@ -208,7 +207,7 @@
         categories.forEach(cat => {
             let bS1 = 0, aS1 = 0, bS2 = 0, aS2 = 0, isW = cat.key === "waiting", isBP = cat.key === "bpCount";
             for(let i=0; i<12; i++) {
-                const bVal = isBP ? 0 : (i < 8 ? data.budget[cat.key][i] : (parseFloat(document.getElementById(`b_${cat.key}_${i}`)?.value) || 0));
+                const bVal = data.budget[cat.key][i] || 0;
                 const aVal = (i < 8) ? data.actual[cat.key][i] : (document.getElementById(`a_${cat.key}_${i}`)?.value === "" ? null : parseFloat(document.getElementById(`a_${cat.key}_${i}`)?.value));
                 if(i < 6) { bS1 += bVal; aS1 += (aVal || 0); } else { bS2 += bVal; aS2 += (aVal || 0); }
                 if(!isBP) {
@@ -222,7 +221,7 @@
                 if(cat.key === "waiting") { cWA.push(aVal); cWB.push(bVal); }
             }
             const setT = (idP, b, a) => {
-                if(!isBP && document.getElementById(`b_${idP}_${cat.key}`)) document.getElementById(`b_${idP}_${cat.key}`).innerText = b.toLocaleString();
+                if(document.getElementById(`b_${idP}_${cat.key}`)) document.getElementById(`b_${idP}_${cat.key}`).innerText = b.toLocaleString();
                 if(document.getElementById(`a_${idP}_${cat.key}`)) document.getElementById(`a_${idP}_${cat.key}`).innerText = a.toLocaleString();
                 const rEl = document.getElementById(`r_${idP}_${cat.key}`);
                 if (!isBP && rEl) {
@@ -236,10 +235,8 @@
     }
 
     function drawCharts(sb, sa, wb, wa) {
-        const ctxS = document.getElementById('salesChart');
-        const ctxW = document.getElementById('waitingChart');
-        if (!ctxS || !ctxW) return;
-
+        const ctxS = document.getElementById('salesChart').getContext('2d');
+        const ctxW = document.getElementById('waitingChart').getContext('2d');
         if (salesChart) salesChart.destroy();
         salesChart = new Chart(ctxS, {
             type: 'bar',
@@ -259,7 +256,6 @@
         if(rk !== 'west' && rk !== 'tokai' && rk !== 'tokyo') { alert("拠点を選択して保存してください。"); return; }
         categories.forEach(cat => {
             for(let i=8; i<12; i++) {
-                currentData[rk].budget[cat.key][i] = parseFloat(document.getElementById(`b_${cat.key}_${i}`).value) || 0;
                 currentData[rk].actual[cat.key][i] = document.getElementById(`a_${cat.key}_${i}`).value === "" ? null : parseFloat(document.getElementById(`a_${cat.key}_${i}`).value);
             }
         });
@@ -272,10 +268,9 @@
     function closeModal() { document.getElementById('update-modal').style.display = 'none'; document.getElementById('modal-overlay').style.display = 'none'; }
     function applyImport() { try { currentData = JSON.parse(document.getElementById('import-data').value); localStorage.setItem('freeeks_data', JSON.stringify(currentData)); alert("更新完了。"); location.reload(); } catch(e) { alert("形式エラー"); } }
     
-    // ページ読み込み完了後に実行
-    window.onload = function() {
-        renderTable("total");
-    };
+    // 起動
+    window.onload = () => { renderTable("total"); };
 </script>
 </body>
 </html>
+
