@@ -142,6 +142,140 @@
                 aProfit:[1668, 2056, 2990, 2378, 2024, 1598, 2098, 2006],
                 workers:[25, 26, 30, 31, 31, 33, 29, 31],
                 waiting:[1, 1, 1, 1, 1, 1, 1, 1],
-                waitCost:[220, 200, 200,
+                waitCost:[220, 200, 200, 200, 200, 200, 200, 200],
+                bpCount:[20, 21, 25, 26, 26, 30, 27, 28]
+            }
+        }
+    };
 
+    let currentData = JSON.parse(localStorage.getItem('freeeks_data')) || defaultData;
+    const categories = [
+        { label: "売上", key: "sales" }, { label: "稼働原価", key: "kCost" },
+        { label: "A利益", key: "aProfit" }, { label: "稼働者", key: "workers" },
+        { label: "待機者", key: "waiting" }, { label: "待機原価", key: "waitCost" },
+        { label: "BP数", key: "bpCount" }
+    ];
+    const months = ["6月", "7月", "8月", "9月", "10月", "11月", "12月", "1月", "2月", "3月", "4月", "5月"];
+    let salesChart, waitingChart;
 
+    function renderTable(rk) {
+        const data = getRD(rk);
+        const tbody = document.getElementById('table-body');
+        tbody.innerHTML = "";
+        document.getElementById('display-title').innerText = `${getRN(rk)} 営業実績・予算管理表`;
+        categories.forEach(cat => {
+            const isW = cat.key === "waiting", isBP = cat.key === "bpCount";
+            let rowB = `<tr class="budget-row"><td rowspan="${isBP ? '2' : '3'}" class="cat-header">${cat.label}</td><td>予算</td>`;
+            let rowA = `<tr class="actual-row"><td>実績</td>`, rowR = isBP ? "" : `<tr class="rate-row"><td>${isW ? "増減" : "達成率"}</td>`;
+            for(let i=0; i<12; i++) {
+                const bVal = data.budget[cat.key][i] || 0, aVal = data.actual[cat.key][i];
+                if(isBP) rowB += `<td class="no-budget">-</td>`;
+                else if(i < 8) rowB += `<td class="fixed-val" id="b_${cat.key}_${i}">${bVal.toLocaleString()}</td>`;
+                else rowB += `<td><input type="number" id="b_${cat.key}_${i}" value="${bVal}" oninput="updateAll()"></td>`;
+                if(i < 8) rowA += `<td class="fixed-val" id="a_${cat.key}_${i}">${aVal !== null ? aVal.toLocaleString() : "-"}</td>`;
+                else rowA += `<td><input type="number" id="a_${cat.key}_${i}" value="${aVal !== null ? aVal : ''}" oninput="updateAll()"></td>`;
+                if(!isBP) rowR += `<td id="r_${cat.key}_${i}">-</td>`;
+                if(i === 5) {
+                    rowB += `<td class="total-col" id="b_sum1_${cat.key}">${isBP ? '-' : '0'}</td>`;
+                    rowA += `<td class="total-col" id="a_sum1_${cat.key}">0</td>`;
+                    if(!isBP) rowR += `<td class="total-col" id="r_sum1_${cat.key}">-</td>`;
+                }
+            }
+            rowB += `<td class="total-col" id="b_sum2_${cat.key}">${isBP ? '-' : '0'}</td><td class="total-col" id="b_sumT_${cat.key}">${isBP ? '-' : '0'}</td></tr>`;
+            rowA += `<td class="total-col" id="a_sum2_${cat.key}">0</td><td class="total-col" id="a_sumT_${cat.key}">0</td></tr>`;
+            if(!isBP) rowR += `<td class="total-col" id="r_sum2_${cat.key}">-</td><td class="total-col" id="r_sumT_${cat.key}">-</td></tr>`;
+            tbody.innerHTML += rowB + rowA + rowR;
+        });
+        updateAll();
+    }
+
+    function getRD(key) {
+        if(key === 'west' || key === 'tokai' || key === 'tokyo') return currentData[key];
+        const rs = key === 'east' ? ['tokai', 'tokyo'] : ['west', 'tokai', 'tokyo'];
+        const res = { budget: {}, actual: {} };
+        categories.forEach(cat => {
+            res.budget[cat.key] = Array(12).fill(0).map((_, i) => rs.reduce((s, r) => s + (currentData[r].budget[cat.key][i] || 0), 0));
+            res.actual[cat.key] = Array(12).fill(0).map((_, i) => rs.reduce((s, r) => s + (currentData[r].actual[cat.key][i] || 0), 0));
+        });
+        return res;
+    }
+
+    function getRN(k) { return { total: "全社", west: "西日本", tokai: "東海", tokyo: "首都圏", east: "東日本" }[k]; }
+
+    function updateAll() {
+        const rk = document.getElementById('region-select').value, data = getRD(rk);
+        const cSB = [], cSA = [], cWB = [], cWA = [];
+        categories.forEach(cat => {
+            let bS1 = 0, aS1 = 0, bS2 = 0, aS2 = 0, isW = cat.key === "waiting", isBP = cat.key === "bpCount";
+            for(let i=0; i<12; i++) {
+                const bVal = isBP ? 0 : (i < 8 ? data.budget[cat.key][i] : (parseFloat(document.getElementById(`b_${cat.key}_${i}`)?.value) || 0));
+                const aVal = (i < 8) ? data.actual[cat.key][i] : (document.getElementById(`a_${cat.key}_${i}`)?.value === "" ? null : parseFloat(document.getElementById(`a_${cat.key}_${i}`)?.value));
+                if(i < 6) { bS1 += bVal; aS1 += (aVal || 0); } else { bS2 += bVal; aS2 += (aVal || 0); }
+                if(!isBP) {
+                    const rEl = document.getElementById(`r_${cat.key}_${i}`);
+                    if (aVal !== null) {
+                        if (isW) { const d = aVal - bVal; rEl.innerText = d > 0 ? "+" + d : "-"; rEl.className = d > 0 ? "bad" : ""; }
+                        else { const r = bVal ? (aVal / bVal * 100).toFixed(1) : 0; rEl.innerText = r + "%"; rEl.className = r >= 100 ? "good" : "bad"; }
+                    } else rEl.innerText = "-";
+                }
+                if(cat.key === "sales") { cSB.push(bVal); cSA.push(aVal); }
+                if(cat.key === "waiting") { cWA.push(aVal); cWB.push(bVal); }
+            }
+            const setT = (idP, b, a) => {
+                if(!isBP && document.getElementById(`b_${idP}_${cat.key}`)) document.getElementById(`b_${idP}_${cat.key}`).innerText = b.toLocaleString();
+                if(document.getElementById(`a_${idP}_${cat.key}`)) document.getElementById(`a_${idP}_${cat.key}`).innerText = a.toLocaleString();
+                const rEl = document.getElementById(`r_${idP}_${cat.key}`);
+                if (!isBP && rEl) {
+                    if (isW) { const d = a - b; rEl.innerText = d > 0 ? "+" + d : "-"; rEl.className = `total-col ${d > 0 ? 'bad' : ''}`; }
+                    else { const r = b ? (a / b * 100).toFixed(1) : 0; rEl.innerText = r + "%"; rEl.className = `total-col ${r >= 100 ? 'good' : 'bad'}`; }
+                }
+            };
+            setT("sum1", bS1, aS1); setT("sum2", bS2, aS2); setT("sumT", bS1 + bS2, aS1 + aS2);
+        });
+        drawCharts(cSB, cSA, cWB, cWA);
+    }
+
+    function drawCharts(sb, sa, wb, wa) {
+        const ctxS = document.getElementById('salesChart');
+        const ctxW = document.getElementById('waitingChart');
+        if (!ctxS || !ctxW) return;
+
+        if (salesChart) salesChart.destroy();
+        salesChart = new Chart(ctxS, {
+            type: 'bar',
+            data: { labels: months, datasets: [{ label: '予算', data: sb, backgroundColor: '#cbd5e0' }, { label: '実績', data: sa, backgroundColor: '#3182ce' }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+        if (waitingChart) waitingChart.destroy();
+        waitingChart = new Chart(ctxW, {
+            type: 'bar',
+            data: { labels: months, datasets: [{ label: '実績', data: wa, backgroundColor: '#e53e3e' }, { label: '予算', data: wb, backgroundColor: '#fed7d7' }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    function saveToLocal() {
+        const rk = document.getElementById('region-select').value;
+        if(rk !== 'west' && rk !== 'tokai' && rk !== 'tokyo') { alert("拠点を選択して保存してください。"); return; }
+        categories.forEach(cat => {
+            for(let i=8; i<12; i++) {
+                currentData[rk].budget[cat.key][i] = parseFloat(document.getElementById(`b_${cat.key}_${i}`).value) || 0;
+                currentData[rk].actual[cat.key][i] = document.getElementById(`a_${cat.key}_${i}`).value === "" ? null : parseFloat(document.getElementById(`a_${cat.key}_${i}`).value);
+            }
+        });
+        localStorage.setItem('freeeks_data', JSON.stringify(currentData));
+        alert("保存しました。");
+        renderTable(rk);
+    }
+    function changeRegion() { renderTable(document.getElementById('region-select').value); }
+    function openModal() { document.getElementById('update-modal').style.display = 'block'; document.getElementById('modal-overlay').style.display = 'block'; }
+    function closeModal() { document.getElementById('update-modal').style.display = 'none'; document.getElementById('modal-overlay').style.display = 'none'; }
+    function applyImport() { try { currentData = JSON.parse(document.getElementById('import-data').value); localStorage.setItem('freeeks_data', JSON.stringify(currentData)); alert("更新完了。"); location.reload(); } catch(e) { alert("形式エラー"); } }
+    
+    // ページ読み込み完了後に実行
+    window.onload = function() {
+        renderTable("total");
+    };
+</script>
+</body>
+</html>
