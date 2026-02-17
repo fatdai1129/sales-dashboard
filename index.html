@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Freeeks 営業実績管理システム</title>
+    <title>Freeeks 拠点別営業実績管理システム</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Hiragino Sans', sans-serif; background-color: #f0f4f8; margin: 0; padding: 20px; color: #333; }
@@ -34,7 +34,7 @@
 <div id="modal-overlay" onclick="closeModal()"></div>
 <div id="update-modal">
     <h3>データ一括更新</h3>
-    <textarea id="import-data"></textarea>
+    <textarea id="import-data" placeholder='JSON形式のデータを貼り付けてください'></textarea>
     <div style="text-align:right;">
         <button onclick="closeModal()" style="background:#718096;">キャンセル</button>
         <button onclick="applyImport()">更新を実行</button>
@@ -209,7 +209,7 @@
             for(let i=0; i<12; i++) {
                 const bVal = isBP ? 0 : (i < 8 ? data.budget[cat.key][i] : (parseFloat(document.getElementById(`b_${cat.key}_${i}`)?.value) || 0));
                 const aVal = (i < 8) ? data.actual[cat.key][i] : (document.getElementById(`a_${cat.key}_${i}`)?.value === "" ? null : parseFloat(document.getElementById(`a_${cat.key}_${i}`)?.value));
-                if(i < 6) { bS1 += bVal; aS1 += (aVal || 0); } else { bS2 += bVal; aS2 += (aVal || 0); }
+                if(i < 6) { bS1 += bVal; aS1 += (aV || 0); } else { bS2 += bVal; aS2 += (aVal || 0); }
                 if(!isBP) {
                     const rEl = document.getElementById(`r_${cat.key}_${i}`);
                     if (aVal !== null) {
@@ -270,3 +270,5 @@
 </script>
 </body>
 </html>
+</html>
+
