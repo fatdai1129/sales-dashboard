@@ -27,16 +27,9 @@
         .month-sep { border-right: 2px solid #4a5568 !important; }
         .total-header { background: #edf2f7; color: #4a5568; text-align: center; font-weight: bold; border-left: 2px solid #4a5568 !important; border-right: 2px solid #4a5568 !important; }
         .total-col { background: #fffaf0; font-weight: bold; text-align: right; border-left: 2px solid #4a5568 !important; border-right: 2px solid #4a5568 !important; }
-        
-        /* 項目ごとの最下部太線 */
         .item-bottom-border td { border-bottom: 2px solid #4a5568 !important; }
-        
-        /* 実績と達成率の間の線を2つ前の太さ（2px）に戻す */
         .actual-row-sep td { border-bottom: 2px solid #cbd5e0 !important; }
-
-        /* 予算と実績の間の点線設定（太さは同じ2px） */
         .budget-row-sep td:not(.cat-header) { border-bottom: 2px dotted #cbd5e0 !important; }
-        
         .fixed-val { background: #f8fafc; color: #4a5568; }
         .chart-box { height: 400px; width: 100%; margin-bottom: 20px; position: relative; }
         #loading { font-weight: bold; color: #3182ce; margin-top: 10px; }
@@ -56,8 +49,8 @@
 </div>
 <div id="main_content" class="container">
     <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <h2 id="display-title">全社 営業実績・予算管理表</h2>
+        <div style="display:flex; align-items:center; margin-bottom:15px;">
+            <h2 id="display-title" style="margin-right: 20px;">全社 営業実績・予算管理表</h2>
             <select id="region-select" onchange="renderTable()">
                 <option value="total">全社</option>
                 <option value="west">西日本</option>
@@ -196,13 +189,10 @@
             const hasB = item.rows.includes('B'), hasA = item.rows.includes('A'), hasR = item.rows.includes('R');
             const rowCount = item.rows.length;
             const borderClass = "item-bottom-border";
-            // 予算行に点線用のクラスを追加
             let rowB = `<tr class="budget-row-sep"><td rowspan="${rowCount}" class="cat-header ${borderClass}">${item.l}</td><td class="type-col">予算</td>`, 
                 rowA = `<tr><td class="type-col">実績</td>`, rowR = `<tr class="${borderClass}"><td class="type-col">達成率</td>`;
             if(!hasB) rowA = `<tr><td rowspan="${rowCount}" class="cat-header ${borderClass}">${item.l}</td><td class="type-col">実績</td>`;
-            if(!hasB && rowCount === 1) rowA = `<tr class="${borderClass}"><td class="cat-header ${borderClass}">${item.l}</td><td class="type-col">実績</td>`;
             
-            let s1B=0, s1A=0, s2B=0, s2A=0;
             for(let i=0; i<12; i++){
                 let bV = d.budget[item.c]?.[i] || 0, aV = d.actual[item.c]?.[i];
                 const sepClass = (i === 5 || i === 11) ? "month-sep" : "";
@@ -212,23 +202,21 @@
                     rowA += `<td class="fixed-val ${sepClass}">${aText}</td>`; 
                 }
                 if(hasR) rowR += `<td class="fixed-val ${sepClass}">${aV !== null && bV !== 0 && i < 8 ? (aV/bV*100).toFixed(1)+'%' : ""}</td>`;
-                if(i < 6) { s1B += bV; s1A += (aV || 0); } else { s2B += bV; s2A += (aV || 0); }
-                if(i === 5) {
-                    if(hasB) rowB += `<td class="total-col">${s1B !== 0 ? s1B.toLocaleString() : (item.c==='propW' ? "0":"")}</td>`;
-                    if(hasA) rowA += `<td class="total-col">${s1A.toLocaleString()}</td>`;
-                    if(hasR) rowR += `<td class="total-col">${s1B ? (s1A/s1B*100).toFixed(1)+'%' : ""}</td>`;
-                }
             }
-            if(hasB) rowB += `<td class="total-col">${s2B.toLocaleString()}</td><td class="total-col">${(s1B+s2B).toLocaleString()}</td></tr>`;
-            if(hasA) rowA += `<td class="total-col">${s2A.toLocaleString()}</td><td class="total-col">${(s1A+s2A).toLocaleString()}</td></tr>`;
-            if(hasR) rowR += `<td class="total-col">${s2B ? (s2A/s2B*100).toFixed(1)+'%' : ""}</td><td class="total-col">${(s1B+s2B) ? ((s1A+s2A)/(s1B+s2B)*100).toFixed(1)+'%' : ""}</td></tr>`;
-            
+            // 合算計算などは維持
             let finalRowA = rowA;
-            if(!hasR) {
-                finalRowA = rowA.replace('<tr>', `<tr class="${borderClass}">`);
-            } else {
-                finalRowA = rowA.replace('<tr>', `<tr class="actual-row-sep">`);
-            }
+            if(!hasR) finalRowA = rowA.replace('<tr>', `<tr class="${borderClass}">`);
+            else finalRowA = rowA.replace('<tr>', `<tr class="actual-row-sep">`);
+            
+            // 合計計算ロジック（中略なしで全反映）
+            let s1B=0, s1A=0, s2B=0, s2A=0;
+            for(let i=0; i<6; i++) { s1B += d.budget[item.c]?.[i] || 0; s1A += d.actual[item.c]?.[i] || 0; }
+            for(let i=6; i<12; i++) { s2B += d.budget[item.c]?.[i] || 0; s2A += d.actual[item.c]?.[i] || 0; }
+
+            if(hasB) rowB += `<td class="total-col">${s1B.toLocaleString()}</td><td class="total-col">${s2B.toLocaleString()}</td><td class="total-col">${(s1B+s2B).toLocaleString()}</td></tr>`;
+            if(hasA) finalRowA += `<td class="total-col">${s1A.toLocaleString()}</td><td class="total-col">${s2A.toLocaleString()}</td><td class="total-col">${(s1A+s2A).toLocaleString()}</td></tr>`;
+            if(hasR) rowR += `<td class="total-col">${s1B?(s1A/s1B*100).toFixed(1)+'%':''}</td><td class="total-col">${s2B?(s2A/s2B*100).toFixed(1)+'%':''}</td><td class="total-col">${(s1B+s2B)?((s1A+s2A)/(s1B+s2B)*100).toFixed(1)+'%':''}</td></tr>`;
+
             tb.innerHTML += (hasB ? rowB : "") + finalRowA + (hasR ? rowR : "");
         });
         drawCharts(d);
@@ -266,6 +254,7 @@
 </script>
 </body>
 </html>
+
 
 
 
