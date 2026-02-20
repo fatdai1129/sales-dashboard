@@ -17,20 +17,28 @@
         body { font-family: 'Hiragino Sans', sans-serif; background-color: #f0f4f8; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 1700px; margin: auto; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 30px; overflow-x: auto; }
+        
+        /* ナビゲーション */
         .top-nav { background: #1a202c; padding: 15px 20px; color: white; display: flex; align-items: center; margin-bottom: 20px; border-radius: 0 0 12px 12px; }
         .nav-select { background: #2d3748; color: white; border: 1px solid #4a5568; padding: 8px 15px; border-radius: 6px; font-size: 1rem; margin-left: 15px; cursor: pointer; }
+
         h2 { font-size: 1.4rem; margin: 0; color: #1a202c; border-left: 5px solid #3182ce; padding-left: 15px; }
         
         /* 枠線設定：すべて黒 */
         table { width: 100%; border-collapse: collapse; min-width: 1500px; background: white; border: 2px solid black; }
         th, td { border: 1px solid black; padding: 6px 4px; text-align: right; font-size: 0.8rem; }
         th { background: #edf2f7; color: #4a5568; text-align: center; border-bottom: 2px solid black !important; }
+        
+        /* 垂直太線の設定 */
         .cat-header { background: #ebf8ff; font-weight: bold; text-align: center; color: #2c5282; border-right: 2px solid black !important; border-bottom: 2px solid black !important; }
         .type-col { text-align: center; border-right: 2px solid black !important; }
         .month-sep { border-right: 2px solid black !important; }
         .second-half-start { border-left: 2px solid black !important; }
+        
         .total-header { background: #edf2f7; color: #4a5568; text-align: center; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .total-col { background: #fffaf0; font-weight: bold; text-align: right; border-left: 2px solid black !important; border-right: 2px solid black !important; }
+        
+        /* 水平線のスタイル設定 */
         .item-bottom-border td { border-bottom: 2px solid black !important; }
         .actual-row-sep td { border-bottom: 2px solid black !important; }
         .budget-row-sep td:not(.cat-header) { border-bottom: 2px dotted black !important; }
@@ -46,7 +54,8 @@
 <body class="notranslate">
 <div id="pw_screen">
     <div id="pw_box">
-        <div class="pw-title">【実績管理】</div><h3 style="margin-top:0">閲覧にはパスワードが必要です</h3>
+        <div class="pw-title">【実績管理】</div>
+        <h3 style="margin-top:0">閲覧にはパスワードが必要です</h3>
         <input type="password" id="pass_val" placeholder="パスワードを入力" onkeydown="if(event.keyCode==13)checkPW()">
         <br>
         <button class="login-btn" onclick="checkPW()">ログイン</button>
@@ -69,7 +78,253 @@
         <div id="dashboard-sales" class="dashboard-view">
             <div class="card">
                 <div style="display:flex; align-items:center; margin-bottom:15px;">
-                    <h2 id="display-title"
+                    <h2 id="display-title" style="margin-right: 20px;">2025年6月期 営業実績・予算管理表</h2>
+                    <select id="region-select" onchange="renderSalesTable()">
+                        <option value="total">全社</option>
+                        <option value="west">西日本</option>
+                        <option value="east">東日本</option>
+                        <option value="tokai">東海</option>
+                        <option value="tokyo">首都圏</option>
+                    </select>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th rowspan="2" class="cat-header">項目</th>
+                            <th rowspan="2" class="type-col">区分</th>
+                            <th colspan="6">上期実績</th>
+                            <th class="total-header">上期合計</th>
+                            <th colspan="6" class="second-half-start">下期実績・予想</th>
+                            <th class="total-header">下期合計</th>
+                            <th class="total-header">年間合計</th>
+                        </tr>
+                        <tr>
+                            <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th class="month-sep">11月</th>
+                            <th class="total-header">計</th>
+                            <th class="second-half-start">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th class="month-sep">5月</th>
+                            <th class="total-header">計</th>
+                            <th class="total-header">合計</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+            </div>
+            <div class="card">
+                <h2>売上推移グラフ</h2>
+                <div class="chart-box"><canvas id="salesChart"></canvas></div>
+                <hr style="border:0; border-top:1px solid #eee; margin:40px 0;">
+                <h2>稼働エンジニア数</h2>
+                <div class="chart-box"><canvas id="engineerChart"></canvas></div>
+                <hr style="border:0; border-top:1px solid #eee; margin:40px 0;">
+                <h2>待機原価推移</h2>
+                <div class="chart-box"><canvas id="waitingChart"></canvas></div>
+            </div>
+        </div>
+
+        <div id="dashboard-generic" class="dashboard-view" style="display:none;">
+            <div class="card">
+                <h2 id="generic-title">管理表</h2>
+                <div id="generic-content" style="margin-top:20px; overflow-x:auto;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    Chart.register(ChartDataLabels);
+    
+    const TOOLS = {
+        sales: { name: '全社 営業実績・予算管理表', id: '1LRVwKu-YXWJvRgSophqF0VlORS5_dcjztSvfz95Qe_E', sheet: '実績データ' },
+        promotion: { name: 'フリークス営業推進管理表', id: 'ここにファイルIDを入力', sheet: 'シート1' },
+        status: { name: '売込状況一覧_20250601運用開始', id: 'ここにファイルIDを入力', sheet: 'シート1' }
+    };
+
+    let dataSet = { west: { budget:{}, actual:{} }, tokai: { budget:{}, actual:{} }, tokyo: { budget:{}, actual:{} } };
+    const months = ["6月","7月","8月","9月","10月","11月","12月","1月","2月","3月","4月","5月"];
+    let salesChart, waitingChart, engineerChart;
+    const labelMap = { '売上':'sales', '稼働原価':'kCost', 'A利益':'aProfit', '待機原価':'waitCost', 'プロパー(稼働)':'propK', 'BP':'bpK', '稼働エンジニア総数':'workEngTotal', 'エンジニア総数':'totalEng', 'プロパー(待機)':'propW', '待機率':'waitRate' };
+    const regionMap = { '西日本':'west', '東海':'tokai', '首都圏':'tokyo' };
+
+    function checkPW() {
+        if (document.getElementById('pass_val').value === "freeeks2022") { switchTool(); } 
+        else { document.getElementById('err_msg').style.display = 'block'; }
+    }
+
+    async function switchTool() {
+        const toolKey = document.getElementById('tool-select').value;
+        const tool = TOOLS[toolKey];
+        if (toolKey !== 'sales' && tool.id === 'ここにファイルIDを入力') {
+            alert('新しい管理表のファイルIDが設定されていません。');
+            return;
+        }
+        document.getElementById('loading').style.display = 'block';
+        const CSV_URL = `https://docs.google.com/spreadsheets/d/${tool.id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tool.sheet)}`;
+        
+        try {
+            const response = await fetch(CSV_URL);
+            const csvText = await response.text();
+            const rows = parseCSV(csvText);
+            document.getElementById('pw_screen').style.display = 'none';
+            document.getElementById('main_content').style.display = 'block';
+
+            if (toolKey === 'sales') {
+                document.getElementById('dashboard-sales').style.display = 'block';
+                document.getElementById('dashboard-generic').style.display = 'none';
+                processSalesData(rows);
+                renderSalesTable();
+            } else {
+                document.getElementById('dashboard-sales').style.display = 'none';
+                document.getElementById('dashboard-generic').style.display = 'block';
+                document.getElementById('generic-title').innerText = tool.name;
+                renderGenericTable(rows);
+            }
+        } catch (e) {
+            alert(`データの取得に失敗しました。`);
+        } finally {
+            document.getElementById('loading').style.display = 'none';
+        }
+    }
+
+    function parseCSV(text) {
+        return text.split(/\r?\n/).filter(line => line.trim() !== "").map(line => {
+            const result = [];
+            let current = '', inQuotes = false;
+            for (let char of line) {
+                if (char === '"') inQuotes = !inQuotes;
+                else if (char === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+                else current += char;
+            }
+            result.push(current.trim());
+            return result;
+        });
+    }
+
+    function processSalesData(rows) {
+        dataSet = { west: { budget:{}, actual:{} }, tokai: { budget:{}, actual:{} }, tokyo: { budget:{}, actual:{} } };
+        const dataRows = rows.slice(1);
+        dataRows.forEach(row => {
+            const rKey = regionMap[row[0]];
+            const lKey = labelMap[row[1]];
+            const type = row[2] === '予算' ? 'budget' : 'actual';
+            if(rKey && lKey) {
+                if(!dataSet[rKey][type][lKey]) dataSet[rKey][type][lKey] = Array(12).fill(null);
+                for(let i=3; i<15; i++) {
+                    let val = row[i] ? row[i].replace(/,/g, '').replace('%', '') : null;
+                    dataSet[rKey][type][lKey][i-3] = (val === null || val === "" || isNaN(val)) ? null : parseFloat(val);
+                }
+            }
+        });
+    }
+
+    function renderGenericTable(rows) {
+        let html = '<table class="simple-table"><thead><tr>';
+        rows[0].forEach(h => html += `<th>${h}</th>`);
+        html += '</tr></thead><tbody>';
+        rows.slice(1).forEach(row => {
+            html += '<tr>';
+            row.forEach(cell => html += `<td>${cell}</td>`);
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        document.getElementById('generic-content').innerHTML = html;
+    }
+
+    function getRD(k) {
+        let rs = ['west','tokai','tokyo'];
+        if (k === 'east') rs = ['tokai', 'tokyo'];
+        else if (k !== 'total') rs = [k];
+        const res = { budget:{}, actual:{} };
+        Object.values(labelMap).forEach(c => {
+            res.budget[c] = Array(12).fill(0).map((_,i) => rs.reduce((s,r) => s + (dataSet[r].budget[c]?.[i]||0), 0));
+            res.actual[c] = Array(12).fill(null).map((_,i) => {
+                let hasVal = false, sum = 0;
+                rs.forEach(r => { if(dataSet[r].actual[c]?.[i] !== null) { hasVal = true; sum += dataSet[r].actual[c][i]; } });
+                return hasVal ? sum : null;
+            });
+        });
+        return res;
+    }
+
+    function renderSalesTable() {
+        const sel = document.getElementById('region-select');
+        const rk = sel.value;
+        const d = getRD(rk);
+        const tb = document.getElementById('table-body');
+        document.getElementById('display-title').innerText = `2025年6月期 営業実績・予算管理表`;
+        tb.innerHTML = "";
+        const labels = [{l:'売上',c:'sales',rows:['B','A','R']},{l:'稼働原価',c:'kCost',rows:['B','A','R']},{l:'A利益',c:'aProfit',rows:['B','A','R']},{l:'待機原価',c:'waitCost',rows:['A']},{l:'プロパー(稼働)',c:'propK',rows:['B','A','R']},{l:'BP',c:'bpK',rows:['A']},{l:'稼働エンジニア総数',c:'workEngTotal',rows:['B','A']},{l:'エンジニア総数',c:'totalEng',rows:['B','A','R']},{l:'プロパー(待機)',c:'propW',rows:['B','A']},{l:'待機率',c:'waitRate',rows:['A']}];
+        
+        labels.forEach(item => {
+            const hasB = item.rows.includes('B'), hasA = item.rows.includes('A'), hasR = item.rows.includes('R');
+            const rowCount = item.rows.length;
+            const borderClass = "item-bottom-border";
+            let rowB = `<tr class="budget-row-sep"><td rowspan="${rowCount}" class="cat-header ${borderClass}">${item.l}</td><td class="type-col">予算</td>`;
+            let rowA = `<tr><td class="type-col">実績</td>`;
+            let rowR = `<tr class="${borderClass}"><td class="type-col">達成率</td>`;
+            if(!hasB) rowA = `<tr><td rowspan="${rowCount}" class="cat-header ${borderClass}">${item.l}</td><td class="type-col">実績</td>`;
+
+            for(let i=0; i<12; i++){
+                let bV = d.budget[item.c]?.[i] || 0, aV = d.actual[item.c]?.[i];
+                const extraClass = (i === 5 || i === 11) ? "month-sep" : "";
+                const startClass = (i === 6) ? "second-half-start" : "";
+                const cellClass = `fixed-val ${extraClass} ${startClass}`;
+
+                if(hasB) {
+                    let bText = (bV === 0 && item.c==='propW') ? "0" : (bV !== 0 ? bV.toLocaleString() : "");
+                    rowB += `<td class="${cellClass}">${bText}</td>`;
+                }
+                if(hasA) {
+                    let aText = "";
+                    if(i < 8) {
+                        if(aV !== null) aText = (item.c==='waitRate') ? aV.toFixed(1)+'%' : aV.toLocaleString();
+                        else aText = (item.c==='propW' || item.c==='waitCost') ? "0" : "";
+                    }
+                    rowA += `<td class="${cellClass}">${aText}</td>`;
+                }
+                if(hasR) {
+                    let rText = (aV !== null && bV !== 0 && i < 8) ? (aV/bV*100).toFixed(1)+'%' : "";
+                    rowR += `<td class="${cellClass}">${rText}</td>`;
+                }
+
+                if(i === 5) {
+                    let s1B=0, s1A=0;
+                    for(let j=0; j<6; j++) { s1B += d.budget[item.c]?.[j] || 0; s1A += d.actual[item.c]?.[j] || 0; }
+                    if(hasB) rowB += `<td class="total-col">${s1B.toLocaleString()}</td>`;
+                    if(hasA) rowA += `<td class="total-col">${s1A.toLocaleString()}</td>`;
+                    if(hasR) rowR += `<td class="total-col">${s1B?(s1A/s1B*100).toFixed(1)+'%':''}</td>`;
+                }
+            }
+
+            let s2B=0, s2A=0;
+            for(let j=6; j<12; j++) { s2B += d.budget[item.c]?.[j] || 0; s2A += d.actual[item.c]?.[j] || 0; }
+            let totalB = 0, totalA = 0;
+            for(let j=0; j<12; j++) { totalB += d.budget[item.c]?.[j] || 0; totalA += d.actual[item.c]?.[j] || 0; }
+
+            if(hasB) rowB += `<td class="total-col">${s2B.toLocaleString()}</td><td class="total-col">${totalB.toLocaleString()}</td></tr>`;
+            let finalRowA = rowA;
+            if(!hasR) finalRowA = rowA.replace('<tr>', `<tr class="${borderClass}">`);
+            else finalRowA = rowA.replace('<tr>', `<tr class="actual-row-sep">`);
+            if(hasA) finalRowA += `<td class="total-col">${s2A.toLocaleString()}</td><td class="total-col">${totalA.toLocaleString()}</td></tr>`;
+            if(hasR) rowR += `<td class="total-col">${s2B?(s2A/s2B*100).toFixed(1)+'%':''}</td><td class="total-col">${totalB?(totalA/totalB*100).toFixed(1)+'%':''}</td></tr>`;
+            tb.innerHTML += (hasB ? rowB : "") + finalRowA + (hasR ? rowR : "");
+        });
+        drawSalesCharts(d);
+    }
+
+    function drawSalesCharts(d) {
+        if(salesChart) salesChart.destroy();
+        salesChart = new Chart(document.getElementById('salesChart'), { type:'bar', data:{ labels:months, datasets:[{label:'予算',data:d.budget.sales,backgroundColor:'#cbd5e0'},{label:'実績',data:d.actual.sales.map((v,i) => i < 8 ? v : undefined),backgroundColor:'#3182ce'}] }, options:{ responsive:true, maintainAspectRatio:false, plugins: { datalabels: { anchor: 'end', align: 'top', formatter: (v) => v.toLocaleString(), display: (ctx) => ctx.dataset.data[ctx.dataIndex] !== undefined } } } });
+        
+        if(engineerChart) engineerChart.destroy();
+        engineerChart = new Chart(document.getElementById('engineerChart'), { type:'bar', data:{ labels:months, datasets:[{label:'プロパー(稼働)',data:d.actual.propK.map((v,i) => i < 8 ? v : undefined),backgroundColor:'#10b981', datalabels: { align: 'center', anchor: 'center' }},{label:'BP',data:d.actual.bpK.map((v,i) => i < 8 ? v : undefined),backgroundColor:'#8b5cf6', datalabels: { align: 'center', anchor: 'center' }}] }, options:{ responsive:true, maintainAspectRatio:false, scales: { x: { stacked: true }, y: { stacked: true } }, plugins: { datalabels: { color: '#fff', font: { weight: 'bold' }, display: (ctx) => ctx.dataset.data[ctx.dataIndex] !== undefined }, tooltip: { callbacks: { footer: (items) => '合計: ' + items.reduce((a, b) => a + b.parsed.y, 0) } } } }, plugins: [{ afterDraw: (chart) => { const {ctx, scales: {y}} = chart; chart.data.labels.forEach((label, i) => { if(i >= 8) return; let total = 0, hasVal = false; chart.data.datasets.forEach(ds => { if(ds.data[i] !== undefined && ds.data[i] !== null) { total += ds.data[i]; hasVal = true; } }); if(hasVal && chart.getDatasetMeta(0).data[i]) { ctx.fillStyle = '#333'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.fillText(total, chart.getDatasetMeta(0).data[i].x, y.getPixelForValue(total) - 10); } }); }}] });
+        
+        if(waitingChart) waitingChart.destroy();
+        waitingChart = new Chart(document.getElementById('waitingChart'), { type:'bar', data:{ labels:months, datasets:[{label:'待機原価実績',data:d.actual.waitCost.map((v,i) => i < 8 ? v : undefined),backgroundColor:'#e53e3e'}] }, options:{ responsive:true, maintainAspectRatio:false, plugins: { datalabels: { anchor: 'end', align: 'top', formatter: (v) => v.toLocaleString(), display: (ctx) => ctx.dataset.data[ctx.dataIndex] !== undefined && ctx.dataset.data[ctx.dataIndex] !== null } } } });
+    }
+</script>
+</body>
+</html>
+
 
 
 
