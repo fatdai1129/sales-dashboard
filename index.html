@@ -10,7 +10,7 @@
     <style>
         #pw_screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #2d3748; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; }
         #pw_box { padding: 30px; background: white; border-radius: 12px; color: #333; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        .pw-title { font-size: 1.2rem; font-weight: bold; color: #2d3748; margin-bottom: 5px; } /* */
+        .pw-title { font-size: 1.2rem; font-weight: bold; color: #2d3748; margin-bottom: 5px; }
         input#pass_val { padding: 12px; font-size: 18px; border: 2px solid #ddd; border-radius: 6px; margin-bottom: 15px; width: 220px; text-align: center; }
         button.login-btn { padding: 12px 25px; background: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; }
         #main_content { display: none; }
@@ -19,19 +19,15 @@
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 30px; overflow-x: auto; }
         h2 { font-size: 1.4rem; margin: 0; color: #1a202c; border-left: 5px solid #3182ce; padding-left: 15px; }
         select { padding: 8px 15px; border-radius: 6px; border: 1px solid #cbd5e0; font-size: 1rem; }
-        
-        /* 枠線の強化設定 */
         table { width: 100%; border-collapse: collapse; min-width: 1500px; background: white; border: 2px solid #4a5568; }
         th, td { border: 1px solid #e2e8f0; padding: 6px 4px; text-align: right; font-size: 0.8rem; }
         th { background: #edf2f7; color: #4a5568; text-align: center; border-bottom: 2px solid #4a5568 !important; }
-        
         .cat-header { background: #ebf8ff; font-weight: bold; text-align: center; color: #2c5282; border-right: 2px solid #4a5568 !important; border-bottom: 2px solid #4a5568 !important; }
         .type-col { text-align: center; border-right: 2px solid #4a5568 !important; }
-        .month-sep { border-right: 2px solid #4a5568 !important; } /* 11月と5月の右側 */
+        .month-sep { border-right: 2px solid #4a5568 !important; }
         .total-header { background: #edf2f7; color: #4a5568; text-align: center; font-weight: bold; border-left: 2px solid #4a5568 !important; border-right: 2px solid #4a5568 !important; }
         .total-col { background: #fffaf0; font-weight: bold; text-align: right; border-left: 2px solid #4a5568 !important; border-right: 2px solid #4a5568 !important; }
         .item-bottom-border td { border-bottom: 2px solid #4a5568 !important; }
-        
         .fixed-val { background: #f8fafc; color: #4a5568; }
         .chart-box { height: 400px; width: 100%; margin-bottom: 20px; position: relative; }
         #loading { font-weight: bold; color: #3182ce; margin-top: 10px; }
@@ -40,8 +36,7 @@
 <body class="notranslate">
 <div id="pw_screen">
     <div id="pw_box">
-        <div class="pw-title">【実績管理】</div>
-        <h3 style="margin-top:0">閲覧にはパスワードが必要です</h3>
+        <div class="pw-title">【実績管理】</div><h3 style="margin-top:0">閲覧にはパスワードが必要です</h3>
         <input type="password" id="pass_val" placeholder="パスワードを入力" onkeydown="if(event.keyCode==13)checkPW()">
         <br>
         <button class="login-btn" onclick="checkPW()">ログイン</button>
@@ -96,7 +91,6 @@
 
 <script>
     Chart.register(ChartDataLabels);
-    // スプレッドシートIDは維持
     const SHEET_ID = '1LRVwKu-YXWJvRgSophqF0VlORS5_dcjztSvfz95Qe_E';
     const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=実績データ`;
 
@@ -117,18 +111,27 @@
             document.getElementById('main_content').style.display = 'block';
             renderTable();
         } catch (e) {
-            alert('データの読み込みに失敗しました。');
+            alert('データの読み込みに失敗しました。公開設定を確認してください。');
         } finally {
             document.getElementById('loading').style.display = 'none';
         }
     }
 
     function parseCSV(text) {
-        // カンマ問題を解決する正規表現: 引用符で囲まれたカンマは無視
+        // カンマ問題の抜本的解決: 引用符で囲まれたカンマを正しく保持するロジック
         const rows = text.split(/\r?\n/).filter(line => line.trim() !== "").map(line => {
-            return line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.replace(/^"|"$/g, '').trim());
+            const result = [];
+            let current = '', inQuotes = false;
+            for (let char of line) {
+                if (char === '"') inQuotes = !inQuotes;
+                else if (char === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+                else current += char;
+            }
+            result.push(current.trim());
+            return result;
         });
-        rows.shift();
+        
+        rows.shift(); // ヘッダーを削除
         rows.forEach(row => {
             const rKey = regionMap[row[0]];
             const lKey = labelMap[row[1]];
@@ -136,18 +139,16 @@
             if(rKey && lKey) {
                 if(!dataSet[rKey][type][lKey]) dataSet[rKey][type][lKey] = [];
                 for(let i=3; i<15; i++) {
-                    // 数値としてパースする際にカンマや%を削除
                     let val = row[i] ? row[i].replace(/,/g, '').replace('%', '') : null;
-                    dataSet[rKey][type][lKey][i-3] = (val === null || val === "") ? null : parseFloat(val);
+                    dataSet[rKey][type][lKey][i-3] = (val === null || val === "" || isNaN(val)) ? null : parseFloat(val);
                 }
             }
         });
     }
 
     function checkPW() {
-        if (document.getElementById('pass_val').value === "freeeks2022") {
-            fetchData();
-        } else { document.getElementById('err_msg').style.display = 'block'; }
+        if (document.getElementById('pass_val').value === "freeeks2022") { fetchData(); } 
+        else { document.getElementById('err_msg').style.display = 'block'; }
     }
 
     function getRD(k) {
@@ -184,6 +185,7 @@
                 rowA = `<tr><td class="type-col">実績</td>`, rowR = `<tr class="${borderClass}"><td class="type-col">達成率</td>`;
             if(!hasB) rowA = `<tr><td rowspan="${rowCount}" class="cat-header ${borderClass}">${item.l}</td><td class="type-col">実績</td>`;
             if(!hasB && rowCount === 1) rowA = `<tr class="${borderClass}"><td class="cat-header ${borderClass}">${item.l}</td><td class="type-col">実績</td>`;
+            
             let s1B=0, s1A=0, s2B=0, s2A=0;
             for(let i=0; i<12; i++){
                 let bV = d.budget[item.c]?.[i] || 0, aV = d.actual[item.c]?.[i];
@@ -219,7 +221,18 @@
         engineerChart = new Chart(document.getElementById('engineerChart'), {
             type:'bar', data:{ labels:months, datasets:[{label:'プロパー(稼働)',data:d.actual.propK.map((v,i) => i < 8 ? v : undefined),backgroundColor:'#10b981', datalabels: { align: 'center', anchor: 'center' }},{label:'BP',data:d.actual.bpK.map((v,i) => i < 8 ? v : undefined),backgroundColor:'#8b5cf6', datalabels: { align: 'center', anchor: 'center' }}] },
             options:{ responsive:true, maintainAspectRatio:false, scales: { x: { stacked: true }, y: { stacked: true } }, plugins: { datalabels: { color: '#fff', font: { weight: 'bold' }, display: (ctx) => ctx.dataset.data[ctx.dataIndex] !== undefined }, tooltip: { callbacks: { footer: (items) => '合計: ' + items.reduce((a, b) => a + b.parsed.y, 0) } } } },
-            plugins: [{ afterDraw: (chart) => { const {ctx, scales: {y}} = chart; chart.data.labels.forEach((label, i) => { if(i >= 8) return; let total = 0, hasValue = false; chart.data.datasets.forEach(ds => { if(ds.data[i] !== undefined) { total += ds.data[i]; hasValue = true; } }); if(hasValue) { ctx.fillStyle = '#333'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.fillText(total, chart.getDatasetMeta(1).data[i].x, y.getPixelForValue(total) - 10); } }); } }]
+            plugins: [{ afterDraw: (chart) => {
+                const {ctx, scales: {y}} = chart;
+                chart.data.labels.forEach((label, i) => {
+                    if(i >= 8) return;
+                    let total = 0, hasVal = false;
+                    chart.data.datasets.forEach(ds => { if(ds.data[i] !== undefined && ds.data[i] !== null) { total += ds.data[i]; hasVal = true; } });
+                    if(hasVal && chart.getDatasetMeta(0).data[i]) {
+                        ctx.fillStyle = '#333'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
+                        ctx.fillText(total, chart.getDatasetMeta(0).data[i].x, y.getPixelForValue(total) - 10);
+                    }
+                });
+            }}]
         });
         if(waitingChart) waitingChart.destroy();
         waitingChart = new Chart(document.getElementById('waitingChart'), {
@@ -230,6 +243,7 @@
 </script>
 </body>
 </html>
+
 
 
 
