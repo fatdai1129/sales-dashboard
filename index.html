@@ -18,13 +18,12 @@
         .container { max-width: 1700px; margin: auto; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 30px; overflow-x: auto; }
         
-        /* ナビゲーション */
         .top-nav { background: #1a202c; padding: 15px 20px; color: white; display: flex; align-items: center; margin-bottom: 20px; border-radius: 0 0 12px 12px; }
         .nav-select { background: #2d3748; color: white; border: 1px solid #4a5568; padding: 8px 15px; border-radius: 6px; font-size: 1rem; margin-left: 15px; cursor: pointer; }
 
         h2 { font-size: 1.4rem; margin: 0; color: #1a202c; border-left: 5px solid #3182ce; padding-left: 15px; }
         
-        /* 枠線設定：すべて黒 */
+        /* 共通テーブル設定：枠線をすべて黒に変更 */
         table { width: 100%; border-collapse: collapse; min-width: 1500px; background: white; border: 2px solid black; }
         th, td { border: 1px solid black; padding: 6px 4px; text-align: right; font-size: 0.8rem; }
         th { background: #edf2f7; color: #4a5568; text-align: center; border-bottom: 2px solid black !important; }
@@ -69,7 +68,7 @@
         <strong>表示ツール切替:</strong>
         <select id="tool-select" class="nav-select" onchange="switchTool()">
             <option value="sales">全社 営業実績・予算管理表</option>
-            <option value="promotion">フリークス営業推進管理表</option>
+            <option value="promotion">営業推進管理表</option>
             <option value="status">売込状況一覧_20250601運用開始</option>
         </select>
     </div>
@@ -133,10 +132,23 @@
 <script>
     Chart.register(ChartDataLabels);
     
+    // スプレッドシート設定
     const TOOLS = {
-        sales: { name: '全社 営業実績・予算管理表', id: '1LRVwKu-YXWJvRgSophqF0VlORS5_dcjztSvfz95Qe_E', sheet: '実績データ' },
-        promotion: { name: 'フリークス営業推進管理表', id: 'ここにファイルIDを入力', sheet: 'シート1' },
-        status: { name: '売込状況一覧_20250601運用開始', id: 'ここにファイルIDを入力', sheet: 'シート1' }
+        sales: { 
+            name: '全社 営業実績・予算管理表', 
+            id: '1LRVwKu-YXWJvRgSophqF0VlORS5_dcjztSvfz95Qe_E', 
+            sheet: '実績データ' 
+        },
+        promotion: { 
+            name: '営業推進管理表', 
+            id: '1LRVwKu-YXWJvRgSophqF0VlORS5_dcjztSvfz95Qe_E', 
+            sheet: '営業推進管理表' 
+        },
+        status: { 
+            name: '売込状況一覧_20250601運用開始', 
+            id: 'ここにファイルIDを入力', 
+            sheet: 'シート1' 
+        }
     };
 
     let dataSet = { west: { budget:{}, actual:{} }, tokai: { budget:{}, actual:{} }, tokyo: { budget:{}, actual:{} } };
@@ -153,10 +165,8 @@
     async function switchTool() {
         const toolKey = document.getElementById('tool-select').value;
         const tool = TOOLS[toolKey];
-        if (toolKey !== 'sales' && tool.id === 'ここにファイルIDを入力') {
-            alert('新しい管理表のファイルIDが設定されていません。');
-            return;
-        }
+        if (tool.id.includes('ここに')) return;
+        
         document.getElementById('loading').style.display = 'block';
         const CSV_URL = `https://docs.google.com/spreadsheets/d/${tool.id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tool.sheet)}`;
         
@@ -179,7 +189,7 @@
                 renderGenericTable(rows);
             }
         } catch (e) {
-            alert(`データの取得に失敗しました。`);
+            alert(`データの取得に失敗しました。公開設定を確認してください。`);
         } finally {
             document.getElementById('loading').style.display = 'none';
         }
@@ -285,7 +295,6 @@
                     let rText = (aV !== null && bV !== 0 && i < 8) ? (aV/bV*100).toFixed(1)+'%' : "";
                     rowR += `<td class="${cellClass}">${rText}</td>`;
                 }
-
                 if(i === 5) {
                     let s1B=0, s1A=0;
                     for(let j=0; j<6; j++) { s1B += d.budget[item.c]?.[j] || 0; s1A += d.actual[item.c]?.[j] || 0; }
@@ -294,7 +303,6 @@
                     if(hasR) rowR += `<td class="total-col">${s1B?(s1A/s1B*100).toFixed(1)+'%':''}</td>`;
                 }
             }
-
             let s2B=0, s2A=0;
             for(let j=6; j<12; j++) { s2B += d.budget[item.c]?.[j] || 0; s2A += d.actual[item.c]?.[j] || 0; }
             let totalB = 0, totalA = 0;
@@ -314,16 +322,15 @@
     function drawSalesCharts(d) {
         if(salesChart) salesChart.destroy();
         salesChart = new Chart(document.getElementById('salesChart'), { type:'bar', data:{ labels:months, datasets:[{label:'予算',data:d.budget.sales,backgroundColor:'#cbd5e0'},{label:'実績',data:d.actual.sales.map((v,i) => i < 8 ? v : undefined),backgroundColor:'#3182ce'}] }, options:{ responsive:true, maintainAspectRatio:false, plugins: { datalabels: { anchor: 'end', align: 'top', formatter: (v) => v.toLocaleString(), display: (ctx) => ctx.dataset.data[ctx.dataIndex] !== undefined } } } });
-        
         if(engineerChart) engineerChart.destroy();
         engineerChart = new Chart(document.getElementById('engineerChart'), { type:'bar', data:{ labels:months, datasets:[{label:'プロパー(稼働)',data:d.actual.propK.map((v,i) => i < 8 ? v : undefined),backgroundColor:'#10b981', datalabels: { align: 'center', anchor: 'center' }},{label:'BP',data:d.actual.bpK.map((v,i) => i < 8 ? v : undefined),backgroundColor:'#8b5cf6', datalabels: { align: 'center', anchor: 'center' }}] }, options:{ responsive:true, maintainAspectRatio:false, scales: { x: { stacked: true }, y: { stacked: true } }, plugins: { datalabels: { color: '#fff', font: { weight: 'bold' }, display: (ctx) => ctx.dataset.data[ctx.dataIndex] !== undefined }, tooltip: { callbacks: { footer: (items) => '合計: ' + items.reduce((a, b) => a + b.parsed.y, 0) } } } }, plugins: [{ afterDraw: (chart) => { const {ctx, scales: {y}} = chart; chart.data.labels.forEach((label, i) => { if(i >= 8) return; let total = 0, hasVal = false; chart.data.datasets.forEach(ds => { if(ds.data[i] !== undefined && ds.data[i] !== null) { total += ds.data[i]; hasVal = true; } }); if(hasVal && chart.getDatasetMeta(0).data[i]) { ctx.fillStyle = '#333'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.fillText(total, chart.getDatasetMeta(0).data[i].x, y.getPixelForValue(total) - 10); } }); }}] });
-        
         if(waitingChart) waitingChart.destroy();
         waitingChart = new Chart(document.getElementById('waitingChart'), { type:'bar', data:{ labels:months, datasets:[{label:'待機原価実績',data:d.actual.waitCost.map((v,i) => i < 8 ? v : undefined),backgroundColor:'#e53e3e'}] }, options:{ responsive:true, maintainAspectRatio:false, plugins: { datalabels: { anchor: 'end', align: 'top', formatter: (v) => v.toLocaleString(), display: (ctx) => ctx.dataset.data[ctx.dataIndex] !== undefined && ctx.dataset.data[ctx.dataIndex] !== null } } } });
     }
 </script>
 </body>
 </html>
+
 
 
 
