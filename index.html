@@ -31,8 +31,11 @@
         /* 項目ごとの最下部太線 */
         .item-bottom-border td { border-bottom: 2px solid #4a5568 !important; }
         
-        /* 実績と達成率の間の線を中間の太さ（1.5px）に設定 */
-        .actual-row-sep td { border-bottom: 1.5px solid #cbd5e0 !important; }
+        /* 実績と達成率の間の線を2つ前の太さ（2px）に戻す */
+        .actual-row-sep td { border-bottom: 2px solid #cbd5e0 !important; }
+
+        /* 予算と実績の間の点線設定（太さは同じ2px） */
+        .budget-row-sep td:not(.cat-header) { border-bottom: 2px dotted #cbd5e0 !important; }
         
         .fixed-val { background: #f8fafc; color: #4a5568; }
         .chart-box { height: 400px; width: 100%; margin-bottom: 20px; position: relative; }
@@ -193,7 +196,8 @@
             const hasB = item.rows.includes('B'), hasA = item.rows.includes('A'), hasR = item.rows.includes('R');
             const rowCount = item.rows.length;
             const borderClass = "item-bottom-border";
-            let rowB = `<tr><td rowspan="${rowCount}" class="cat-header ${borderClass}">${item.l}</td><td class="type-col">予算</td>`, 
+            // 予算行に点線用のクラスを追加
+            let rowB = `<tr class="budget-row-sep"><td rowspan="${rowCount}" class="cat-header ${borderClass}">${item.l}</td><td class="type-col">予算</td>`, 
                 rowA = `<tr><td class="type-col">実績</td>`, rowR = `<tr class="${borderClass}"><td class="type-col">達成率</td>`;
             if(!hasB) rowA = `<tr><td rowspan="${rowCount}" class="cat-header ${borderClass}">${item.l}</td><td class="type-col">実績</td>`;
             if(!hasB && rowCount === 1) rowA = `<tr class="${borderClass}"><td class="cat-header ${borderClass}">${item.l}</td><td class="type-col">実績</td>`;
@@ -262,6 +266,7 @@
 </script>
 </body>
 </html>
+
 
 
 
