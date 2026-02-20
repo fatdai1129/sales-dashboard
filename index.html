@@ -31,8 +31,8 @@
         /* 項目ごとの最下部太線 */
         .item-bottom-border td { border-bottom: 2px solid #4a5568 !important; }
         
-        /* 実績と達成率の間の太線設定 */
-        .actual-row-sep td { border-bottom: 2px solid #cbd5e0 !important; }
+        /* 実績と達成率の間の線を中間の太さ（1.5px）に設定 */
+        .actual-row-sep td { border-bottom: 1.5px solid #cbd5e0 !important; }
         
         .fixed-val { background: #f8fafc; color: #4a5568; }
         .chart-box { height: 400px; width: 100%; margin-bottom: 20px; position: relative; }
@@ -219,7 +219,6 @@
             if(hasA) rowA += `<td class="total-col">${s2A.toLocaleString()}</td><td class="total-col">${(s1A+s2A).toLocaleString()}</td></tr>`;
             if(hasR) rowR += `<td class="total-col">${s2B ? (s2A/s2B*100).toFixed(1)+'%' : ""}</td><td class="total-col">${(s1B+s2B) ? ((s1A+s2A)/(s1B+s2B)*100).toFixed(1)+'%' : ""}</td></tr>`;
             
-            // 実績と達成率の間の枠線を太くする判定ロジック
             let finalRowA = rowA;
             if(!hasR) {
                 finalRowA = rowA.replace('<tr>', `<tr class="${borderClass}">`);
@@ -263,6 +262,7 @@
 </script>
 </body>
 </html>
+
 
 
 
