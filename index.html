@@ -10,7 +10,7 @@
     <style>
         #pw_screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #2d3748; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; }
         #pw_box { padding: 30px; background: white; border-radius: 12px; color: #333; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        .pw-title { font-size: 1.2rem; font-weight: bold; color: #2d3748; margin-bottom: 5px; }
+        .pw-title { font-size: 1.2rem; font-weight: bold; color: #2d3748; margin-bottom: 5px; } /* */
         input#pass_val { padding: 12px; font-size: 18px; border: 2px solid #ddd; border-radius: 6px; margin-bottom: 15px; width: 220px; text-align: center; }
         button.login-btn { padding: 12px 25px; background: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; }
         #main_content { display: none; }
@@ -19,15 +19,19 @@
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 30px; overflow-x: auto; }
         h2 { font-size: 1.4rem; margin: 0; color: #1a202c; border-left: 5px solid #3182ce; padding-left: 15px; }
         select { padding: 8px 15px; border-radius: 6px; border: 1px solid #cbd5e0; font-size: 1rem; }
+        
+        /* 枠線の強化設定 */
         table { width: 100%; border-collapse: collapse; min-width: 1500px; background: white; border: 2px solid #4a5568; }
         th, td { border: 1px solid #e2e8f0; padding: 6px 4px; text-align: right; font-size: 0.8rem; }
         th { background: #edf2f7; color: #4a5568; text-align: center; border-bottom: 2px solid #4a5568 !important; }
+        
         .cat-header { background: #ebf8ff; font-weight: bold; text-align: center; color: #2c5282; border-right: 2px solid #4a5568 !important; border-bottom: 2px solid #4a5568 !important; }
         .type-col { text-align: center; border-right: 2px solid #4a5568 !important; }
-        .month-sep { border-right: 2px solid #4a5568 !important; }
+        .month-sep { border-right: 2px solid #4a5568 !important; } /* 11月と5月の右側 */
         .total-header { background: #edf2f7; color: #4a5568; text-align: center; font-weight: bold; border-left: 2px solid #4a5568 !important; border-right: 2px solid #4a5568 !important; }
         .total-col { background: #fffaf0; font-weight: bold; text-align: right; border-left: 2px solid #4a5568 !important; border-right: 2px solid #4a5568 !important; }
         .item-bottom-border td { border-bottom: 2px solid #4a5568 !important; }
+        
         .fixed-val { background: #f8fafc; color: #4a5568; }
         .chart-box { height: 400px; width: 100%; margin-bottom: 20px; position: relative; }
         #loading { font-weight: bold; color: #3182ce; margin-top: 10px; }
@@ -36,12 +40,12 @@
 <body class="notranslate">
 <div id="pw_screen">
     <div id="pw_box">
-        <div class="pw-title">【Freeeks実績管理】</div>
+        <div class="pw-title">【実績管理】</div>
         <h3 style="margin-top:0">閲覧にはパスワードが必要です</h3>
         <input type="password" id="pass_val" placeholder="パスワードを入力" onkeydown="if(event.keyCode==13)checkPW()">
         <br>
         <button class="login-btn" onclick="checkPW()">ログイン</button>
-        <div id="loading" style="display:none;">データを読み込み中...</div>
+        <div id="loading" style="display:none;">データを取得中...</div>
         <p id="err_msg" style="color: red; display: none; margin-top:10px;">パスワードが違います</p>
     </div>
 </div>
@@ -92,7 +96,7 @@
 
 <script>
     Chart.register(ChartDataLabels);
-    // スプレッドシートID 
+    // スプレッドシートIDは維持
     const SHEET_ID = '1LRVwKu-YXWJvRgSophqF0VlORS5_dcjztSvfz95Qe_E';
     const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=実績データ`;
 
@@ -113,15 +117,18 @@
             document.getElementById('main_content').style.display = 'block';
             renderTable();
         } catch (e) {
-            alert('データの読み込みに失敗しました。公開設定を確認してください。');
+            alert('データの読み込みに失敗しました。');
         } finally {
             document.getElementById('loading').style.display = 'none';
         }
     }
 
     function parseCSV(text) {
-        const rows = text.split('\n').map(r => r.split(',').map(c => c.replace(/^"|"$/g, '').trim()));
-        rows.shift(); // ヘッダースキップ
+        // カンマ問題を解決する正規表現: 引用符で囲まれたカンマは無視
+        const rows = text.split(/\r?\n/).filter(line => line.trim() !== "").map(line => {
+            return line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.replace(/^"|"$/g, '').trim());
+        });
+        rows.shift();
         rows.forEach(row => {
             const rKey = regionMap[row[0]];
             const lKey = labelMap[row[1]];
@@ -129,6 +136,7 @@
             if(rKey && lKey) {
                 if(!dataSet[rKey][type][lKey]) dataSet[rKey][type][lKey] = [];
                 for(let i=3; i<15; i++) {
+                    // 数値としてパースする際にカンマや%を削除
                     let val = row[i] ? row[i].replace(/,/g, '').replace('%', '') : null;
                     dataSet[rKey][type][lKey][i-3] = (val === null || val === "") ? null : parseFloat(val);
                 }
@@ -222,5 +230,6 @@
 </script>
 </body>
 </html>
+
 
 
