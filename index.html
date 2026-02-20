@@ -27,7 +27,13 @@
         .month-sep { border-right: 2px solid #4a5568 !important; }
         .total-header { background: #edf2f7; color: #4a5568; text-align: center; font-weight: bold; border-left: 2px solid #4a5568 !important; border-right: 2px solid #4a5568 !important; }
         .total-col { background: #fffaf0; font-weight: bold; text-align: right; border-left: 2px solid #4a5568 !important; border-right: 2px solid #4a5568 !important; }
+        
+        /* 項目ごとの最下部太線 */
         .item-bottom-border td { border-bottom: 2px solid #4a5568 !important; }
+        
+        /* 実績と達成率の間の太線設定 */
+        .actual-row-sep td { border-bottom: 2px solid #cbd5e0 !important; }
+        
         .fixed-val { background: #f8fafc; color: #4a5568; }
         .chart-box { height: 400px; width: 100%; margin-bottom: 20px; position: relative; }
         #loading { font-weight: bold; color: #3182ce; margin-top: 10px; }
@@ -52,7 +58,8 @@
             <select id="region-select" onchange="renderTable()">
                 <option value="total">全社</option>
                 <option value="west">西日本</option>
-                <option value="east">東日本</option> <option value="tokai">東海</option>
+                <option value="east">東日本</option>
+                <option value="tokai">東海</option>
                 <option value="tokyo">首都圏</option>
             </select>
         </div>
@@ -112,7 +119,7 @@
             document.getElementById('main_content').style.display = 'block';
             renderTable();
         } catch (e) {
-            alert('データの読み込みに失敗しました。公開設定を確認してください。');
+            alert('データの読み込みに失敗しました。');
         } finally {
             document.getElementById('loading').style.display = 'none';
         }
@@ -130,7 +137,6 @@
             result.push(current.trim());
             return result;
         });
-        
         rows.shift();
         rows.forEach(row => {
             const rKey = regionMap[row[0]];
@@ -153,7 +159,6 @@
 
     function getRD(k) {
         let rs = ['west','tokai','tokyo'];
-        // 東日本が選択された場合、東海と首都圏のみを合算
         if (k === 'east') rs = ['tokai', 'tokyo'];
         else if (k !== 'total') rs = [k];
 
@@ -213,7 +218,15 @@
             if(hasB) rowB += `<td class="total-col">${s2B.toLocaleString()}</td><td class="total-col">${(s1B+s2B).toLocaleString()}</td></tr>`;
             if(hasA) rowA += `<td class="total-col">${s2A.toLocaleString()}</td><td class="total-col">${(s1A+s2A).toLocaleString()}</td></tr>`;
             if(hasR) rowR += `<td class="total-col">${s2B ? (s2A/s2B*100).toFixed(1)+'%' : ""}</td><td class="total-col">${(s1B+s2B) ? ((s1A+s2A)/(s1B+s2B)*100).toFixed(1)+'%' : ""}</td></tr>`;
-            tb.innerHTML += (hasB ? rowB : "") + (hasA ? (rowCount===1||hasR?rowA:rowA.replace('<tr>',`<tr class="${borderClass}">`)) : "") + (hasR ? rowR : "");
+            
+            // 実績と達成率の間の枠線を太くする判定ロジック
+            let finalRowA = rowA;
+            if(!hasR) {
+                finalRowA = rowA.replace('<tr>', `<tr class="${borderClass}">`);
+            } else {
+                finalRowA = rowA.replace('<tr>', `<tr class="actual-row-sep">`);
+            }
+            tb.innerHTML += (hasB ? rowB : "") + finalRowA + (hasR ? rowR : "");
         });
         drawCharts(d);
     }
