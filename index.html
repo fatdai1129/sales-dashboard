@@ -35,16 +35,10 @@
         .item-bottom-bold td { border-bottom: 2px solid black !important; }
         .row-border td:not(.cat-header) { border-bottom: 1px solid #ddd !important; }
 
-        /* レイアウトボックス */
         .flex-stack-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
-        
-        /* ヘッダー用：給与・コスト（太字・大きめ） */
         .header-label-bold { font-weight: bold; font-size: 0.88rem; color: #1a202c; }
         .header-label-sub { font-size: 0.72rem; color: #666; font-weight: normal; }
-
-        /* データ用：給与・コスト数値（標準サイズ・太字なし） */
         .data-value-std { font-weight: normal !important; font-size: 0.82rem !important; color: #333; }
-
         .tech-name-label { font-weight: bold; font-size: 0.9rem; }
         .tech-no-label { font-size: 0.7rem; color: #666; }
 
@@ -217,13 +211,13 @@
     function renderPromotionTable(rows, filterRegion) {
         if (rows.length < 2) return;
         
-        // spreadsheet画像(image_7a22e1.jpg)とユーザー指示に基づきインデックスを修正
+        // spreadsheet画像(image_7a22e1.jpg)の正確なインデックスに基づき設定
         const AffIndex = 2;    // C列
         const NoIndex = 3;     // D列
         const NameIndex = 4;   // E列
-        const SalaryIndex = 11; // L列 (ユーザー指定K列)
-        const CostIndex = 12;   // M列 (ユーザー指定L列)
-        const DataStartCol = 13; // N列 (ユーザー指定M列・6月売上開始)
+        const SalaryIndex = 10; // K列（給料：333,334）
+        const CostIndex = 11;   // L列（コスト：400,001）
+        const DataStartCol = 12; // M列（6月売上：530,000）
         
         let data = rows.slice(1).filter(r => r[NoIndex] && r[NoIndex].trim() !== "" && r[NoIndex] !== "技術者№");
         if (filterRegion !== 'total') data = data.filter(r => r[AffIndex] === filterRegion);
@@ -265,8 +259,10 @@
                     mC.push(parseNum(m[DataStartCol + i * 2 + 1])); 
                 }
                 const metrics = [
-                    { n: '売上', d: mS, type: 'num' }, { n: '利益', d: mS.map((s,i)=>s-mC[i]), type: 'num' },
-                    { n: '利益率', d: mS.map((s,i)=>s?((s-mC[i])/s*100):0), type: 'pct' }, { n: '運用率', d: mS.map(s=>salVal?(s/salVal*100):0), type: 'pct' }
+                    { n: '売上', d: mS, type: 'num' }, 
+                    { n: '利益', d: mS.map((s,i)=>s-costVal), type: 'num' },
+                    { n: '利益率', d: mS.map((s,i)=>s?((s-costVal)/s*100):0), type: 'pct' }, 
+                    { n: '運用率', d: mS.map(s=>salVal?(s/salVal*100):0), type: 'pct' }
                 ];
                 metrics.forEach((met, idx) => {
                     let trCls = (idx < 3) ? "row-border" : "item-bottom-bold";
@@ -285,7 +281,7 @@
                     html += `<td class="metric-label">${met.n}</td>`;
                     let h1=0, h2=0;
                     met.d.forEach((v, i) => {
-                        const cellCls = `${i===5?'month-sep':''} ${i===6?'second-half-start':''}`;
+                        const cellCls = `${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}`;
                         html += `<td class="${cellCls}">${met.type==='num'?v.toLocaleString():v.toFixed(1)+'%'}</td>`;
                         if(i<6) h1+=v; else h2+=v;
                         if(i===5) html += `<td class="total-col">${met.type==='num'?Math.round(h1).toLocaleString():'-'}</td>`;
@@ -369,7 +365,6 @@
 </script>
 </body>
 </html>
-
 
 
 
