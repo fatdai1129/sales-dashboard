@@ -78,6 +78,7 @@
             <select id="promotion-region-select" class="nav-select" onchange="filterPromotion()">
                 <option value="total">全社</option>
                 <option value="西日本">西日本</option>
+                <option value="東日本">東日本</option>
                 <option value="東海">東海</option>
                 <option value="首都圏">首都圏</option>
             </select>
@@ -173,19 +174,29 @@
             const rows = parseCSV(csvText);
             document.getElementById('pw_screen').style.display = 'none';
             document.getElementById('main_content').style.display = 'block';
+            
+            // フィルタ表示の切り替え
             if (toolKey === 'sales') {
                 document.getElementById('dashboard-sales').style.display = 'block';
                 document.getElementById('dashboard-generic').style.display = 'none';
                 document.getElementById('sales-region-container').style.display = 'inline-block';
                 document.getElementById('promotion-filter-container').style.display = 'none';
                 processSalesData(rows); renderSalesTable();
-            } else if (toolKey === 'promotion') {
+            } else {
                 document.getElementById('dashboard-sales').style.display = 'none';
                 document.getElementById('dashboard-generic').style.display = 'block';
                 document.getElementById('sales-region-container').style.display = 'none';
                 document.getElementById('promotion-filter-container').style.display = 'inline-block';
-                document.getElementById('generic-title').innerText = '営業推進管理表';
-                currentPromotionRows = rows; renderPromotionTable(rows, 'total');
+                
+                if (toolKey === 'promotion') {
+                    document.getElementById('generic-title').innerText = '営業推進管理表';
+                    currentPromotionRows = rows;
+                    filterPromotion(); // 初期表示
+                } else if (toolKey === 'status') {
+                    document.getElementById('generic-title').innerText = '売込状況一覧';
+                    currentPromotionRows = rows; // 変数名を共通利用
+                    filterPromotion(); // 同一のフィルタロジックを利用
+                }
             }
         } catch (e) { alert('取得失敗'); }
         finally { document.getElementById('loading').style.display = 'none'; }
@@ -205,34 +216,37 @@
 
     function filterPromotion() {
         const region = document.getElementById('promotion-region-select').value;
-        renderPromotionTable(currentPromotionRows, region);
+        const toolKey = document.getElementById('tool-select').value;
+        if (toolKey === 'promotion') {
+            renderPromotionTable(currentPromotionRows, region);
+        } else if (toolKey === 'status') {
+            renderGenericTable(currentPromotionRows, region); // 売込状況用の簡易描画
+        }
     }
 
+    // --- 営業推進管理表の描画ロジック ---
     function renderPromotionTable(rows, filterRegion) {
         if (rows.length < 2) return;
-        
-        const AffIndex = 2;    
-        const NoIndex = 3;     
-        const NameIndex = 4;   
-        const SalaryIndex = 10; 
-        const CostIndex = 11;   
-        const DataStartCol = 12; 
+        const AffIndex = 2, NoIndex = 3, NameIndex = 4, SalaryIndex = 10, CostIndex = 11, DataStartCol = 12;
         
         let rawData = rows.slice(1).filter(r => r[NoIndex] && r[NoIndex].trim() !== "" && r[NoIndex] !== "技術者№");
-        let data = (filterRegion !== 'total') ? rawData.filter(r => r[AffIndex] === filterRegion) : rawData;
+        
+        // 地域フィルタリングの拡張
+        let data;
+        if (filterRegion === 'total') {
+            data = rawData;
+        } else if (filterRegion === '東日本') {
+            data = rawData.filter(r => r[AffIndex] === '東海' || r[AffIndex] === '首都圏');
+        } else {
+            data = rawData.filter(r => r[AffIndex] === filterRegion);
+        }
         
         let html = `<table><thead><tr>
             <th rowspan="2" class="cat-header">
-                <div class="flex-stack-box">
-                    <div class="header-label-bold">技術者名</div>
-                    <div class="header-label-sub">スキルシートNO</div>
-                </div>
+                <div class="flex-stack-box"><div class="header-label-bold">技術者名</div><div class="header-label-sub">スキルシートNO</div></div>
             </th>
             <th rowspan="2" class="cat-header">
-                <div class="flex-stack-box">
-                    <div class="header-label-bold">給与</div>
-                    <div class="header-label-bold">コスト</div>
-                </div>
+                <div class="flex-stack-box"><div class="header-label-bold">給与</div><div class="header-label-bold">コスト</div></div>
             </th> 
             <th rowspan="2" class="type-col">項目</th>
             <th colspan="6">上期実績</th><th class="total-header">上期計</th>
@@ -258,10 +272,7 @@
 
         const techCount = techMetrics.length;
         const overallAgg = {
-            sales: Array(12).fill(0),
-            profit: Array(12).fill(0),
-            margin: Array(12).fill(0),
-            opRate: Array(12).fill(0)
+            sales: Array(12).fill(0), profit: Array(12).fill(0), margin: Array(12).fill(0), opRate: Array(12).fill(0)
         };
 
         techMetrics.forEach(tech => {
@@ -280,8 +291,8 @@
             }
         }
 
-        // --- 全体合計セクション ---
-        html += `<tr><td colspan="18" class="affiliation-header">全体合計</td></tr>`;
+        // 全体合計セクション
+        html += `<tr><td colspan="18" class="affiliation-header">全体合計 (${filterRegion==='total'?'全社':filterRegion})</td></tr>`;
         const totalLabels = [
             { n: '売上', d: overallAgg.sales, type: 'num' },
             { n: '利益', d: overallAgg.profit, type: 'num' },
@@ -292,7 +303,6 @@
         totalLabels.forEach((met, idx) => {
             let trCls = (idx < 3) ? "row-border" : "item-bottom-bold";
             html += `<tr class="${trCls}">`;
-            // 指示通り「全体合計」に修正
             if(idx===0) html += `<td rowspan="4" colspan="2" class="cat-header" style="background:white; font-size:1rem;">全体合計</td>`;
             html += `<td class="metric-label">${met.n}</td>`;
             
@@ -300,15 +310,10 @@
             met.d.forEach((v, i) => {
                 const cellCls = `${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}`;
                 let displayVal;
-                if (met.type === 'num') {
-                    displayVal = Math.round(v).toLocaleString();
-                } else if (met.type === 'ratio') {
-                    displayVal = (Math.floor(v * 100) / 100).toFixed(2);
-                } else {
-                    displayVal = v.toFixed(1) + '%';
-                }
+                if (met.type === 'num') displayVal = Math.round(v).toLocaleString();
+                else if (met.type === 'ratio') displayVal = (Math.floor(v * 100) / 100).toFixed(2);
+                else displayVal = v.toFixed(1) + '%';
                 html += `<td class="${cellCls}">${displayVal}</td>`;
-                
                 if(i<6) h1Sum += v; else h2Sum += v;
                 if(i===5) {
                     let h1Disp = (met.type === 'num') ? Math.round(h1Sum).toLocaleString() : (met.type === 'ratio' ? (Math.floor((h1Sum/6)*100)/100).toFixed(2) : (h1Sum/6).toFixed(1) + '%');
@@ -320,16 +325,14 @@
             html += `<td class="total-col">${h2Disp}</td><td class="total-col">${yrDisp}</td></tr>`;
         });
 
+        // 各拠点の描画
         const affs = [...new Set(data.map(r => r[AffIndex]))];
         affs.forEach(aff => {
             html += `<tr><td colspan="18" class="affiliation-header">${aff}</td></tr>`;
             data.filter(r => r[AffIndex] === aff).forEach(m => {
-                const name = m[NameIndex] || '-';
-                const no = m[NoIndex] || '-';
-                const salVal = parseNum(m[SalaryIndex]); 
-                const costVal = parseNum(m[CostIndex]);
-                const mS = [];
-                for(let i=0; i<12; i++) { mS.push(parseNum(m[DataStartCol + i * 2])); }
+                const name = m[NameIndex] || '-'; const no = m[NoIndex] || '-';
+                const salVal = parseNum(m[SalaryIndex]); const costVal = parseNum(m[CostIndex]);
+                const mS = []; for(let i=0; i<12; i++) { mS.push(parseNum(m[DataStartCol + i * 2])); }
 
                 const metrics = [
                     { n: '売上', d: mS, type: 'num' }, 
@@ -346,33 +349,54 @@
                                     <div class="flex-stack-box"><div class="tech-name-label">${name}</div><div class="tech-no-label">${no}</div></div>
                                  </td>
                                  <td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;">
-                                    <div class="flex-stack-box">
-                                        <div class="data-value-std">${salVal.toLocaleString()}</div>
-                                        <div class="data-value-std">${costVal.toLocaleString()}</div>
-                                    </div>
+                                    <div class="flex-stack-box"><div class="data-value-std">${salVal.toLocaleString()}</div><div class="data-value-std">${costVal.toLocaleString()}</div></div>
                                  </td>`;
                     }
                     html += `<td class="metric-label">${met.n}</td>`;
-                    let h1Indiv = 0, h2Indiv = 0;
+                    let h1I = 0, h2I = 0;
                     met.d.forEach((v, i) => {
                         const cellCls = `${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}`;
-                        let displayVal;
-                        if (met.type === 'num') displayVal = v.toLocaleString();
-                        else if (met.type === 'ratio') displayVal = (Math.floor(v * 100) / 100).toFixed(2);
-                        else displayVal = v.toFixed(1) + '%';
-                        html += `<td class="${cellCls}">${displayVal}</td>`;
-                        
-                        if(i<6) h1Indiv += v; else h2Indiv += v;
+                        let dVal;
+                        if (met.type === 'num') dVal = v.toLocaleString();
+                        else if (met.type === 'ratio') dVal = (Math.floor(v * 100) / 100).toFixed(2);
+                        else dVal = v.toFixed(1) + '%';
+                        html += `<td class="${cellCls}">${dVal}</td>`;
+                        if(i<6) h1I += v; else h2I += v;
                         if(i===5) {
-                            let h1D = (met.type === 'num') ? Math.round(h1Indiv).toLocaleString() : (met.type === 'ratio' ? (Math.floor((h1Indiv/6)*100)/100).toFixed(2) : (h1Indiv/6).toFixed(1) + '%');
+                            let h1D = (met.type === 'num') ? Math.round(h1I).toLocaleString() : (met.type === 'ratio' ? (Math.floor((h1I/6)*100)/100).toFixed(2) : (h1I/6).toFixed(1) + '%');
                             html += `<td class="total-col">${h1D}</td>`;
                         }
                     });
-                    let h2D = (met.type === 'num') ? Math.round(h2Indiv).toLocaleString() : (met.type === 'ratio' ? (Math.floor((h2Indiv/6)*100)/100).toFixed(2) : (h2Indiv/6).toFixed(1) + '%');
-                    let yrD = (met.type === 'num') ? Math.round(h1Indiv + h2Indiv).toLocaleString() : (met.type === 'ratio' ? (Math.floor(((h1Indiv+h2Indiv)/12)*100)/100).toFixed(2) : ((h1Indiv+h2Indiv)/12).toFixed(1) + '%');
+                    let h2D = (met.type === 'num') ? Math.round(h2I).toLocaleString() : (met.type === 'ratio' ? (Math.floor((h2I/6)*100)/100).toFixed(2) : (h2I/6).toFixed(1) + '%');
+                    let yrD = (met.type === 'num') ? Math.round(h1I + h2I).toLocaleString() : (met.type === 'ratio' ? (Math.floor(((h1I+h2I)/12)*100)/100).toFixed(2) : ((h1I+h2I)/12).toFixed(1) + '%');
                     html += `<td class="total-col">${h2D}</td><td class="total-col">${yrD}</td></tr>`;
                 });
             });
+        });
+        html += `</tbody></table>`;
+        document.getElementById('generic-content').innerHTML = html;
+    }
+
+    // --- 売込状況一覧用（汎用描画） ---
+    function renderGenericTable(rows, filterRegion) {
+        if (rows.length < 1) return;
+        const AffIndex = 2;
+        let data = rows.slice(1);
+        if (filterRegion !== 'total') {
+            if (filterRegion === '東日本') {
+                data = data.filter(r => r[AffIndex] === '東海' || r[AffIndex] === '首都圏');
+            } else {
+                data = data.filter(r => r[AffIndex] === filterRegion);
+            }
+        }
+        
+        let html = `<table><thead><tr>`;
+        rows[0].forEach(h => html += `<th>${h}</th>`);
+        html += `</tr></thead><tbody>`;
+        data.forEach(row => {
+            html += `<tr>`;
+            row.forEach(cell => html += `<td>${cell || '-'}</td>`);
+            html += `</tr>`;
         });
         html += `</tbody></table>`;
         document.getElementById('generic-content').innerHTML = html;
