@@ -17,7 +17,7 @@
         .container { max-width: 1700px; margin: auto; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 30px; overflow-x: auto; }
         
-        /* ナビゲーションバー：各要素を横並びに配置 */
+        /* ナビゲーションバー */
         .top-nav { background: #1a202c; padding: 15px 20px; color: white; display: flex; align-items: center; margin-bottom: 20px; border-radius: 0 0 12px 12px; }
         .nav-select { background: #2d3748; color: white; border: 1px solid #4a5568; padding: 8px 15px; border-radius: 6px; font-size: 1rem; margin-right: 15px; cursor: pointer; }
         .nav-label { margin-right: 10px; font-weight: bold; }
@@ -36,11 +36,11 @@
         .total-header { background: #edf2f7; color: #4a5568; text-align: center; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
 
-        /* 各項目の区切り：2pxの黒太線（赤矢印箇所） */
+        /* 各項目の区切り：2pxの黒太線 */
         .item-bottom-border td { border-bottom: 2px solid black !important; }
         .actual-row-sep td { border-bottom: 2px solid black !important; }
         
-        /* 予算と実績の間：1pxの細い点線（赤矢印箇所） */
+        /* 予算と実績の間：1pxの細い点線 */
         .budget-row-sep td { border-bottom: 1px dotted black !important; }
 
         .metric-label { text-align: center; background: #f8fafc; font-weight: bold; }
@@ -65,6 +65,7 @@
 <div id="main_content">
     <div class="top-nav">
         <select id="year-select" class="nav-select" onchange="initApp()"></select>
+        
         <select id="tool-select" class="nav-select" onchange="switchTool()">
             <option value="sales">営業実績・予算管理表</option>
             <option value="promotion">営業推進管理表</option>
@@ -145,7 +146,7 @@
 <script>
     Chart.register(ChartDataLabels);
     
-    // 年度別設定
+    // 年度設定：2027年を削除
     const YEAR_CONFIG = {
         '2025年6月期': {
             sales: { id: '1LRVwKu-YXWJvRgSophqF0VlORS5_dcjztSvfz95Qe_E', sheet: '実績データ' },
@@ -153,11 +154,6 @@
             status: { id: 'ここにファイルIDを入力', sheet: 'シート1' }
         },
         '2026年6月期': {
-            sales: { id: 'ここにファイルIDを入力', sheet: '実績データ' },
-            promotion: { id: 'ここにファイルIDを入力', sheet: '営業推進管理表' },
-            status: { id: 'ここにファイルIDを入力', sheet: 'シート1' }
-        },
-        '2027年6月期': {
             sales: { id: 'ここにファイルIDを入力', sheet: '実績データ' },
             promotion: { id: 'ここにファイルIDを入力', sheet: '営業推進管理表' },
             status: { id: 'ここにファイルIDを入力', sheet: 'シート1' }
@@ -350,6 +346,7 @@
 </script>
 </body>
 </html>
+
 
 
 
