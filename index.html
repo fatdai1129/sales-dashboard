@@ -32,6 +32,7 @@
         .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .affiliation-header { background: #1a202c !important; color: white !important; text-align: left !important; padding: 10px 15px !important; font-size: 1rem !important; border-bottom: 2px solid black !important; }
         
+        /* 枠線の制御 */
         .item-bottom-bold td { border-bottom: 2px solid black !important; }
         .dotted-line td:not(.cat-header) { border-bottom: 1px dotted black !important; }
 
@@ -39,9 +40,6 @@
         .info-upper { font-weight: bold; font-size: 0.88rem; color: #1a202c; }
         .info-lower { font-size: 0.72rem; color: #666; font-weight: normal; }
 
-        .tech-info-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
-        .tech-name { font-weight: bold; font-size: 0.9rem; }
-        .tech-no { font-size: 0.7rem; color: #666; }
         .chart-box { height: 400px; width: 100%; margin-bottom: 20px; position: relative; }
         #loading { font-weight: bold; color: #3182ce; margin-top: 10px; }
     </style>
@@ -212,13 +210,13 @@
     function renderPromotionTable(rows, filterRegion) {
         if (rows.length < 2) return;
         
-        const AffIndex = 2;   // C列
-        const NoIndex = 3;    // D列
-        const NameIndex = 4;  // E列
-        const SalaryIndex = 10; // K列
-        const CostIndex = 11;   // L列
+        const AffIndex = 2;   // C列：所属
+        const NoIndex = 3;    // D列：技術者№
+        const NameIndex = 4;  // E列：技術者名
+        const SalaryIndex = 10; // K列：給与
+        const CostIndex = 11;   // L列：コスト
         
-        // D列が空欄の場合は除外するフィルタ
+        // D列（技術者№）が空欄の場合はデータを作成しない
         let data = rows.slice(1).filter(r => r[NoIndex] && r[NoIndex].trim() !== "");
         
         if (filterRegion !== 'total') data = data.filter(r => r[AffIndex] === filterRegion);
@@ -250,23 +248,34 @@
         affs.forEach(aff => {
             html += `<tr><td colspan="18" class="affiliation-header">${aff}</td></tr>`;
             data.filter(r => r[AffIndex] === aff).forEach(m => {
-                const name = m[NameIndex] || '-';
-                const no = m[NoIndex] || '-';    
-                const sal = parseNum(m[SalaryIndex]);
-                const cost = parseNum(m[CostIndex]);  
+                const name = m[NameIndex] || '-'; // E列
+                const no = m[NoIndex] || '-';     // D列
+                const salVal = parseNum(m[SalaryIndex]); // K列
+                const costVal = parseNum(m[CostIndex]);   // L列
+                
                 const mS = [], mC = [];
-                // 6月＝M列（12）から取得
-                for(let i=0; i<12; i++) { mS.push(parseNum(m[12+i*2])); mC.push(parseNum(m[13+i*2])); }
+                // 6月＝M列（インデックス12）から取得
+                for(let i=0; i<12; i++) { 
+                    mS.push(parseNum(m[12 + i * 2])); 
+                    mC.push(parseNum(m[13 + i * 2])); 
+                }
                 const metrics = [
                     { n: '売上', d: mS, type: 'num' }, { n: '利益', d: mS.map((s,i)=>s-mC[i]), type: 'num' },
-                    { n: '利益率', d: mS.map((s,i)=>s?((s-mC[i])/s*100):0), type: 'pct' }, { n: '運用率', d: mS.map(s=>sal?(s/sal*100):0), type: 'pct' }
+                    { n: '利益率', d: mS.map((s,i)=>s?((s-mC[i])/s*100):0), type: 'pct' }, { n: '運用率', d: mS.map(s=>salVal?(s/salVal*100):0), type: 'pct' }
                 ];
                 metrics.forEach((met, idx) => {
                     let trCls = (idx < 3) ? "dotted-line" : "item-bottom-bold";
                     html += `<tr class="${trCls}">`;
                     if(idx===0) {
-                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name">${name}</div><div class="tech-no">${no}</div></div></td>`;
-                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name">${sal.toLocaleString()}</div><div class="tech-no">${cost.toLocaleString()}</div></div></td>`;
+                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;">
+                                    <div class="info-box"><div class="info-upper">${name}</div><div class="info-lower">${no}</div></div>
+                                 </td>
+                                 <td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;">
+                                    <div class="info-box">
+                                        <div class="info-upper">${salVal.toLocaleString()}</div>
+                                        <div class="info-lower">${costVal.toLocaleString()}</div>
+                                    </div>
+                                 </td>`;
                     }
                     html += `<td class="metric-label">${met.n}</td>`;
                     let h1=0, h2=0;
@@ -355,6 +364,7 @@
 </script>
 </body>
 </html>
+
 
 
 
