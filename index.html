@@ -235,7 +235,7 @@
                 </div>
             </th> 
             <th rowspan="2" class="type-col">項目</th>
-            <th colspan="6">上期実績</th><th class="total-header">上期計</th>
+            <th colspan="6">上期実績</th><th class="total-header">上期合計</th>
             <th colspan="6" class="second-half-start">下期実績・予想</th><th class="total-header">下期合計</th>
             <th class="total-header">年間合計</th></tr>
             <tr>
@@ -257,12 +257,12 @@
                     mS.push(parseNum(m[DataStartCol + i * 2])); 
                 }
 
-                // 修正：利益 = 売上 - 給料(salVal)
+                // 運用率：売上 / 給料 (小数点第3位切り捨て)
                 const metrics = [
                     { n: '売上', d: mS, type: 'num' }, 
                     { n: '利益', d: mS.map(s => s - salVal), type: 'num' },
                     { n: '利益率', d: mS.map(s => s ? ((s - salVal) / s * 100) : 0), type: 'pct' }, 
-                    { n: '運用率', d: mS.map(s => salVal ? (s / salVal * 100) : 0), type: 'pct' }
+                    { n: '運用率', d: mS.map(s => salVal ? (s / salVal) : 0), type: 'ratio' }
                 ];
 
                 metrics.forEach((met, idx) => {
@@ -282,10 +282,22 @@
                     html += `<td class="metric-label">${met.n}</td>`;
                     let h1=0, h2=0;
                     met.d.forEach((v, i) => {
-                        const cellCls = `${i===5?'month-sep':''} ${i===6?'second-half-start':''}`;
-                        html += `<td class="${cellCls}">${met.type==='num'?v.toLocaleString():v.toFixed(1)+'%'}</td>`;
-                        if(i<6) h1+=v; else h2+=v;
-                        if(i===5) html += `<td class="total-col">${met.type==='num'?Math.round(h1).toLocaleString():'-'}</td>`;
+                        const cellCls = `${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}`;
+                        let displayVal;
+                        if (met.type === 'num') {
+                            displayVal = v.toLocaleString();
+                            if(i<6) h1+=v; else h2+=v;
+                        } else if (met.type === 'ratio') {
+                            // 小数点第3位を切り捨てて、小数点第2位まで表示
+                            displayVal = (Math.floor(v * 100) / 100).toFixed(2);
+                        } else {
+                            displayVal = v.toFixed(1) + '%';
+                        }
+                        html += `<td class="${cellCls}">${displayVal}</td>`;
+                        
+                        if(i===5) {
+                            html += `<td class="total-col">${met.type==='num'?Math.round(h1).toLocaleString():'-'}</td>`;
+                        }
                     });
                     html += `<td class="total-col">${met.type==='num'?Math.round(h2).toLocaleString():'-'}</td><td class="total-col">${met.type==='num'?(Math.round(h1+h2)).toLocaleString():'-'}</td></tr>`;
                 });
