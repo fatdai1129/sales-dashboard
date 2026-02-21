@@ -33,15 +33,17 @@
         .total-header { background: #edf2f7; color: #4a5568; text-align: center; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
 
-        /* 1px点線 */
+        /* 1px点線設定 */
         .dotted-line td:not(.cat-header) { border-bottom: 1px dotted black !important; }
-        /* 2px太線 */
+        /* 2px太線設定 */
         .bold-line td { border-bottom: 2px solid black !important; }
 
         .metric-label { text-align: center; background: #f8fafc; font-weight: bold; min-width: 100px; border-right: 2px solid black !important; }
         .affiliation-header { background: #1a202c !important; color: white !important; text-align: left !important; padding: 10px 15px !important; font-size: 1rem !important; border-bottom: 2px solid black !important; }
         
-        /* 技術者情報の2段表示 */
+        /* グラフボックス */
+        .chart-box { height: 400px; width: 100%; margin-bottom: 20px; position: relative; }
+        
         .tech-info-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
         .tech-name { font-weight: bold; font-size: 0.9rem; }
         .tech-no { font-size: 0.7rem; color: #666; }
@@ -112,7 +114,18 @@
                     </table>
                 </div>
             </div>
+            <div class="card">
+                <h2>売上推移グラフ</h2>
+                <div class="chart-box"><canvas id="salesChart"></canvas></div>
+                <hr style="border:0; border-top:1px solid #eee; margin:40px 0;">
+                <h2>稼働エンジニア数</h2>
+                <div class="chart-box"><canvas id="engineerChart"></canvas></div>
+                <hr style="border:0; border-top:1px solid #eee; margin:40px 0;">
+                <h2>待機原価推移</h2>
+                <div class="chart-box"><canvas id="waitingChart"></canvas></div>
+            </div>
         </div>
+
         <div id="dashboard-generic" class="dashboard-view" style="display:none;">
             <div class="card">
                 <h2 id="generic-title">管理表</h2>
@@ -132,7 +145,9 @@
         }
     };
 
+    let dataSet = { west: { budget:{}, actual:{} }, tokai: { budget:{}, actual:{} }, tokyo: { budget:{}, actual:{} } };
     let currentPromotionRows = [];
+    let salesChart, waitingChart, engineerChart;
     const months = ["6月","7月","8月","9月","10月","11月","12月","1月","2月","3月","4月","5月"];
 
     window.onload = function() {
@@ -162,12 +177,13 @@
             const rows = parseCSV(csvText);
             document.getElementById('pw_screen').style.display = 'none';
             document.getElementById('main_content').style.display = 'block';
+            
             if (toolKey === 'sales') {
                 document.getElementById('dashboard-sales').style.display = 'block';
                 document.getElementById('dashboard-generic').style.display = 'none';
                 document.getElementById('sales-region-container').style.display = 'inline-block';
                 document.getElementById('promotion-filter-container').style.display = 'none';
-                processSalesData(rows); renderSalesTable(rows);
+                processSalesData(rows); renderSalesTable();
             } else if (toolKey === 'promotion') {
                 document.getElementById('dashboard-sales').style.display = 'none';
                 document.getElementById('dashboard-generic').style.display = 'block';
@@ -197,25 +213,14 @@
         renderPromotionTable(currentPromotionRows, region);
     }
 
-    // --- 営業推進管理表の描画：ヘッダーと列のズレを修正 ---
+    // --- 営業推進管理表 ---
     function renderPromotionTable(rows, filterRegion) {
         if (rows.length < 2) return;
         const AffIndex = 2, NoIndex = 3, NameIndex = 4, SalaryIndex = 5;
         let data = rows.slice(1).filter(r => r[AffIndex]);
         if (filterRegion !== 'total') data = data.filter(r => r[AffIndex] === filterRegion);
         
-        let html = `<table><thead><tr>
-            <th rowspan="2" class="cat-header">所属</th>
-            <th rowspan="2" class="cat-header">技術者名</th>
-            <th rowspan="2" class="type-col">項目</th>
-            <th colspan="6">上期</th><th class="total-header">上期計</th>
-            <th colspan="6" class="second-half-start">下期</th><th class="total-header">下期計</th>
-            <th class="total-header">年間計</th></tr>
-            <tr>
-                <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th class="month-sep">11月</th><th class="total-header">計</th>
-                <th class="second-half-start">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th class="month-sep">5月</th><th class="total-header">計</th>
-                <th class="total-header">合計</th>
-            </tr></thead><tbody>`;
+        let html = `<table><thead><tr><th rowspan="2" class="cat-header">所属</th><th rowspan="2" class="cat-header">技術者名</th><th rowspan="2" class="type-col">項目</th><th colspan="6">上期</th><th class="total-header">上期計</th><th colspan="6" class="second-half-start">下期</th><th class="total-header">下期計</th><th class="total-header">年間合計</th></tr><tr><th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th class="month-sep">11月</th><th class="total-header">計</th><th class="second-half-start">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th class="month-sep">5月</th><th class="total-header">計</th><th class="total-header">合計</th></tr></thead><tbody>`;
 
         const affs = [...new Set(data.map(r => r[AffIndex]))];
         affs.forEach(aff => {
@@ -225,13 +230,8 @@
                 const techNo = m[NoIndex] || '-';
                 const name = m[NameIndex] || '-';
                 const salary = parseFloat(m[SalaryIndex]) || 0;
-                
                 const mS = [], mC = [];
-                for(let i=0; i<12; i++) { 
-                    mS.push(parseFloat(m[12 + i*2]) || 0); // 6月=M(12), 7月=O(14)...
-                    mC.push(parseFloat(m[13 + i*2]) || 0); 
-                }
-                
+                for(let i=0; i<12; i++) { mS.push(parseFloat(m[12 + i*2]) || 0); mC.push(parseFloat(m[13 + i*2]) || 0); }
                 const metrics = [
                     { n: '売上', d: mS, type: 'num' },
                     { n: '利益', d: mS.map((s, i) => s - mC[i]), type: 'num' },
@@ -241,21 +241,14 @@
                 metrics.forEach((met, idx) => {
                     let trCls = (idx < 3) ? "dotted-line" : "bold-line";
                     html += `<tr class="${trCls}">`;
-                    if(idx === 0) {
-                        html += `<td rowspan="4" class="cat-header" style="background:white">${aff}</td><td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name">${name}</div><div class="tech-no">${techNo}</div></div></td>`;
-                    }
+                    if(idx === 0) html += `<td rowspan="4" class="cat-header" style="background:white">${aff}</td><td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name">${name}</div><div class="tech-no">${techNo}</div></div></td>`;
                     html += `<td class="metric-label">${met.n}</td>`;
-                    
                     let h1=0, h2=0;
                     met.d.forEach((v, i) => {
-                        html += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">
-                                    ${met.type==='num'?Math.round(v).toLocaleString():v.toFixed(1)+'%'}
-                                 </td>`;
+                        html += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${met.type==='num'?Math.round(v).toLocaleString():v.toFixed(1)+'%'}</td>`;
                         if(i<6) h1+=v; else h2+=v;
-                        // 上期計のセル挿入
                         if(i===5) html += `<td class="total-col">${met.type==='num'?Math.round(h1).toLocaleString():'-'}</td>`;
                     });
-                    // 下期計・年間合計のセル挿入
                     html += `<td class="total-col">${met.type==='num'?Math.round(h2).toLocaleString():'-'}</td><td class="total-col">${met.type==='num'?Math.round(h1+h2).toLocaleString():'-'}</td></tr>`;
                 });
             });
@@ -264,7 +257,7 @@
         document.getElementById('generic-content').innerHTML = html;
     }
 
-    // 営業実績テーブルの描画
+    // --- 営業実績表とグラフ ---
     function renderSalesTable() {
         const rk = document.getElementById('region-select').value;
         const d = getRD(rk); const tb = document.getElementById('table-body');
@@ -303,6 +296,16 @@
             if(hasR) rR += `<td class="total-col">${b2?(a2/b2*100).toFixed(1)+'%':'-'}</td><td class="total-col">${(b1+b2)?((a1+a2)/(b1+b2)*100).toFixed(1)+'%':'-'}</td></tr>`;
             tb.innerHTML += (hasB?rB:"") + rA + (hasR?rR:"");
         });
+        drawSalesCharts(d);
+    }
+
+    function drawSalesCharts(d) {
+        if(salesChart) salesChart.destroy();
+        salesChart = new Chart(document.getElementById('salesChart'), { type:'bar', data:{ labels:months, datasets:[{label:'予算',data:d.budget.sales,backgroundColor:'#cbd5e0'},{label:'実績',data:d.actual.sales.map((v,i) => i < 8 ? v : undefined),backgroundColor:'#3182ce'}] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{datalabels:{anchor:'end',align:'top',formatter:v=>v?v.toLocaleString():''}} } });
+        if(engineerChart) engineerChart.destroy();
+        engineerChart = new Chart(document.getElementById('engineerChart'), { type:'bar', data:{ labels:months, datasets:[{label:'プロパー',data:d.actual.propK.map((v,i) => i < 8 ? v : undefined),backgroundColor:'#10b981'},{label:'BP',data:d.actual.bpK.map((v,i) => i < 8 ? v : undefined),backgroundColor:'#8b5cf6'}] }, options:{ responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true},y:{stacked:true}}, plugins:{datalabels:{color:'#fff'}} } });
+        if(waitingChart) waitingChart.destroy();
+        waitingChart = new Chart(document.getElementById('waitingChart'), { type:'bar', data:{ labels:months, datasets:[{label:'待機原価',data:d.actual.waitCost.map((v,i) => i < 8 ? v : undefined),backgroundColor:'#e53e3e'}] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{datalabels:{anchor:'end',align:'top',formatter:v=>v?v.toLocaleString():''}} } });
     }
 
     function processSalesData(rows) {
@@ -312,7 +315,7 @@
         rows.slice(1).forEach(row => {
             const rK = regMap[row[0]], lK = lblMap[row[1]], type = row[2] === '予算' ? 'budget' : 'actual';
             if(rK && lK) {
-                if(!dataSet[rK][type][lKey]) dataSet[rK][type][lK] = Array(12).fill(null);
+                if(!dataSet[rK][type][lK]) dataSet[rK][type][lK] = Array(12).fill(null);
                 for(let i=3; i<15; i++) {
                     let v = row[i] ? row[i].replace(/,/g, '').replace('%', '') : null;
                     dataSet[rK][type][lK][i-3] = (v === null || v === "" || isNaN(v)) ? null : parseFloat(v);
@@ -335,18 +338,10 @@
         });
         return res;
     }
-
-    function renderGenericTable(rows) {
-        let h = '<table style="min-width:100%; border:1px solid black;"><thead><tr>';
-        rows[0].forEach(cell => h += `<th style="border:1px solid black; background:#f4f4f4; padding:12px;">${cell}</th>`);
-        h += '</tr></thead><tbody>';
-        rows.slice(1).forEach(row => { h += '<tr>'; row.forEach(cell => html += `<td style="border:1px solid black; padding:10px; text-align:center;">${cell}</td>`); h += '</tr>'; });
-        h += '</tbody></table>';
-        document.getElementById('generic-content').innerHTML = h;
-    }
 </script>
 </body>
 </html>
+
 
 
 
