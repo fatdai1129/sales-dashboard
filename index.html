@@ -23,7 +23,7 @@
 
         h2 { font-size: 1.4rem; margin: 0; color: #1a202c; border-left: 5px solid #3182ce; padding-left: 15px; }
         
-        /* テーブル基本設定 */
+        /* テーブル基本設定：すべて黒枠 */
         table { width: 100%; border-collapse: collapse; min-width: 1500px; background: white; border: 2px solid black; }
         th, td { border: 1px solid black; padding: 6px 4px; text-align: right; font-size: 0.8rem; }
         th { background: #edf2f7; color: #4a5568; text-align: center; border-bottom: 2px solid black !important; }
@@ -35,18 +35,23 @@
         .total-header { background: #edf2f7; color: #4a5568; text-align: center; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
 
-        /* 各項目の区切り：2pxの黒太線 */
+        /* 各項目の区切り：2pxの黒太線（達成率の下など） */
         .item-bottom-border td { border-bottom: 2px solid black !important; }
         .actual-row-sep td { border-bottom: 2px solid black !important; }
         
-        /* 予算と実績の間：1pxの細い点線 */
+        /* 予算と実績の間：1pxの黒い点線に修正 */
         .budget-row-sep td { border-bottom: 1px dotted black !important; }
+        /* 左端の「項目」セルだけは点線にしない */
+        .budget-row-sep .cat-header { border-bottom: 2px solid black !important; }
 
         .metric-label { text-align: center; background: #f8fafc; font-weight: bold; }
         .affiliation-header { background: #2d3748 !important; color: white !important; text-align: left !important; padding-left: 15px !important; font-size: 1rem !important; }
         
         .chart-box { height: 400px; width: 100%; margin-bottom: 20px; position: relative; }
         #loading { font-weight: bold; color: #3182ce; margin-top: 10px; }
+        .simple-table { min-width: 100%; border: 1px solid black; }
+        .simple-table th { background: #f4f4f4; border: 1px solid black; padding: 12px; text-align: center; }
+        .simple-table td { border: 1px solid black; text-align: center; padding: 12px; }
     </style>
 </head>
 <body class="notranslate">
@@ -68,7 +73,7 @@
         <select id="tool-select" class="nav-select" onchange="switchTool()">
             <option value="sales">営業実績・予算管理表</option>
             <option value="promotion">営業推進管理表</option>
-            <option value="status">売込状況一覧_20250601運用開始</option>
+            <option value="status">売込状況一覧</option>
         </select>
         
         <span id="sales-region-container" style="display:none;">
@@ -143,6 +148,7 @@
 <script>
     Chart.register(ChartDataLabels);
     
+    // 年度設定：名称変更
     const YEAR_CONFIG = {
         '2025年6月期': {
             sales: { id: '1LRVwKu-YXWJvRgSophqF0VlORS5_dcjztSvfz95Qe_E', sheet: '実績データ' },
@@ -267,6 +273,15 @@
         document.getElementById('generic-content').innerHTML = html;
     }
 
+    function renderGenericTable(rows) {
+        let html = '<table class="simple-table"><thead><tr>';
+        rows[0].forEach(h => html += `<th>${h}</th>`);
+        html += '</tr></thead><tbody>';
+        rows.slice(1).forEach(row => { html += '<tr>'; row.forEach(cell => html += `<td>${cell}</td>`); html += '</tr>'; });
+        html += '</tbody></table>';
+        document.getElementById('generic-content').innerHTML = html;
+    }
+
     function processSalesData(rows) {
         dataSet = { west: { budget:{}, actual:{} }, tokai: { budget:{}, actual:{} }, tokyo: { budget:{}, actual:{} } };
         const dataRows = rows.slice(1);
@@ -342,9 +357,6 @@
 </script>
 </body>
 </html>
-
-
-
 
 
 
