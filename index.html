@@ -33,7 +33,7 @@
         .affiliation-header { background: #1a202c !important; color: white !important; text-align: left !important; padding: 10px 15px !important; font-size: 1rem !important; border-bottom: 2px solid black !important; }
         
         .item-bottom-bold td { border-bottom: 2px solid black !important; }
-        .dotted-line td:not(.cat-header) { border-bottom: 1px dotted black !important; }
+        .row-border td:not(.cat-header) { border-bottom: 1px solid #ddd !important; }
 
         .info-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
         .info-upper { font-weight: bold; font-size: 0.88rem; color: #1a202c; }
@@ -42,6 +42,10 @@
         .tech-info-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
         .tech-name { font-weight: bold; font-size: 0.9rem; }
         .tech-no { font-size: 0.7rem; color: #666; }
+        
+        /* 給与・コストのデータセル用：標準フォントサイズで上下中央揃え */
+        .std-text-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 0.82rem; font-weight: normal; color: #333; }
+
         .chart-box { height: 400px; width: 100%; margin-bottom: 20px; position: relative; }
         #loading { font-weight: bold; color: #3182ce; margin-top: 10px; }
     </style>
@@ -208,18 +212,16 @@
         renderPromotionTable(currentPromotionRows, region);
     }
 
-    // --- 営業推進管理表：画像（image_7a22e1.jpg）の正確な列位置に修正 ---
     function renderPromotionTable(rows, filterRegion) {
         if (rows.length < 2) return;
         
-        const AffIndex = 2;    // C列：所属
-        const NoIndex = 3;     // D列：技術者№
-        const NameIndex = 4;   // E列：技術者名
-        const SalaryIndex = 10; // K列：給与（月額）
-        const CostIndex = 11;   // L列：原価
-        const DataStartCol = 12; // M列：6月売上 開始点
+        const AffIndex = 2;    // C列
+        const NoIndex = 3;     // D列
+        const NameIndex = 4;   // E列
+        const SalaryIndex = 10; // K列
+        const CostIndex = 11;   // L列
+        const DataStartCol = 12; // M列
         
-        // D列（技術者№）が空欄、またはヘッダー行の場合は除外
         let data = rows.slice(1).filter(r => r[NoIndex] && r[NoIndex].trim() !== "" && r[NoIndex] !== "技術者№");
         if (filterRegion !== 'total') data = data.filter(r => r[AffIndex] === filterRegion);
         
@@ -228,7 +230,7 @@
                 <div class="info-box"><div class="info-upper">技術者名</div><div class="info-lower">スキルシートNO</div></div>
             </th>
             <th rowspan="2" class="cat-header">
-                <div class="info-box"><div class="info-upper">給与</div><div class="info-lower">コスト</div></div>
+                <div class="info-box"><div class="info-upper">給与</div><div class="info-upper">コスト</div></div>
             </th> 
             <th rowspan="2" class="type-col">項目</th>
             <th colspan="6">上期実績</th><th class="total-header">上期合計</th>
@@ -246,12 +248,12 @@
             data.filter(r => r[AffIndex] === aff).forEach(m => {
                 const name = m[NameIndex] || '-';
                 const no = m[NoIndex] || '-';
-                const salVal = parseNum(m[SalaryIndex]); // K12など
-                const costVal = parseNum(m[CostIndex]);   // L12など
+                const salVal = parseNum(m[SalaryIndex]); 
+                const costVal = parseNum(m[CostIndex]);
                 const mS = [], mC = [];
                 for(let i=0; i<12; i++) { 
-                    mS.push(parseNum(m[DataStartCol + i * 2])); // M列(12)から売上開始
-                    mC.push(parseNum(m[DataStartCol + i * 2 + 1])); // N列(13)から原価開始
+                    mS.push(parseNum(m[DataStartCol + i * 2])); 
+                    mC.push(parseNum(m[DataStartCol + i * 2 + 1])); 
                 }
                 const metrics = [
                     { n: '売上', d: mS, type: 'num' }, { n: '利益', d: mS.map((s,i)=>s-mC[i]), type: 'num' },
@@ -262,7 +264,8 @@
                     html += `<tr class="${trCls}">`;
                     if(idx===0) {
                         html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name">${name}</div><div class="tech-no">${no}</div></div></td>`;
-                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name">${salVal.toLocaleString()}</div><div class="tech-no">${costVal.toLocaleString()}</div></div></td>`;
+                        // ここを新しいクラスに変更し、標準サイズに統一
+                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="std-text-box"><div>${salVal.toLocaleString()}</div><div>${costVal.toLocaleString()}</div></div></td>`;
                     }
                     html += `<td class="metric-label">${met.n}</td>`;
                     let h1=0, h2=0;
@@ -351,6 +354,7 @@
 </script>
 </body>
 </html>
+
 
 
 
