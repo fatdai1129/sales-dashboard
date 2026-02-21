@@ -32,16 +32,15 @@
         .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .affiliation-header { background: #1a202c !important; color: white !important; text-align: left !important; padding: 10px 15px !important; font-size: 1rem !important; border-bottom: 2px solid black !important; }
         
+        /* 枠線の制御 */
         .item-bottom-bold td { border-bottom: 2px solid black !important; }
-        .row-border td:not(.cat-header) { border-bottom: 1px solid #ddd !important; }
+        .dotted-line td:not(.cat-header) { border-bottom: 1px dotted black !important; }
 
+        /* 2段表示ボックス */
         .info-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
         .info-upper { font-weight: bold; font-size: 0.88rem; color: #1a202c; }
         .info-lower { font-size: 0.72rem; color: #666; font-weight: normal; }
 
-        .tech-info-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
-        .tech-name { font-weight: bold; font-size: 0.9rem; }
-        .tech-no { font-size: 0.7rem; color: #666; }
         .chart-box { height: 400px; width: 100%; margin-bottom: 20px; position: relative; }
         #loading { font-weight: bold; color: #3182ce; margin-top: 10px; }
     </style>
@@ -208,9 +207,15 @@
         renderPromotionTable(currentPromotionRows, region);
     }
 
+    // --- 営業推進管理表：画像法則（image_799f62.png）に基づく描画 ---
     function renderPromotionTable(rows, filterRegion) {
         if (rows.length < 2) return;
-        const AffIndex = 2, NoIndex = 3, NameIndex = 4, SalaryIndex = 10, CostIndex = 11;
+        const AffIndex = 2;   // C列：所属
+        const NoIndex = 3;    // D列：技術者№
+        const NameIndex = 4;  // E列：技術者名
+        const SalaryIndex = 10; // K列：給与
+        const CostIndex = 11;   // L列：コスト
+        
         let data = rows.slice(1).filter(r => r[AffIndex]);
         if (filterRegion !== 'total') data = data.filter(r => r[AffIndex] === filterRegion);
         
@@ -228,7 +233,7 @@
                 </div>
             </th> 
             <th rowspan="2" class="type-col">項目</th>
-            <th colspan="6">上期実績</th><th class="total-header">上期合計</th>
+            <th colspan="6">上期実績</th><th class="total-header">上期計</th>
             <th colspan="6" class="second-half-start">下期実績・予想</th><th class="total-header">下期合計</th>
             <th class="total-header">年間合計</th></tr>
             <tr>
@@ -241,20 +246,35 @@
         affs.forEach(aff => {
             html += `<tr><td colspan="18" class="affiliation-header">${aff}</td></tr>`;
             data.filter(r => r[AffIndex] === aff).forEach(m => {
-                const name = m[NameIndex] || '-'; const no = m[NoIndex] || '-'; 
-                const sal = parseNum(m[SalaryIndex]); 
-                const cost = parseNum(m[CostIndex]);
+                const name = m[NameIndex] || '-';
+                const no = m[NoIndex] || '-';    
+                const salVal = parseNum(m[SalaryIndex]);
+                const costVal = parseNum(m[CostIndex]);  
+                
                 const mS = [], mC = [];
-                for(let i=0; i<12; i++) { mS.push(parseNum(m[12+i*2])); mC.push(parseNum(m[13+i*2])); }
+                // 6月＝M列（12）からの法則に厳密に設定
+                for(let i=0; i<12; i++) { 
+                    mS.push(parseNum(m[12+i*2])); 
+                    mC.push(parseNum(m[13+i*2])); 
+                }
                 const metrics = [
                     { n: '売上', d: mS, type: 'num' }, { n: '利益', d: mS.map((s,i)=>s-mC[i]), type: 'num' },
-                    { n: '利益率', d: mS.map((s,i)=>s?((s-mC[i])/s*100):0), type: 'pct' }, { n: '運用率', d: mS.map(s=>sal?(s/sal*100):0), type: 'pct' }
+                    { n: '利益率', d: mS.map((s,i)=>s?((s-mC[i])/s*100):0), type: 'pct' }, { n: '運用率', d: mS.map(s=>salVal?(s/salVal*100):0), type: 'pct' }
                 ];
                 metrics.forEach((met, idx) => {
-                    html += `<tr class="${idx===3?'item-bottom-bold':'row-border'}">`;
+                    // 点線と太線の制御
+                    let trCls = (idx < 3) ? "dotted-line" : "item-bottom-bold";
+                    html += `<tr class="${trCls}">`;
                     if(idx===0) {
-                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name">${name}</div><div class="tech-no">${no}</div></div></td>`;
-                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name">${sal.toLocaleString()}</div><div class="tech-no">${cost.toLocaleString()}</div></div></td>`;
+                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;">
+                                    <div class="info-box"><div class="info-upper">${name}</div><div class="info-lower">${no}</div></div>
+                                 </td>
+                                 <td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;">
+                                    <div class="info-box">
+                                        <div class="info-upper">${salVal.toLocaleString()}</div>
+                                        <div class="info-lower">${costVal.toLocaleString()}</div>
+                                    </div>
+                                 </td>`;
                     }
                     html += `<td class="metric-label">${met.n}</td>`;
                     let h1=0, h2=0;
@@ -272,6 +292,7 @@
         document.getElementById('generic-content').innerHTML = html;
     }
 
+    // --- 営業実績表とグラフ：現状維持 ---
     function renderSalesTable() {
         const rk = document.getElementById('region-select').value;
         const d = getRD(rk); const tb = document.getElementById('table-body');
@@ -279,7 +300,7 @@
         const labels = [{l:'売上',c:'sales',r:['B','A','R']},{l:'稼働原価',c:'kCost',r:['B','A','R']},{l:'A利益',c:'aProfit',r:['B','A','R']},{l:'待機原価',c:'waitCost',r:['A']},{l:'プロパー(稼働)',c:'propK',r:['B','A','R']},{l:'BP',c:'bpK',r:['A']},{l:'稼働エンジニア数',c:'workEngTotal',r:['B','A']},{l:'エンジニア総数',c:'totalEng',r:['B','A','R']},{l:'プロパー(待機)',c:'propW',r:['B','A']},{l:'待機率',c:'waitRate',r:['A']}];
         labels.forEach(item => {
             const hasB=item.r.includes('B'), hasA=item.r.includes('A'), hasR=item.r.includes('R'), rCnt=item.r.length;
-            let rB=`<tr class="row-border"><td rowspan="${rCnt}" class="cat-header">${item.l}</td><td class="type-col">予算</td>`, rA=`<tr class="${!hasR?'item-bottom-bold':'row-border'}"><td class="type-col">実績</td>`, rR=`<tr class="item-bottom-bold"><td class="type-col">達成率</td>`;
+            let rB=`<tr class="dotted-line"><td rowspan="${rCnt}" class="cat-header">${item.l}</td><td class="type-col">予算</td>`, rA=`<tr class="${!hasR?'item-bottom-bold':'dotted-line'}"><td class="type-col">実績</td>`, rR=`<tr class="item-bottom-bold"><td class="type-col">達成率</td>`;
             if(!hasB) rA = `<tr class="item-bottom-bold"><td rowspan="${rCnt}" class="cat-header">${item.l}</td><td class="type-col">実績</td>`;
             let b1=0, b2=0, a1=0, a2=0;
             for(let i=0; i<12; i++){
@@ -343,6 +364,7 @@
 </script>
 </body>
 </html>
+
 
 
 
