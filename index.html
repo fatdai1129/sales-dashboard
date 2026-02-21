@@ -214,9 +214,9 @@
         const AffIndex = 2;    // C列
         const NoIndex = 3;     // D列
         const NameIndex = 4;   // E列
-        const SalaryIndex = 10; // K列（給料）
-        const CostIndex = 11;   // L列（コスト）
-        const DataStartCol = 12; // M列（6月売上開始）
+        const SalaryIndex = 10; // K列
+        const CostIndex = 11;   // L列
+        const DataStartCol = 12; // M列
         
         let data = rows.slice(1).filter(r => r[NoIndex] && r[NoIndex].trim() !== "" && r[NoIndex] !== "技術者№");
         if (filterRegion !== 'total') data = data.filter(r => r[AffIndex] === filterRegion);
@@ -235,7 +235,7 @@
                 </div>
             </th> 
             <th rowspan="2" class="type-col">項目</th>
-            <th colspan="6">上期実績</th><th class="total-header">上期合計</th>
+            <th colspan="6">上期実績</th><th class="total-header">上期計</th>
             <th colspan="6" class="second-half-start">下期実績・予想</th><th class="total-header">下期合計</th>
             <th class="total-header">年間合計</th></tr>
             <tr>
@@ -257,7 +257,6 @@
                     mS.push(parseNum(m[DataStartCol + i * 2])); 
                 }
 
-                // 運用率：売上 / 給料 (小数点第3位切り捨て)
                 const metrics = [
                     { n: '売上', d: mS, type: 'num' }, 
                     { n: '利益', d: mS.map(s => s - salVal), type: 'num' },
@@ -269,37 +268,56 @@
                     let trCls = (idx < 3) ? "row-border" : "item-bottom-bold";
                     html += `<tr class="${trCls}">`;
                     if(idx===0) {
-                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;">
-                                    <div class="flex-stack-box"><div class="tech-name-label">${name}</div><div class="tech-no-label">${no}</div></div>
-                                 </td>
-                                 <td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;">
-                                    <div class="flex-stack-box">
-                                        <div class="data-value-std">${salVal.toLocaleString()}</div>
-                                        <div class="data-value-std">${costVal.toLocaleString()}</div>
-                                    </div>
-                                 </td>`;
+                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name">${name}</div><div class="tech-no">${no}</div></div></td>`;
+                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="std-text-box"><div>${salVal.toLocaleString()}</div><div>${costVal.toLocaleString()}</div></div></td>`;
                     }
                     html += `<td class="metric-label">${met.n}</td>`;
-                    let h1=0, h2=0;
+                    
+                    let h1Sum = 0, h2Sum = 0;
                     met.d.forEach((v, i) => {
                         const cellCls = `${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}`;
                         let displayVal;
                         if (met.type === 'num') {
                             displayVal = v.toLocaleString();
-                            if(i<6) h1+=v; else h2+=v;
                         } else if (met.type === 'ratio') {
-                            // 小数点第3位を切り捨てて、小数点第2位まで表示
                             displayVal = (Math.floor(v * 100) / 100).toFixed(2);
                         } else {
                             displayVal = v.toFixed(1) + '%';
                         }
                         html += `<td class="${cellCls}">${displayVal}</td>`;
                         
+                        // 集計
+                        if(i<6) h1Sum += v; else h2Sum += v;
+
                         if(i===5) {
-                            html += `<td class="total-col">${met.type==='num'?Math.round(h1).toLocaleString():'-'}</td>`;
+                            let h1Display;
+                            if (met.type === 'num') {
+                                h1Display = Math.round(h1Sum).toLocaleString();
+                            } else if (met.type === 'ratio') {
+                                // 平均値を小数点第3位切り捨てで算出
+                                h1Display = (Math.floor((h1Sum / 6) * 100) / 100).toFixed(2);
+                            } else {
+                                // 平均値を算出
+                                h1Display = (h1Sum / 6).toFixed(1) + '%';
+                            }
+                            html += `<td class="total-col">${h1Display}</td>`;
                         }
                     });
-                    html += `<td class="total-col">${met.type==='num'?Math.round(h2).toLocaleString():'-'}</td><td class="total-col">${met.type==='num'?(Math.round(h1+h2)).toLocaleString():'-'}</td></tr>`;
+
+                    // 下期合計と年間合計の平均/合計算出
+                    let h2Display, yrDisplay;
+                    if (met.type === 'num') {
+                        h2Display = Math.round(h2Sum).toLocaleString();
+                        yrDisplay = Math.round(h1Sum + h2Sum).toLocaleString();
+                    } else if (met.type === 'ratio') {
+                        h2Display = (Math.floor((h2Sum / 6) * 100) / 100).toFixed(2);
+                        yrDisplay = (Math.floor(((h1Sum + h2Sum) / 12) * 100) / 100).toFixed(2);
+                    } else {
+                        h2Display = (h2Sum / 6).toFixed(1) + '%';
+                        yrDisplay = ((h1Sum + h2Sum) / 12).toFixed(1) + '%';
+                    }
+                    
+                    html += `<td class="total-col">${h2Display}</td><td class="total-col">${yrDisplay}</td></tr>`;
                 });
             });
         });
