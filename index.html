@@ -16,34 +16,25 @@
         body { font-family: 'Hiragino Sans', sans-serif; background-color: #f0f4f8; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 1750px; margin: auto; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 30px; overflow-x: auto; }
-        
         .top-nav { background: #1a202c; padding: 15px 20px; color: white; display: flex; align-items: center; margin-bottom: 20px; border-radius: 0 0 12px 12px; }
         .nav-select { background: #2d3748; color: white; border: 1px solid #4a5568; padding: 8px 15px; border-radius: 6px; font-size: 1rem; margin-right: 15px; cursor: pointer; }
-
-        h2 { font-size: 1.4rem; margin: 0; color: #1a202c; border-left: 5px solid #3182ce; padding-left: 15px; }
-        
+        h2 { font-size: 1.4rem; margin: 0; color: #1a202c; border-left: 5px solid #3182ce; padding-left: 15px; text-align: left; }
         table { width: 100%; border-collapse: collapse; min-width: 1500px; background: white; border: 2px solid black !important; }
         th, td { border: 1px solid black; padding: 6px 4px; text-align: right; font-size: 0.85rem; }
         th { background: #edf2f7; color: #4a5568; text-align: center; border: 1px solid black !important; border-bottom: 2px solid black !important; }
-        
         .cat-header { background: #ebf8ff; font-weight: bold; text-align: center; color: #2c5282; border-right: 2px solid black !important; border-bottom: 2px solid black !important; min-width: 130px; }
         .type-col { text-align: center; border-right: 2px solid black !important; min-width: 80px; }
         .month-sep { border-right: 2px solid black !important; }
         .second-half-start { border-left: 2px solid black !important; }
         .total-header { background: #edf2f7; color: #4a5568; text-align: center; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
-
-        /* 区切り線設定 */
         .row-border td:not(.cat-header) { border-bottom: 1px solid #ddd !important; }
         .item-bottom-bold td { border-bottom: 2px solid black !important; }
-
         .metric-label { text-align: center; background: #f8fafc; font-weight: bold; min-width: 100px; border-right: 2px solid black !important; }
         .affiliation-header { background: #1a202c !important; color: white !important; text-align: left !important; padding: 10px 15px !important; font-size: 1rem !important; border-bottom: 2px solid black !important; }
-        
         .tech-info-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
         .tech-name { font-weight: bold; font-size: 0.9rem; }
         .tech-no { font-size: 0.7rem; color: #666; }
-
         .chart-box { height: 400px; width: 100%; margin-bottom: 20px; position: relative; }
         #loading { font-weight: bold; color: #3182ce; margin-top: 10px; }
     </style>
@@ -59,7 +50,6 @@
         <p id="err_msg" style="color: red; display: none; margin-top:10px;">パスワードが違います</p>
     </div>
 </div>
-
 <div id="main_content">
     <div class="top-nav">
         <select id="year-select" class="nav-select" onchange="initApp()"></select>
@@ -86,7 +76,6 @@
             </select>
         </span>
     </div>
-
     <div class="container">
         <div id="dashboard-sales" class="dashboard-view">
             <div class="card">
@@ -130,7 +119,6 @@
         </div>
     </div>
 </div>
-
 <script>
     Chart.register(ChartDataLabels);
     const YEAR_CONFIG = {
@@ -140,7 +128,6 @@
             status: { id: '1LRVwKu-YXWJvRgSophqF0VlORS5_dcjztSvfz95Qe_E', sheet: '売込状況一覧' }
         }
     };
-
     let dataSet = { west: { budget:{}, actual:{} }, tokai: { budget:{}, actual:{} }, tokyo: { budget:{}, actual:{} } };
     let currentPromotionRows = [];
     let salesChart, waitingChart, engineerChart;
@@ -155,11 +142,10 @@
     };
 
     function checkPW() {
-        if (document.getElementById('pass_val').value === "freeeks2022") { initApp(); } 
-        else { document.getElementById('err_msg').style.display = 'block'; }
+        if (document.getElementById('pass_val').value === "freeeks2022") initApp();
+        else document.getElementById('err_msg').style.display = 'block';
     }
 
-    // 数値クレンジング関数（カンマを除去してパース）
     function parseNum(val) {
         if (val === null || val === undefined || val === '') return 0;
         let s = String(val).replace(/,/g, '').replace(/[^-0.9.]/g, '');
@@ -227,13 +213,9 @@
         affs.forEach(aff => {
             html += `<tr><td colspan="18" class="affiliation-header">${aff}</td></tr>`;
             data.filter(r => r[AffIndex] === aff).forEach(m => {
-                const name = m[NameIndex] || '-'; const no = m[NoIndex] || '-'; 
-                const sal = parseNum(m[SalaryIndex]);
+                const name = m[NameIndex] || '-'; const no = m[NoIndex] || '-'; const sal = parseNum(m[SalaryIndex]);
                 const mS = [], mC = [];
-                for(let i=0; i<12; i++) { 
-                    mS.push(parseNum(m[12+i*2])); 
-                    mC.push(parseNum(m[13+i*2])); 
-                }
+                for(let i=0; i<12; i++) { mS.push(parseNum(m[12+i*2])); mC.push(parseNum(m[13+i*2])); }
                 const metrics = [
                     { n: '売上', d: mS, type: 'num' }, { n: '利益', d: mS.map((s,i)=>s-mC[i]), type: 'num' },
                     { n: '利益率', d: mS.map((s,i)=>s?((s-mC[i])/s*100):0), type: 'pct' }, { n: '運用率', d: mS.map(s=>sal?(s/sal*100):0), type: 'pct' }
@@ -263,7 +245,7 @@
         const labels = [{l:'売上',c:'sales',r:['B','A','R']},{l:'稼働原価',c:'kCost',r:['B','A','R']},{l:'A利益',c:'aProfit',r:['B','A','R']},{l:'待機原価',c:'waitCost',r:['A']},{l:'プロパー(稼働)',c:'propK',r:['B','A','R']},{l:'BP',c:'bpK',r:['A']},{l:'稼働エンジニア数',c:'workEngTotal',r:['B','A']},{l:'エンジニア総数',c:'totalEng',r:['B','A','R']},{l:'プロパー(待機)',c:'propW',r:['B','A']},{l:'待機率',c:'waitRate',r:['A']}];
         labels.forEach(item => {
             const hasB=item.r.includes('B'), hasA=item.r.includes('A'), hasR=item.r.includes('R'), rCnt=item.r.length;
-            let rB=`<tr class="row-border"><td rowspan="${rCnt}" class="cat-header">${item.l}</td><td class="type-col">予算</td>`, rA=`<tr class="${!hasR?'item-bottom-bold':''}"><td class="type-col">実績</td>`, rR=`<tr class="item-bottom-bold"><td class="type-col">達成率</td>`;
+            let rB=`<tr class="row-border"><td rowspan="${rCnt}" class="cat-header">${item.l}</td><td class="type-col">予算</td>`, rA=`<tr class="${!hasR?'item-bottom-bold':'row-border'}"><td class="type-col">実績</td>`, rR=`<tr class="item-bottom-bold"><td class="type-col">達成率</td>`;
             if(!hasB) rA = `<tr class="item-bottom-bold"><td rowspan="${rCnt}" class="cat-header">${item.l}</td><td class="type-col">実績</td>`;
             let b1=0, b2=0, a1=0, a2=0;
             for(let i=0; i<12; i++){
@@ -288,12 +270,13 @@
     }
 
     function drawSalesCharts(d) {
+        const opt = { responsive:true, maintainAspectRatio:false, plugins:{datalabels:{anchor:'end',align:'top',formatter:v=>v?v.toLocaleString():''}} };
         if(salesChart) salesChart.destroy();
-        salesChart = new Chart(document.getElementById('salesChart'), { type:'bar', data:{ labels:months, datasets:[{label:'予算',data:d.budget.sales,backgroundColor:'#cbd5e0'},{label:'実績',data:d.actual.sales.map((v,i)=>i<9?v:undefined),backgroundColor:'#3182ce'}] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{datalabels:{anchor:'end',align:'top',formatter:v=>v?v.toLocaleString():''}} } });
+        salesChart = new Chart(document.getElementById('salesChart'), { type:'bar', data:{ labels:months, datasets:[{label:'予算',data:d.budget.sales,backgroundColor:'#cbd5e0'},{label:'実績',data:d.actual.sales.map((v,i)=>i<9?v:undefined),backgroundColor:'#3182ce'}] }, options:opt });
         if(engineerChart) engineerChart.destroy();
-        engineerChart = new Chart(document.getElementById('engineerChart'), { type:'bar', data:{ labels:months, datasets:[{label:'プロパー',data:d.actual.propK.map((v,i)=>i<9?v:undefined),backgroundColor:'#10b981'},{label:'BP',data:d.actual.bpK.map((v,i)=>i<9?v:undefined),backgroundColor:'#8b5cf6'}] }, options:{ responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true},y:{stacked:true}}, plugins:{datalabels:{color:'#fff'}} } });
+        engineerChart = new Chart(document.getElementById('engineerChart'), { type:'bar', data:{ labels:months, datasets:[{label:'プロパー',data:d.actual.propK.map((v,i)=>i<9?v:undefined),backgroundColor:'#10b981'},{label:'BP',data:d.actual.bpK.map((v,i)=>i<9?v:undefined),backgroundColor:'#8b5cf6'}] }, options:{...opt, scales:{x:{stacked:true},y:{stacked:true}}, plugins:{datalabels:{color:'#fff'}}} });
         if(waitingChart) waitingChart.destroy();
-        waitingChart = new Chart(document.getElementById('waitingChart'), { type:'bar', data:{ labels:months, datasets:[{label:'待機原価',data:d.actual.waitCost.map((v,i)=>i<9?v:undefined),backgroundColor:'#e53e3e'}] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{datalabels:{anchor:'end',align:'top',formatter:v=>v?v.toLocaleString():''}} } });
+        waitingChart = new Chart(document.getElementById('waitingChart'), { type:'bar', data:{ labels:months, datasets:[{label:'待機原価',data:d.actual.waitCost.map((v,i)=>i<9?v:undefined),backgroundColor:'#e53e3e'}] }, options:opt });
     }
 
     function processSalesData(rows) {
@@ -303,15 +286,13 @@
             const rK = regMap[row[0]], lK = lblMap[row[1]], type = row[2] === '予算' ? 'budget' : 'actual';
             if(rK && lK) {
                 if(!dataSet[rK][type][lK]) dataSet[rK][type][lK] = Array(12).fill(null);
-                for(let i=3; i<15; i++) {
-                    dataSet[rK][type][lK][i-3] = parseNum(row[i]);
-                }
+                for(let i=3; i<15; i++) dataSet[rK][type][lK][i-3] = parseNum(row[i]);
             }
         });
     }
 
     function getRD(k) {
-        let rs = k==='total'?['west','tokai','tokyo']:(k==='east' ? ['tokai', 'tokyo'] : [k]);
+        let rs = k==='total'?['west','tokai','tokyo']:(k==='east'?['tokai','tokyo']:[k]);
         const res = { budget:{}, actual:{} }, lbls = ['sales','kCost','aProfit','waitCost','propK','bpK','workEngTotal','totalEng','propW','waitRate'];
         lbls.forEach(c => {
             res.budget[c] = Array(12).fill(0).map((_,i)=>rs.reduce((s,r)=>s+(dataSet[r].budget[c]?.[i]||0),0));
