@@ -24,8 +24,8 @@
         th, td { border: 1px solid black; padding: 6px 4px; text-align: right; font-size: 0.82rem; word-break: break-all; }
         th { background: #edf2f7; color: #4a5568; text-align: center; border-bottom: 2px solid black !important; }
         
-        .cat-header { background: #ebf8ff; font-weight: bold; text-align: center; color: #2c5282; border-right: 2px solid black !important; border-bottom: 2px solid black !important; width: 125px; }
-        .type-col { text-align: center; border-right: 2px solid black !important; width: 70px; }
+        .cat-header { background: #ebf8ff; font-weight: bold; text-align: center; color: #2c5282; border-right: 2px solid black !important; border-bottom: 2px solid black !important; width: 130px; }
+        .type-col { text-align: center; border-right: 2px solid black !important; width: 75px; }
         .month-sep { border-right: 2px solid black !important; }
         .second-half-start { border-left: 2px solid black !important; }
         .total-header { background: #edf2f7; color: #4a5568; text-align: center; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
@@ -33,7 +33,7 @@
         .affiliation-header { background: #1a202c !important; color: white !important; text-align: left !important; padding: 10px 15px !important; font-size: 1rem !important; border-bottom: 2px solid black !important; }
         
         .item-bottom-bold td { border-bottom: 2px solid black !important; }
-        .dotted-line td:not(.cat-header) { border-bottom: 1px dotted black !important; }
+        .row-border td:not(.cat-header) { border-bottom: 1px solid #ddd !important; }
 
         .info-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
         .info-upper { font-weight: bold; font-size: 0.88rem; color: #1a202c; }
@@ -153,10 +153,10 @@
         else document.getElementById('err_msg').style.display = 'block';
     }
 
-    // 数値パース関数（カンマ除去）
+    // 数値パース関数（正規表現のタイポを修正：0.9 -> 0-9）
     function parseNum(val) {
         if (val === null || val === undefined || val === '') return 0;
-        let s = String(val).replace(/,/g, '').replace(/[^-0.9.]/g, '');
+        let s = String(val).replace(/,/g, '').replace(/[^-0-9.]/g, '');
         return Math.round(parseFloat(s)) || 0;
     }
 
@@ -209,21 +209,19 @@
         renderPromotionTable(currentPromotionRows, region);
     }
 
-    // --- 営業推進管理表：画像（image_7a22e1.jpg）の列位置に修正 ---
     function renderPromotionTable(rows, filterRegion) {
         if (rows.length < 2) return;
         
-        // 正確な列インデックス設定
-        const AffIndex = 2;    // C列：所属
+        // spreadsheet画像(image_7a22e1.jpg)に基づきインデックスを正確に設定
+        const AffIndex = 2;    // C列：所属（西日本など）
         const NoIndex = 3;     // D列：技術者№
         const NameIndex = 4;   // E列：技術者名
         const SalaryIndex = 11; // L列：給与（月額）
-        const CostIndex = 12;   // M列：原価（社会保険...）
-        const DataStartCol = 13; // N列：6月売上 開始点
+        const CostIndex = 12;   // M列：原価
+        const DataStartCol = 13; // N列：6月売上開始
         
-        // D列（技術者№）が空欄、またはヘッダー行の場合は除外
+        // D列（技術者№）が空欄の場合は除外
         let data = rows.slice(1).filter(r => r[NoIndex] && r[NoIndex].trim() !== "" && r[NoIndex] !== "技術者№");
-        
         if (filterRegion !== 'total') data = data.filter(r => r[AffIndex] === filterRegion);
         
         let html = `<table><thead><tr>
@@ -249,11 +247,9 @@
             data.filter(r => r[AffIndex] === aff).forEach(m => {
                 const name = m[NameIndex] || '-';
                 const no = m[NoIndex] || '-';
-                const salVal = parseNum(m[SalaryIndex]); // L12など
-                const costVal = parseNum(m[CostIndex]);   // M12など
-                
+                const salVal = parseNum(m[SalaryIndex]); 
+                const costVal = parseNum(m[CostIndex]);
                 const mS = [], mC = [];
-                // 6月＝N列（13）から開始する法則に修正
                 for(let i=0; i<12; i++) { 
                     mS.push(parseNum(m[DataStartCol + i * 2])); 
                     mC.push(parseNum(m[DataStartCol + i * 2 + 1])); 
@@ -263,7 +259,7 @@
                     { n: '利益率', d: mS.map((s,i)=>s?((s-mC[i])/s*100):0), type: 'pct' }, { n: '運用率', d: mS.map(s=>salVal?(s/salVal*100):0), type: 'pct' }
                 ];
                 metrics.forEach((met, idx) => {
-                    let trCls = (idx < 3) ? "dotted-line" : "item-bottom-bold";
+                    let trCls = (idx < 3) ? "row-border" : "item-bottom-bold";
                     html += `<tr class="${trCls}">`;
                     if(idx===0) {
                         html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name">${name}</div><div class="tech-no">${no}</div></div></td>`;
@@ -285,7 +281,6 @@
         document.getElementById('generic-content').innerHTML = html;
     }
 
-    // --- 営業実績表：一切変更なし ---
     function renderSalesTable() {
         const rk = document.getElementById('region-select').value;
         const d = getRD(rk); const tb = document.getElementById('table-body');
@@ -357,6 +352,7 @@
 </script>
 </body>
 </html>
+
 
 
 
