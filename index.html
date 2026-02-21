@@ -231,13 +231,15 @@
         const overall = { sales: Array(12).fill(0), profit: Array(12).fill(0), margin: Array(12).fill(0), opRate: Array(12).fill(0), counts: Array(12).fill(0) };
         
         const techProcessed = data.map(m => {
-            const sal = parseNum(m[SalaryIndex]);
+            const isBP = (m[NoIndex] === 'BP 要員');
+            const salVal = parseNum(m[SalaryIndex]);
+            const costVal = parseNum(m[CostIndex]);
+            const calcBase = isBP ? costVal : salVal; // BPならコスト、以外なら給与を使用
+
             const sList = []; for(let i=0; i<12; i++) sList.push(parseNum(m[DataStartCol + i * 2]));
-            const pList = sList.map(s => s > 0 ? s - sal : 0);
-            const mList = sList.map(s => s > 0 ? ((s - sal) / s * 100) : 0);
-            
-            // 割り算の前に給料(sal)が0でないかチェックしてInfinityを回避
-            const oList = sList.map(s => (s > 0 && sal > 0) ? (s / sal) : 0);
+            const pList = sList.map(s => s > 0 ? s - calcBase : 0);
+            const mList = sList.map(s => s > 0 ? ((s - calcBase) / s * 100) : 0);
+            const oList = sList.map(s => (s > 0 && calcBase > 0) ? (s / calcBase) : 0);
             
             sList.forEach((s, i) => {
                 if(s > 0) {
@@ -246,7 +248,7 @@
                     overall.counts[i]++;
                 }
             });
-            return { name: m[NameIndex], no: m[NoIndex], aff: m[AffIndex], sal, cost: parseNum(m[CostIndex]), sList, pList, mList, oList };
+            return { name: m[NameIndex], no: m[NoIndex], aff: m[AffIndex], salVal, costVal, sList, pList, mList, oList };
         });
 
         html += `<tr><td colspan="18" class="affiliation-header">全体合計 (${filterRegion==='total'?'全社':filterRegion})</td></tr>`;
@@ -280,7 +282,7 @@
                     html += `<tr class="${idx === 3 ? 'item-bottom-bold' : 'row-border'}">`;
                     if(idx === 0) {
                         html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name-label">${t.name}</div><div class="tech-no-label">${t.no}</div></div></td>`;
-                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="flex-stack-box"><div class="data-value-std">${t.sal.toLocaleString()}</div><div class="data-value-std">${t.cost.toLocaleString()}</div></div></td>`;
+                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="flex-stack-box"><div class="data-value-std">${t.salVal.toLocaleString()}</div><div class="data-value-std">${t.costVal.toLocaleString()}</div></div></td>`;
                     }
                     html += `<td class="metric-label">${met.n}</td>`;
                     let h1I = 0, h1C = 0, h2I = 0, h2C = 0;
@@ -385,9 +387,6 @@
 </script>
 </body>
 </html>
-
-
-
 
 
 
