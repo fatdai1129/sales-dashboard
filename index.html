@@ -20,7 +20,6 @@
         /* ナビゲーションバー */
         .top-nav { background: #1a202c; padding: 15px 20px; color: white; display: flex; align-items: center; margin-bottom: 20px; border-radius: 0 0 12px 12px; }
         .nav-select { background: #2d3748; color: white; border: 1px solid #4a5568; padding: 8px 15px; border-radius: 6px; font-size: 1rem; margin-right: 15px; cursor: pointer; }
-        .nav-label { margin-right: 10px; font-weight: bold; }
 
         h2 { font-size: 1.4rem; margin: 0; color: #1a202c; border-left: 5px solid #3182ce; padding-left: 15px; }
         
@@ -73,7 +72,6 @@
         </select>
         
         <span id="sales-region-container" style="display:none;">
-            <span class="nav-label">拠点:</span>
             <select id="region-select" class="nav-select" onchange="renderSalesTable()">
                 <option value="total">全社</option>
                 <option value="west">西日本</option>
@@ -84,7 +82,6 @@
         </span>
 
         <span id="promotion-filter-container" style="display:none;">
-            <span class="nav-label">拠点:</span>
             <select id="promotion-region-select" class="nav-select" onchange="filterPromotion()">
                 <option value="total">全社</option>
                 <option value="西日本">西日本</option>
@@ -146,7 +143,6 @@
 <script>
     Chart.register(ChartDataLabels);
     
-    // 年度設定：2027年を削除
     const YEAR_CONFIG = {
         '2025年6月期': {
             sales: { id: '1LRVwKu-YXWJvRgSophqF0VlORS5_dcjztSvfz95Qe_E', sheet: '実績データ' },
@@ -346,14 +342,6 @@
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
 
 
 
