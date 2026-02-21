@@ -20,7 +20,6 @@
         .nav-select { background: #2d3748; color: white; border: 1px solid #4a5568; padding: 8px 15px; border-radius: 6px; font-size: 1rem; margin-right: 15px; cursor: pointer; }
         h2 { font-size: 1.4rem; margin: 0; color: #1a202c; border-left: 5px solid #3182ce; padding-left: 15px; text-align: left; }
         
-        /* 枠線は確実に黒く、ズレを防ぐため collapse を使用 */
         table { width: 100%; border-collapse: collapse; background: white; border: 2px solid black !important; table-layout: fixed; }
         th, td { border: 1px solid black; padding: 6px 4px; text-align: right; font-size: 0.82rem; word-break: break-all; }
         th { background: #edf2f7; color: #4a5568; text-align: center; border-bottom: 2px solid black !important; }
@@ -33,8 +32,9 @@
         .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .affiliation-header { background: #1a202c !important; color: white !important; text-align: left !important; padding: 10px 15px !important; font-size: 1rem !important; border-bottom: 2px solid black !important; }
         
-        /* 区切り線 */
         .item-bottom-bold td { border-bottom: 2px solid black !important; }
+        .row-border td:not(.cat-header) { border-bottom: 1px solid #ddd !important; }
+
         .tech-info-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
         .tech-name { font-weight: bold; font-size: 0.9rem; }
         .tech-no { font-size: 0.7rem; color: #666; }
@@ -204,7 +204,7 @@
         renderPromotionTable(currentPromotionRows, region);
     }
 
-    // --- 営業推進管理表の描画ロジック ---
+    // --- 営業推進管理表：レイアウトの修正 ---
     function renderPromotionTable(rows, filterRegion) {
         if (rows.length < 2) return;
         const AffIndex = 2, NoIndex = 3, NameIndex = 4, SalaryIndex = 5;
@@ -212,9 +212,8 @@
         if (filterRegion !== 'total') data = data.filter(r => r[AffIndex] === filterRegion);
         
         let html = `<table><thead><tr>
-            <th rowspan="2" class="cat-header">所属</th>
             <th rowspan="2" class="cat-header">技術者名</th>
-            <th rowspan="2" class="type-col">項目</th>
+            <th rowspan="2" class="cat-header"></th> <th rowspan="2" class="type-col">項目</th>
             <th colspan="6">上期実績</th><th class="total-header">上期合計</th>
             <th colspan="6" class="second-half-start">下期実績・予想</th><th class="total-header">下期合計</th>
             <th class="total-header">年間合計</th></tr>
@@ -230,24 +229,27 @@
             data.filter(r => r[AffIndex] === aff).forEach(m => {
                 const name = m[NameIndex] || '-'; const no = m[NoIndex] || '-'; const sal = parseNum(m[SalaryIndex]);
                 const mS = [], mC = [];
-                // 6月売上＝M(12), 6月原価＝N(13)の法則
                 for(let i=0; i<12; i++) { mS.push(parseNum(m[12+i*2])); mC.push(parseNum(m[13+i*2])); }
                 const metrics = [
                     { n: '売上', d: mS, type: 'num' }, { n: '利益', d: mS.map((s,i)=>s-mC[i]), type: 'num' },
                     { n: '利益率', d: mS.map((s,i)=>s?((s-mC[i])/s*100):0), type: 'pct' }, { n: '運用率', d: mS.map(s=>sal?(s/sal*100):0), type: 'pct' }
                 ];
                 metrics.forEach((met, idx) => {
-                    html += `<tr class="${idx===3?'item-bottom-bold':''}">`;
-                    if(idx===0) html += `<td rowspan="4" class="cat-header" style="background:white">${aff}</td><td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name">${name}</div><div class="tech-no">${no}</div></div></td>`;
+                    html += `<tr class="${idx===3?'item-bottom-bold':'row-border'}">`;
+                    if(idx===0) {
+                        // 左端に技術者名、その次に新しい列
+                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name">${name}</div><div class="tech-no">${no}</div></div></td>`;
+                        html += `<td rowspan="4" class="cat-header" style="background:white;"></td>`;
+                    }
                     html += `<td class="metric-label">${met.n}</td>`;
                     let h1=0, h2=0;
                     met.d.forEach((v, i) => {
                         const cellCls = `${i===5?'month-sep':''} ${i===6?'second-half-start':''}`;
                         html += `<td class="${cellCls}">${met.type==='num'?v.toLocaleString():v.toFixed(1)+'%'}</td>`;
                         if(i<6) h1+=v; else h2+=v;
-                        if(i===5) html += `<td class="total-col">${met.type==='num'?h1.toLocaleString():'-'}</td>`;
+                        if(i===5) html += `<td class="total-col">${met.type==='num'?Math.round(h1).toLocaleString():'-'}</td>`;
                     });
-                    html += `<td class="total-col">${met.type==='num'?h2.toLocaleString():'-'}</td><td class="total-col">${met.type==='num'?(h1+h2).toLocaleString():'-'}</td></tr>`;
+                    html += `<td class="total-col">${met.type==='num'?Math.round(h2).toLocaleString():'-'}</td><td class="total-col">${met.type==='num'?Math.round(h1+h2).toLocaleString():'-'}</td></tr>`;
                 });
             });
         });
@@ -255,40 +257,32 @@
         document.getElementById('generic-content').innerHTML = html;
     }
 
-    // --- 営業実績表とグラフ ---
+    // --- 営業実績表とグラフ：このセクションは一切変更していません ---
     function renderSalesTable() {
         const rk = document.getElementById('region-select').value;
         const d = getRD(rk); const tb = document.getElementById('table-body');
         tb.innerHTML = "";
-        const labels = [
-            {l:'売上',c:'sales',r:['B','A','R']},{l:'稼働原価',c:'kCost',r:['B','A','R']},{l:'A利益',c:'aProfit',r:['B','A','R']},
-            {l:'待機原価',c:'waitCost',r:['A']},{l:'プロパー(稼働)',c:'propK',r:['B','A','R']},{l:'BP',c:'bpK',r:['A']},
-            {l:'稼働エンジニア数',c:'workEngTotal',r:['B','A']},{l:'エンジニア総数',c:'totalEng',r:['B','A','R']},
-            {l:'プロパー(待機)',c:'propW',r:['B','A']},{l:'待機率',c:'waitRate',r:['A']}
-        ];
+        const labels = [{l:'売上',c:'sales',r:['B','A','R']},{l:'稼働原価',c:'kCost',r:['B','A','R']},{l:'A利益',c:'aProfit',r:['B','A','R']},{l:'待機原価',c:'waitCost',r:['A']},{l:'プロパー(稼働)',c:'propK',r:['B','A','R']},{l:'BP',c:'bpK',r:['A']},{l:'稼働エンジニア数',c:'workEngTotal',r:['B','A']},{l:'エンジニア総数',c:'totalEng',r:['B','A','R']},{l:'プロパー(待機)',c:'propW',r:['B','A']},{l:'待機率',c:'waitRate',r:['A']}];
         labels.forEach(item => {
             const hasB=item.r.includes('B'), hasA=item.r.includes('A'), hasR=item.r.includes('R'), rCnt=item.r.length;
-            let rB=`<tr><td rowspan="${rCnt}" class="cat-header">${item.l}</td><td class="type-col">予算</td>`;
-            let rA=`<tr class="${!hasR?'item-bottom-bold':''}"><td class="type-col">実績</td>`;
-            let rR=`<tr class="item-bottom-bold"><td class="type-col">達成率</td>`;
+            let rB=`<tr class="row-border"><td rowspan="${rCnt}" class="cat-header">${item.l}</td><td class="type-col">予算</td>`, rA=`<tr class="${!hasR?'item-bottom-bold':'row-border'}"><td class="type-col">実績</td>`, rR=`<tr class="item-bottom-bold"><td class="type-col">達成率</td>`;
             if(!hasB) rA = `<tr class="item-bottom-bold"><td rowspan="${rCnt}" class="cat-header">${item.l}</td><td class="type-col">実績</td>`;
-            
             let b1=0, b2=0, a1=0, a2=0;
             for(let i=0; i<12; i++){
                 let bV=d.budget[item.c]?.[i]||0, aV=d.actual[item.c]?.[i]||0;
                 if(i<6){b1+=bV; a1+=aV;}else{b2+=bV; a2+=aV;}
-                const cls=`${i===5?'month-sep':''} ${i===6?'second-half-start':''}`;
-                if(hasB) rB+=`<td class="${cls}">${bV?bV.toLocaleString():'-'}</td>`;
-                if(hasA) rA+=`<td class="${cls}">${d.actual[item.c]?.[i]!==null?(item.c==='waitRate'?d.actual[item.c][i].toFixed(1)+'%':d.actual[item.c][i].toLocaleString()):'-'}</td>`;
+                const cls=`${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}`;
+                if(hasB) rB+=`<td class="${cls}">${bV?Math.round(bV).toLocaleString():'-'}</td>`;
+                if(hasA) rA+=`<td class="${cls}">${d.actual[item.c]?.[i]!==null?(item.c==='waitRate'?d.actual[item.c][i].toFixed(1)+'%':Math.round(d.actual[item.c][i]).toLocaleString()):'-'}</td>`;
                 if(hasR) rR+=`<td class="${cls}">${(d.actual[item.c]?.[i]!==null&&bV)?(d.actual[item.c][i]/bV*100).toFixed(1)+'%':'-'}</td>`;
                 if(i===5){
-                    if(hasB) rB+=`<td class="total-col">${b1.toLocaleString()}</td>`;
-                    if(hasA) rA+=`<td class="total-col">${a1.toLocaleString()}</td>`;
+                    if(hasB) rB+=`<td class="total-col">${Math.round(b1).toLocaleString()}</td>`;
+                    if(hasA) rA+=`<td class="total-col">${Math.round(a1).toLocaleString()}</td>`;
                     if(hasR) rR+=`<td class="total-col">${b1?(a1/b1*100).toFixed(1)+'%':'-'}</td>`;
                 }
             }
-            if(hasB) rB+=`<td class="total-col">${b2.toLocaleString()}</td><td class="total-col">${(b1+b2).toLocaleString()}</td></tr>`;
-            if(hasA) rA+=`<td class="total-col">${a2.toLocaleString()}</td><td class="total-col">${(a1+a2).toLocaleString()}</td></tr>`;
+            if(hasB) rB+=`<td class="total-col">${Math.round(b2).toLocaleString()}</td><td class="total-col">${Math.round(b1+b2).toLocaleString()}</td></tr>`;
+            if(hasA) rA+=`<td class="total-col">${Math.round(a2).toLocaleString()}</td><td class="total-col">${Math.round(a1+a2).toLocaleString()}</td></tr>`;
             if(hasR) rR+=`<td class="total-col">${b2?(a2/b2*100).toFixed(1)+'%':'-'}</td><td class="total-col">${(b1+b2)?((a1+a2)/(b1+b2)*100).toFixed(1)+'%':'-'}</td></tr>`;
             tb.innerHTML += (hasB?rB:'')+rA+(hasR?rR:'');
         });
@@ -335,6 +329,7 @@
 </script>
 </body>
 </html>
+
 
 
 
