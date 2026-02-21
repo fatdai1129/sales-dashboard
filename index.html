@@ -234,12 +234,18 @@
             const isBP = (m[NoIndex] === 'BP 要員');
             const salVal = parseNum(m[SalaryIndex]);
             const costVal = parseNum(m[CostIndex]);
-            const calcBase = isBP ? costVal : salVal; // BPならコスト、以外なら給与を使用
+            const calcBaseForRate = isBP ? costVal : salVal;
 
-            const sList = []; for(let i=0; i<12; i++) sList.push(parseNum(m[DataStartCol + i * 2]));
-            const pList = sList.map(s => s > 0 ? s - calcBase : 0);
-            const mList = sList.map(s => s > 0 ? ((s - calcBase) / s * 100) : 0);
-            const oList = sList.map(s => (s > 0 && calcBase > 0) ? (s / calcBase) : 0);
+            const sList = []; const cList = [];
+            for(let i=0; i<12; i++) {
+                sList.push(parseNum(m[DataStartCol + i * 2])); 
+                cList.push(parseNum(m[DataStartCol + i * 2 + 1]));
+            }
+            
+            // 修正：利益 = 売上 - 月次原価(cList)
+            const pList = sList.map((s, i) => s > 0 ? s - cList[i] : 0);
+            const mList = sList.map((s, i) => s > 0 ? ((s - cList[i]) / s * 100) : 0);
+            const oList = sList.map(s => (s > 0 && calcBaseForRate > 0) ? (s / calcBaseForRate) : 0);
             
             sList.forEach((s, i) => {
                 if(s > 0) {
@@ -291,7 +297,7 @@
                         if(v !== 0) { if(i < 6) { h1I += v; h1C++; } else { h2I += v; h2C++; } }
                         if(i === 5) html += `<td class="total-col">${met.t === 'num' ? Math.round(h1I).toLocaleString() : (h1C ? fmtVal(h1I / h1C, met.t) : '-')}</td>`;
                     });
-                    let h2D = met.t === 'num' ? Math.round(h2I).toLocaleString() : (h2C ? fmtVal(h2I / h2C, met.t) : '-');
+                    let h2D = met.t === 'num' ? Math.round(h2S || h2I).toLocaleString() : (h2C ? fmtVal(h2I / h2C, met.t) : '-');
                     let yrD = met.t === 'num' ? Math.round(h1I + h2I).toLocaleString() : ((h1C + h2C) ? fmtVal((h1I + h2I) / (h1C + h2C), met.t) : '-');
                     html += `<td class="total-col">${h2D}</td><td class="total-col">${yrD}</td></tr>`;
                 });
@@ -316,6 +322,7 @@
         document.getElementById('generic-content').innerHTML = html;
     }
 
+    // 営業実績・予算管理表（現状維持）
     function renderSalesTable() {
         const rk = document.getElementById('region-select').value;
         const d = getRD(rk); const tb = document.getElementById('table-body');
@@ -387,6 +394,7 @@
 </script>
 </body>
 </html>
+
 
 
 
