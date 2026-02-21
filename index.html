@@ -43,7 +43,6 @@
         .tech-name { font-weight: bold; font-size: 0.9rem; }
         .tech-no { font-size: 0.7rem; color: #666; }
         
-        /* 給与・コストのデータセル用：標準フォントサイズで上下中央揃え */
         .std-text-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 0.82rem; font-weight: normal; color: #333; }
 
         .chart-box { height: 400px; width: 100%; margin-bottom: 20px; position: relative; }
@@ -250,21 +249,24 @@
                 const no = m[NoIndex] || '-';
                 const salVal = parseNum(m[SalaryIndex]); 
                 const costVal = parseNum(m[CostIndex]);
-                const mS = [], mC = [];
+                const mS = [];
                 for(let i=0; i<12; i++) { 
-                    mS.push(parseNum(m[DataStartCol + i * 2])); 
-                    mC.push(parseNum(m[DataStartCol + i * 2 + 1])); 
+                    mS.push(parseNum(m[DataStartCol + i * 2])); // M列(12)から売上のみ取得
                 }
+
+                // 指示に基づき「売上 - コスト(costVal)」で計算するように変更
                 const metrics = [
-                    { n: '売上', d: mS, type: 'num' }, { n: '利益', d: mS.map((s,i)=>s-mC[i]), type: 'num' },
-                    { n: '利益率', d: mS.map((s,i)=>s?((s-mC[i])/s*100):0), type: 'pct' }, { n: '運用率', d: mS.map(s=>salVal?(s/salVal*100):0), type: 'pct' }
+                    { n: '売上', d: mS, type: 'num' }, 
+                    { n: '利益', d: mS.map(s => s - costVal), type: 'num' },
+                    { n: '利益率', d: mS.map(s => s ? ((s - costVal) / s * 100) : 0), type: 'pct' }, 
+                    { n: '運用率', d: mS.map(s => salVal ? (s / salVal * 100) : 0), type: 'pct' }
                 ];
+
                 metrics.forEach((met, idx) => {
                     let trCls = (idx < 3) ? "row-border" : "item-bottom-bold";
                     html += `<tr class="${trCls}">`;
                     if(idx===0) {
                         html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name">${name}</div><div class="tech-no">${no}</div></div></td>`;
-                        // ここを新しいクラスに変更し、標準サイズに統一
                         html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="std-text-box"><div>${salVal.toLocaleString()}</div><div>${costVal.toLocaleString()}</div></div></td>`;
                     }
                     html += `<td class="metric-label">${met.n}</td>`;
@@ -354,6 +356,7 @@
 </script>
 </body>
 </html>
+
 
 
 
