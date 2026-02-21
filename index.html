@@ -33,14 +33,15 @@
         .total-header { background: #edf2f7; color: #4a5568; text-align: center; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
 
-        /* 1px点線設定 */
+        /* 1px点線設定：売上・利益・利益率の下 */
         .dotted-line td:not(.cat-header) { border-bottom: 1px dotted black !important; }
-        /* 2px太線設定 */
+        /* 2px太線設定：運用率の下（技術者の区切り） */
         .bold-line td { border-bottom: 2px solid black !important; }
 
         .metric-label { text-align: center; background: #f8fafc; font-weight: bold; min-width: 100px; border-right: 2px solid black !important; }
         .affiliation-header { background: #1a202c !important; color: white !important; text-align: left !important; padding: 10px 15px !important; font-size: 1rem !important; border-bottom: 2px solid black !important; }
         
+        /* 技術者情報の2段表示用 */
         .tech-info-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
         .tech-name { font-weight: bold; font-size: 0.9rem; }
         .tech-no { font-size: 0.7rem; color: #666; }
@@ -209,13 +210,14 @@
         renderPromotionTable(currentPromotionRows, region);
     }
 
+    // --- 営業推進管理表の描画：列指定の修正（M列=12開始） ---
     function renderPromotionTable(rows, filterRegion) {
         if (rows.length < 2) return;
         const AffIndex = 2, NoIndex = 3, NameIndex = 4, SalaryIndex = 5;
         let data = rows.slice(1).filter(r => r[AffIndex]);
         if (filterRegion !== 'total') data = data.filter(r => r[AffIndex] === filterRegion);
         
-        let html = `<table><thead><tr><th rowspan="2" class="cat-header">所属</th><th rowspan="2" class="cat-header">技術者名</th><th rowspan="2" class="type-col">項目</th><th colspan="6">上期</th><th class="total-header">上期計</th><th colspan="6" class="second-half-start">下期</th><th class="total-header">下期計</th><th class="total-header">年間計</th></tr><tr>${months.map((m, i) => `<th class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${m}</th>`).join('')}<th class="total-header">計</th><th class="total-header">計</th><th class="total-header">合計</th></tr></thead><tbody>`;
+        let html = `<table><thead><tr><th rowspan="2" class="cat-header">所属</th><th rowspan="2" class="cat-header">技術者名</th><th rowspan="2" class="type-col">項目</th><th colspan="6">上期</th><th class="total-header">上期計</th><th colspan="6" class="second-half-start">下期</th><th class="total-header">下期計</th><th class="total-header">年間合計</th></tr><tr>${months.map((m, i) => `<th class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${m}</th>`).join('')}<th class="total-header">計</th><th class="total-header">計</th><th class="total-header">合計</th></tr></thead><tbody>`;
 
         const affs = [...new Set(data.map(r => r[AffIndex]))];
         affs.forEach(aff => {
@@ -225,8 +227,14 @@
                 const techNo = m[NoIndex] || '-';
                 const name = m[NameIndex] || '-';
                 const salary = parseFloat(m[SalaryIndex]) || 0;
+                
+                // M列(12)＝6月売上, N列(13)＝6月原価, O列(14)＝7月売上の法則に修正
                 const mS = [], mC = [];
-                for(let i=0; i<12; i++) { mS.push(parseFloat(m[6 + i*2]) || 0); mC.push(parseFloat(m[7 + i*2]) || 0); }
+                for(let i=0; i<12; i++) { 
+                    mS.push(parseFloat(m[12 + i*2]) || 0); 
+                    mC.push(parseFloat(m[13 + i*2]) || 0); 
+                }
+                
                 const metrics = [
                     { n: '売上', d: mS, type: 'num' },
                     { n: '利益', d: mS.map((s, i) => s - mC[i]), type: 'num' },
@@ -302,7 +310,7 @@
                 if(!dataSet[rK][type][lK]) dataSet[rK][type][lK] = Array(12).fill(null);
                 for(let i=3; i<15; i++) {
                     let v = row[i] ? row[i].replace(/,/g, '').replace('%', '') : null;
-                    dataSet[rK][type][lK][i-3] = (v === null || v === "" || isNaN(v)) ? null : parseFloat(v);
+                    dataSet[rK][type][lK][i-3] = (v === null || v === "" || isNaN(v)) ? null : parseFloat(val);
                 }
             }
         });
@@ -334,6 +342,7 @@
 </script>
 </body>
 </html>
+
 
 
 
