@@ -208,6 +208,7 @@
         renderPromotionTable(currentPromotionRows, region);
     }
 
+    // --- 営業推進管理表の描画ロジック ---
     function renderPromotionTable(rows, filterRegion) {
         if (rows.length < 2) return;
         
@@ -218,8 +219,8 @@
         const CostIndex = 11;   // L列
         const DataStartCol = 12; // M列
         
-        let data = rows.slice(1).filter(r => r[NoIndex] && r[NoIndex].trim() !== "" && r[NoIndex] !== "技術者№");
-        if (filterRegion !== 'total') data = data.filter(r => r[AffIndex] === filterRegion);
+        let rawData = rows.slice(1).filter(r => r[NoIndex] && r[NoIndex].trim() !== "" && r[NoIndex] !== "技術者№");
+        let data = (filterRegion !== 'total') ? rawData.filter(r => r[AffIndex] === filterRegion) : rawData;
         
         let html = `<table><thead><tr>
             <th rowspan="2" class="cat-header">
@@ -244,6 +245,84 @@
                 <th class="total-header">合計</th>
             </tr></thead><tbody>`;
 
+        // 全体集計用データの計算
+        const techMetrics = data.map(m => {
+            const salVal = parseNum(m[SalaryIndex]);
+            const mS = [];
+            for(let i=0; i<12; i++) { mS.push(parseNum(m[DataStartCol + i * 2])); }
+            return {
+                sales: mS,
+                profit: mS.map(s => s - salVal),
+                margin: mS.map(s => s ? ((s - salVal) / s * 100) : 0),
+                opRate: mS.map(s => salVal ? (s / salVal) : 0)
+            };
+        });
+
+        const techCount = techMetrics.length;
+        const overallAgg = {
+            sales: Array(12).fill(0),
+            profit: Array(12).fill(0),
+            margin: Array(12).fill(0),
+            opRate: Array(12).fill(0)
+        };
+
+        techMetrics.forEach(tech => {
+            for(let i=0; i<12; i++) {
+                overallAgg.sales[i] += tech.sales[i];
+                overallAgg.profit[i] += tech.profit[i];
+                overallAgg.margin[i] += tech.margin[i];
+                overallAgg.opRate[i] += tech.opRate[i];
+            }
+        });
+
+        // 利益率・運用率を平均化
+        if (techCount > 0) {
+            for(let i=0; i<12; i++) {
+                overallAgg.margin[i] /= techCount;
+                overallAgg.opRate[i] /= techCount;
+            }
+        }
+
+        // --- 全体合計セクションの描画 ---
+        html += `<tr><td colspan="18" class="affiliation-header">全体合計</td></tr>`;
+        const totalLabels = [
+            { n: '売上', d: overallAgg.sales, type: 'num' },
+            { n: '利益', d: overallAgg.profit, type: 'num' },
+            { n: '利益率', d: overallAgg.margin, type: 'pct' },
+            { n: '運用率', d: overallAgg.opRate, type: 'ratio' }
+        ];
+
+        totalLabels.forEach((met, idx) => {
+            let trCls = (idx < 3) ? "row-border" : "item-bottom-bold";
+            html += `<tr class="${trCls}">`;
+            if(idx===0) html += `<td rowspan="4" colspan="2" class="cat-header" style="background:white; font-size:1rem;">全体集計</td>`;
+            html += `<td class="metric-label">${met.n}</td>`;
+            
+            let h1Sum = 0, h2Sum = 0;
+            met.d.forEach((v, i) => {
+                const cellCls = `${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}`;
+                let displayVal;
+                if (met.type === 'num') {
+                    displayVal = Math.round(v).toLocaleString();
+                } else if (met.type === 'ratio') {
+                    displayVal = (Math.floor(v * 100) / 100).toFixed(2);
+                } else {
+                    displayVal = v.toFixed(1) + '%';
+                }
+                html += `<td class="${cellCls}">${displayVal}</td>`;
+                
+                if(i<6) h1Sum += v; else h2Sum += v;
+                if(i===5) {
+                    let h1Disp = (met.type === 'num') ? Math.round(h1Sum).toLocaleString() : (met.type === 'ratio' ? (Math.floor((h1Sum/6)*100)/100).toFixed(2) : (h1Sum/6).toFixed(1) + '%');
+                    html += `<td class="total-col">${h1Disp}</td>`;
+                }
+            });
+            let h2Disp = (met.type === 'num') ? Math.round(h2Sum).toLocaleString() : (met.type === 'ratio' ? (Math.floor((h2Sum/6)*100)/100).toFixed(2) : (h2Sum/6).toFixed(1) + '%');
+            let yrDisp = (met.type === 'num') ? Math.round(h1Sum + h2Sum).toLocaleString() : (met.type === 'ratio' ? (Math.floor(((h1Sum+h2Sum)/12)*100)/100).toFixed(2) : ((h1Sum+h2Sum)/12).toFixed(1) + '%');
+            html += `<td class="total-col">${h2Disp}</td><td class="total-col">${yrDisp}</td></tr>`;
+        });
+
+        // 各拠点の描画
         const affs = [...new Set(data.map(r => r[AffIndex]))];
         affs.forEach(aff => {
             html += `<tr><td colspan="18" class="affiliation-header">${aff}</td></tr>`;
@@ -253,9 +332,7 @@
                 const salVal = parseNum(m[SalaryIndex]); 
                 const costVal = parseNum(m[CostIndex]);
                 const mS = [];
-                for(let i=0; i<12; i++) { 
-                    mS.push(parseNum(m[DataStartCol + i * 2])); 
-                }
+                for(let i=0; i<12; i++) { mS.push(parseNum(m[DataStartCol + i * 2])); }
 
                 const metrics = [
                     { n: '売上', d: mS, type: 'num' }, 
@@ -268,56 +345,35 @@
                     let trCls = (idx < 3) ? "row-border" : "item-bottom-bold";
                     html += `<tr class="${trCls}">`;
                     if(idx===0) {
-                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name">${name}</div><div class="tech-no">${no}</div></div></td>`;
-                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="std-text-box"><div>${salVal.toLocaleString()}</div><div>${costVal.toLocaleString()}</div></div></td>`;
+                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;">
+                                    <div class="flex-stack-box"><div class="tech-name-label">${name}</div><div class="tech-no-label">${no}</div></div>
+                                 </td>
+                                 <td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;">
+                                    <div class="flex-stack-box">
+                                        <div class="data-value-std">${salVal.toLocaleString()}</div>
+                                        <div class="data-value-std">${costVal.toLocaleString()}</div>
+                                    </div>
+                                 </td>`;
                     }
                     html += `<td class="metric-label">${met.n}</td>`;
-                    
-                    let h1Sum = 0, h2Sum = 0;
+                    let h1Indiv = 0, h2Indiv = 0;
                     met.d.forEach((v, i) => {
                         const cellCls = `${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}`;
                         let displayVal;
-                        if (met.type === 'num') {
-                            displayVal = v.toLocaleString();
-                        } else if (met.type === 'ratio') {
-                            displayVal = (Math.floor(v * 100) / 100).toFixed(2);
-                        } else {
-                            displayVal = v.toFixed(1) + '%';
-                        }
+                        if (met.type === 'num') displayVal = v.toLocaleString();
+                        else if (met.type === 'ratio') displayVal = (Math.floor(v * 100) / 100).toFixed(2);
+                        else displayVal = v.toFixed(1) + '%';
                         html += `<td class="${cellCls}">${displayVal}</td>`;
                         
-                        // 集計
-                        if(i<6) h1Sum += v; else h2Sum += v;
-
+                        if(i<6) h1Indiv += v; else h2Indiv += v;
                         if(i===5) {
-                            let h1Display;
-                            if (met.type === 'num') {
-                                h1Display = Math.round(h1Sum).toLocaleString();
-                            } else if (met.type === 'ratio') {
-                                // 平均値を小数点第3位切り捨てで算出
-                                h1Display = (Math.floor((h1Sum / 6) * 100) / 100).toFixed(2);
-                            } else {
-                                // 平均値を算出
-                                h1Display = (h1Sum / 6).toFixed(1) + '%';
-                            }
-                            html += `<td class="total-col">${h1Display}</td>`;
+                            let h1D = (met.type === 'num') ? Math.round(h1Indiv).toLocaleString() : (met.type === 'ratio' ? (Math.floor((h1Indiv/6)*100)/100).toFixed(2) : (h1Indiv/6).toFixed(1) + '%');
+                            html += `<td class="total-col">${h1D}</td>`;
                         }
                     });
-
-                    // 下期合計と年間合計の平均/合計算出
-                    let h2Display, yrDisplay;
-                    if (met.type === 'num') {
-                        h2Display = Math.round(h2Sum).toLocaleString();
-                        yrDisplay = Math.round(h1Sum + h2Sum).toLocaleString();
-                    } else if (met.type === 'ratio') {
-                        h2Display = (Math.floor((h2Sum / 6) * 100) / 100).toFixed(2);
-                        yrDisplay = (Math.floor(((h1Sum + h2Sum) / 12) * 100) / 100).toFixed(2);
-                    } else {
-                        h2Display = (h2Sum / 6).toFixed(1) + '%';
-                        yrDisplay = ((h1Sum + h2Sum) / 12).toFixed(1) + '%';
-                    }
-                    
-                    html += `<td class="total-col">${h2Display}</td><td class="total-col">${yrDisplay}</td></tr>`;
+                    let h2D = (met.type === 'num') ? Math.round(h2Indiv).toLocaleString() : (met.type === 'ratio' ? (Math.floor((h2Indiv/6)*100)/100).toFixed(2) : (h2Indiv/6).toFixed(1) + '%');
+                    let yrD = (met.type === 'num') ? Math.round(h1Indiv + h2Indiv).toLocaleString() : (met.type === 'ratio' ? (Math.floor(((h1Indiv+h2Indiv)/12)*100)/100).toFixed(2) : ((h1Indiv+h2Indiv)/12).toFixed(1) + '%');
+                    html += `<td class="total-col">${h2D}</td><td class="total-col">${yrD}</td></tr>`;
                 });
             });
         });
@@ -396,6 +452,7 @@
 </script>
 </body>
 </html>
+
 
 
 
