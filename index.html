@@ -208,16 +208,15 @@
         renderPromotionTable(currentPromotionRows, region);
     }
 
-    // --- 営業推進管理表の描画ロジック ---
     function renderPromotionTable(rows, filterRegion) {
         if (rows.length < 2) return;
         
-        const AffIndex = 2;    // C列
-        const NoIndex = 3;     // D列
-        const NameIndex = 4;   // E列
-        const SalaryIndex = 10; // K列
-        const CostIndex = 11;   // L列
-        const DataStartCol = 12; // M列
+        const AffIndex = 2;    
+        const NoIndex = 3;     
+        const NameIndex = 4;   
+        const SalaryIndex = 10; 
+        const CostIndex = 11;   
+        const DataStartCol = 12; 
         
         let rawData = rows.slice(1).filter(r => r[NoIndex] && r[NoIndex].trim() !== "" && r[NoIndex] !== "技術者№");
         let data = (filterRegion !== 'total') ? rawData.filter(r => r[AffIndex] === filterRegion) : rawData;
@@ -245,7 +244,6 @@
                 <th class="total-header">合計</th>
             </tr></thead><tbody>`;
 
-        // 全体集計用データの計算
         const techMetrics = data.map(m => {
             const salVal = parseNum(m[SalaryIndex]);
             const mS = [];
@@ -275,7 +273,6 @@
             }
         });
 
-        // 利益率・運用率を平均化
         if (techCount > 0) {
             for(let i=0; i<12; i++) {
                 overallAgg.margin[i] /= techCount;
@@ -283,7 +280,7 @@
             }
         }
 
-        // --- 全体合計セクションの描画 ---
+        // --- 全体合計セクション ---
         html += `<tr><td colspan="18" class="affiliation-header">全体合計</td></tr>`;
         const totalLabels = [
             { n: '売上', d: overallAgg.sales, type: 'num' },
@@ -295,7 +292,8 @@
         totalLabels.forEach((met, idx) => {
             let trCls = (idx < 3) ? "row-border" : "item-bottom-bold";
             html += `<tr class="${trCls}">`;
-            if(idx===0) html += `<td rowspan="4" colspan="2" class="cat-header" style="background:white; font-size:1rem;">全体集計</td>`;
+            // 指示通り「全体合計」に修正
+            if(idx===0) html += `<td rowspan="4" colspan="2" class="cat-header" style="background:white; font-size:1rem;">全体合計</td>`;
             html += `<td class="metric-label">${met.n}</td>`;
             
             let h1Sum = 0, h2Sum = 0;
@@ -322,7 +320,6 @@
             html += `<td class="total-col">${h2Disp}</td><td class="total-col">${yrDisp}</td></tr>`;
         });
 
-        // 各拠点の描画
         const affs = [...new Set(data.map(r => r[AffIndex]))];
         affs.forEach(aff => {
             html += `<tr><td colspan="18" class="affiliation-header">${aff}</td></tr>`;
