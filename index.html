@@ -93,7 +93,7 @@
                             <tr>
                                 <th rowspan="2" class="cat-header">項目</th>
                                 <th rowspan="2" class="type-col">区分</th>
-                                <th colspan="6">上期実績</th><th class="total-header">上期合計</th>
+                                <th colspan="6">上期実績</th><th class="total-header">上期計</th>
                                 <th colspan="6" class="second-half-start">下期実績・予想</th><th class="total-header">下期合計</th>
                                 <th class="total-header">年間合計</th>
                             </tr>
@@ -211,13 +211,12 @@
     function renderPromotionTable(rows, filterRegion) {
         if (rows.length < 2) return;
         
-        // spreadsheet画像(image_7a22e1.jpg)の正確なインデックスに基づき設定
         const AffIndex = 2;    // C列
         const NoIndex = 3;     // D列
         const NameIndex = 4;   // E列
-        const SalaryIndex = 10; // K列（給料：333,334）
-        const CostIndex = 11;   // L列（コスト：400,001）
-        const DataStartCol = 12; // M列（6月売上：530,000）
+        const SalaryIndex = 10; // K列（給料）
+        const CostIndex = 11;   // L列（コスト）
+        const DataStartCol = 12; // M列（6月売上開始）
         
         let data = rows.slice(1).filter(r => r[NoIndex] && r[NoIndex].trim() !== "" && r[NoIndex] !== "技術者№");
         if (filterRegion !== 'total') data = data.filter(r => r[AffIndex] === filterRegion);
@@ -236,7 +235,7 @@
                 </div>
             </th> 
             <th rowspan="2" class="type-col">項目</th>
-            <th colspan="6">上期実績</th><th class="total-header">上期合計</th>
+            <th colspan="6">上期実績</th><th class="total-header">上期計</th>
             <th colspan="6" class="second-half-start">下期実績・予想</th><th class="total-header">下期合計</th>
             <th class="total-header">年間合計</th></tr>
             <tr>
@@ -253,17 +252,19 @@
                 const no = m[NoIndex] || '-';
                 const salVal = parseNum(m[SalaryIndex]); 
                 const costVal = parseNum(m[CostIndex]);
-                const mS = [], mC = [];
+                const mS = [];
                 for(let i=0; i<12; i++) { 
                     mS.push(parseNum(m[DataStartCol + i * 2])); 
-                    mC.push(parseNum(m[DataStartCol + i * 2 + 1])); 
                 }
+
+                // 修正：利益 = 売上 - 給料(salVal)
                 const metrics = [
                     { n: '売上', d: mS, type: 'num' }, 
-                    { n: '利益', d: mS.map((s,i)=>s-costVal), type: 'num' },
-                    { n: '利益率', d: mS.map((s,i)=>s?((s-costVal)/s*100):0), type: 'pct' }, 
-                    { n: '運用率', d: mS.map(s=>salVal?(s/salVal*100):0), type: 'pct' }
+                    { n: '利益', d: mS.map(s => s - salVal), type: 'num' },
+                    { n: '利益率', d: mS.map(s => s ? ((s - salVal) / s * 100) : 0), type: 'pct' }, 
+                    { n: '運用率', d: mS.map(s => salVal ? (s / salVal * 100) : 0), type: 'pct' }
                 ];
+
                 metrics.forEach((met, idx) => {
                     let trCls = (idx < 3) ? "row-border" : "item-bottom-bold";
                     html += `<tr class="${trCls}">`;
@@ -281,7 +282,7 @@
                     html += `<td class="metric-label">${met.n}</td>`;
                     let h1=0, h2=0;
                     met.d.forEach((v, i) => {
-                        const cellCls = `${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}`;
+                        const cellCls = `${i===5?'month-sep':''} ${i===6?'second-half-start':''}`;
                         html += `<td class="${cellCls}">${met.type==='num'?v.toLocaleString():v.toFixed(1)+'%'}</td>`;
                         if(i<6) h1+=v; else h2+=v;
                         if(i===5) html += `<td class="total-col">${met.type==='num'?Math.round(h1).toLocaleString():'-'}</td>`;
