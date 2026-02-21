@@ -35,6 +35,10 @@
         .item-bottom-bold td { border-bottom: 2px solid black !important; }
         .row-border td:not(.cat-header) { border-bottom: 1px solid #ddd !important; }
 
+        .info-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+        .info-upper { font-weight: bold; font-size: 0.88rem; color: #1a202c; }
+        .info-lower { font-size: 0.72rem; color: #666; font-weight: normal; }
+
         .tech-info-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
         .tech-name { font-weight: bold; font-size: 0.9rem; }
         .tech-no { font-size: 0.7rem; color: #666; }
@@ -204,7 +208,6 @@
         renderPromotionTable(currentPromotionRows, region);
     }
 
-    // --- 営業推進管理表：レイアウトの修正 ---
     function renderPromotionTable(rows, filterRegion) {
         if (rows.length < 2) return;
         const AffIndex = 2, NoIndex = 3, NameIndex = 4, SalaryIndex = 10, CostIndex = 11;
@@ -212,11 +215,16 @@
         if (filterRegion !== 'total') data = data.filter(r => r[AffIndex] === filterRegion);
         
         let html = `<table><thead><tr>
-            <th rowspan="2" class="cat-header">技術者名</th>
             <th rowspan="2" class="cat-header">
                 <div class="info-box">
-                    <div class="info-upper">給与(月額)</div>
-                    <div class="info-lower">コスト(福利厚生込み)</div>
+                    <div class="info-upper">技術者名</div>
+                    <div class="info-lower">スキルシートNO</div>
+                </div>
+            </th>
+            <th rowspan="2" class="cat-header">
+                <div class="info-box">
+                    <div class="info-upper">給与</div>
+                    <div class="info-lower">コスト</div>
                 </div>
             </th> 
             <th rowspan="2" class="type-col">項目</th>
@@ -234,9 +242,8 @@
             html += `<tr><td colspan="18" class="affiliation-header">${aff}</td></tr>`;
             data.filter(r => r[AffIndex] === aff).forEach(m => {
                 const name = m[NameIndex] || '-'; const no = m[NoIndex] || '-'; 
-                const sal = parseNum(m[SalaryIndex]); // K列
-                const cost = parseNum(m[CostIndex]);   // L列
-                
+                const sal = parseNum(m[SalaryIndex]); 
+                const cost = parseNum(m[CostIndex]);
                 const mS = [], mC = [];
                 for(let i=0; i<12; i++) { mS.push(parseNum(m[12+i*2])); mC.push(parseNum(m[13+i*2])); }
                 const metrics = [
@@ -247,12 +254,7 @@
                     html += `<tr class="${idx===3?'item-bottom-bold':'row-border'}">`;
                     if(idx===0) {
                         html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name">${name}</div><div class="tech-no">${no}</div></div></td>`;
-                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;">
-                                    <div class="tech-info-box">
-                                        <div class="tech-name">${sal.toLocaleString()}</div>
-                                        <div class="tech-no">${cost.toLocaleString()}</div>
-                                    </div>
-                                 </td>`;
+                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name">${sal.toLocaleString()}</div><div class="tech-no">${cost.toLocaleString()}</div></div></td>`;
                     }
                     html += `<td class="metric-label">${met.n}</td>`;
                     let h1=0, h2=0;
@@ -262,7 +264,7 @@
                         if(i<6) h1+=v; else h2+=v;
                         if(i===5) html += `<td class="total-col">${met.type==='num'?Math.round(h1).toLocaleString():'-'}</td>`;
                     });
-                    html += `<td class="total-col">${met.type==='num'?Math.round(h2).toLocaleString():'-'}</td><td class="total-col">${met.type==='num'?Math.round(h1+h2).toLocaleString():'-'}</td></tr>`;
+                    html += `<td class="total-col">${met.type==='num'?Math.round(h2).toLocaleString():'-'}</td><td class="total-col">${met.type==='num'?(Math.round(h1+h2)).toLocaleString():'-'}</td></tr>`;
                 });
             });
         });
@@ -270,7 +272,6 @@
         document.getElementById('generic-content').innerHTML = html;
     }
 
-    // --- 営業実績表とグラフ：変更なし ---
     function renderSalesTable() {
         const rk = document.getElementById('region-select').value;
         const d = getRD(rk); const tb = document.getElementById('table-body');
@@ -342,9 +343,6 @@
 </script>
 </body>
 </html>
-
-
-
 
 
 
