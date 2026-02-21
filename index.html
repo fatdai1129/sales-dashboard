@@ -207,13 +207,19 @@
     // --- 営業推進管理表：レイアウトの修正 ---
     function renderPromotionTable(rows, filterRegion) {
         if (rows.length < 2) return;
-        const AffIndex = 2, NoIndex = 3, NameIndex = 4, SalaryIndex = 5;
+        const AffIndex = 2, NoIndex = 3, NameIndex = 4, SalaryIndex = 10, CostIndex = 11;
         let data = rows.slice(1).filter(r => r[AffIndex]);
         if (filterRegion !== 'total') data = data.filter(r => r[AffIndex] === filterRegion);
         
         let html = `<table><thead><tr>
             <th rowspan="2" class="cat-header">技術者名</th>
-            <th rowspan="2" class="cat-header"></th> <th rowspan="2" class="type-col">項目</th>
+            <th rowspan="2" class="cat-header">
+                <div class="info-box">
+                    <div class="info-upper">給与(月額)</div>
+                    <div class="info-lower">コスト(福利厚生込み)</div>
+                </div>
+            </th> 
+            <th rowspan="2" class="type-col">項目</th>
             <th colspan="6">上期実績</th><th class="total-header">上期合計</th>
             <th colspan="6" class="second-half-start">下期実績・予想</th><th class="total-header">下期合計</th>
             <th class="total-header">年間合計</th></tr>
@@ -227,7 +233,10 @@
         affs.forEach(aff => {
             html += `<tr><td colspan="18" class="affiliation-header">${aff}</td></tr>`;
             data.filter(r => r[AffIndex] === aff).forEach(m => {
-                const name = m[NameIndex] || '-'; const no = m[NoIndex] || '-'; const sal = parseNum(m[SalaryIndex]);
+                const name = m[NameIndex] || '-'; const no = m[NoIndex] || '-'; 
+                const sal = parseNum(m[SalaryIndex]); // K列
+                const cost = parseNum(m[CostIndex]);   // L列
+                
                 const mS = [], mC = [];
                 for(let i=0; i<12; i++) { mS.push(parseNum(m[12+i*2])); mC.push(parseNum(m[13+i*2])); }
                 const metrics = [
@@ -237,9 +246,13 @@
                 metrics.forEach((met, idx) => {
                     html += `<tr class="${idx===3?'item-bottom-bold':'row-border'}">`;
                     if(idx===0) {
-                        // 左端に技術者名、その次に新しい列
                         html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name">${name}</div><div class="tech-no">${no}</div></div></td>`;
-                        html += `<td rowspan="4" class="cat-header" style="background:white;"></td>`;
+                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;">
+                                    <div class="tech-info-box">
+                                        <div class="tech-name">${sal.toLocaleString()}</div>
+                                        <div class="tech-no">${cost.toLocaleString()}</div>
+                                    </div>
+                                 </td>`;
                     }
                     html += `<td class="metric-label">${met.n}</td>`;
                     let h1=0, h2=0;
@@ -257,7 +270,7 @@
         document.getElementById('generic-content').innerHTML = html;
     }
 
-    // --- 営業実績表とグラフ：このセクションは一切変更していません ---
+    // --- 営業実績表とグラフ：変更なし ---
     function renderSalesTable() {
         const rk = document.getElementById('region-select').value;
         const d = getRD(rk); const tb = document.getElementById('table-body');
@@ -329,11 +342,6 @@
 </script>
 </body>
 </html>
-
-
-
-
-
 
 
 
