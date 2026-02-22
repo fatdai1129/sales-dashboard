@@ -2,16 +2,20 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>実績管理（接続確認版）</title>
+    <title>実績管理ポータル</title>
     <style>
-        body { font-family: sans-serif; margin: 20px; background: #f0f4f8; }
+        body { font-family: sans-serif; background-color: #f0f4f8; padding: 20px; }
         #pw_screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a202c; display: flex; justify-content: center; align-items: center; z-index: 1000; }
         #pw_box { background: white; padding: 40px; border-radius: 12px; text-align: center; }
         #main_content { display: none; }
-        table { width: 100%; border-collapse: collapse; background: white; margin-top: 20px; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; font-size: 13px; }
+        table { width: 100%; border-collapse: collapse; background: white; border: 2px solid black !important; }
+        th, td { border: 1px solid black !important; padding: 8px 4px; text-align: center; font-size: 13px; }
         th { background: #edf2f7; }
-        .loading { color: #3182ce; font-weight: bold; }
+        .cat-header { background: #ebf8ff; font-weight: bold; width: 120px; }
+        .type-col { width: 70px; }
+        .total-col { background: #fffaf0; font-weight: bold; }
+        /* 3px太線の設定 */
+        .item-bottom-bold td { border-bottom: 3px solid black !important; }
     </style>
 </head>
 <body>
@@ -27,75 +31,142 @@
 </div>
 
 <div id="main_content">
-    <h2>実績データ（生データ表示確認）</h2>
-    <p id="status_msg" class="loading">データ読み込み中...</p>
-    <div id="data_area"></div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <h2 style="margin:0;">営業実績・予算管理表</h2>
+        <select id="region-select" style="padding:8px;" onchange="renderTable()">
+            <option value="全社">全社合計</option>
+            <option value="東日本">東日本 (東海＋首都圏)</option>
+            <option value="西日本">西日本</option>
+            <option value="東海">東海</option>
+            <option value="首都圏">首都圏</option>
+        </select>
+    </div>
+    <div id="status_msg" style="color:blue; font-weight:bold;">データ読み込み中...</div>
+    <table id="sales-table">
+        <thead>
+            <tr>
+                <th rowspan="2">項目</th><th rowspan="2">区分</th>
+                <th colspan="6">上期実績</th><th class="total-col">上期計</th>
+                <th colspan="6">下期実績・予想</th><th class="total-col">下期計</th><th class="total-col">年間計</th>
+            </tr>
+            <tr>
+                <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th>11月</th><th class="total-col">計</th>
+                <th>12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th>5月</th><th class="total-col">計</th><th class="total-col">合計</th>
+            </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+    </table>
 </div>
 
 <script>
     const SHEET_ID = '1LRVwKu-YXWJvRgSophqF0VlORS5_dcjztSvfz95Qe_E';
+    let rawRows = [];
 
-    // ログイン処理
     function checkPW() {
-        const input = document.getElementById('pass_val').value;
-        if (input === "freeeks2022") {
+        if (document.getElementById('pass_val').value === "freeeks2022") {
             document.getElementById('pw_screen').style.display = 'none';
             document.getElementById('main_content').style.display = 'block';
-            loadData();
+            fetchData();
         } else {
             document.getElementById('err_msg').style.display = 'block';
         }
     }
 
-    // データ読み込み
-    async function loadData() {
+    async function fetchData() {
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('実績データ')}`;
         try {
-            const response = await fetch(url);
-            if (!response.ok) throw new Error('Network response was not ok');
-            
-            const text = await response.text();
-            const rows = parseCSV(text);
-            
-            displayRawData(rows);
-            document.getElementById('status_msg').innerText = "データの取得に成功しました。";
-            document.getElementById('status_msg').style.color = "green";
+            const resp = await fetch(url);
+            const text = await resp.text();
+            rawRows = parseCSV(text);
+            document.getElementById('status_msg').style.display = 'none';
+            renderTable();
         } catch (e) {
-            document.getElementById('status_msg').innerText = "取得失敗: " + e.message;
-            document.getElementById('status_msg').style.color = "red";
+            alert('取得失敗');
+            console.error(e);
         }
     }
 
-    // CSV解析
     function parseCSV(t) {
         return t.split(/\r?\n/).filter(l => l.trim() !== "").map(l => {
-            const res = []; let c = '', q = false;
+            const res = []; let cur = '', q = false;
             for (let ch of l) {
                 if (ch === '"') q = !q;
-                else if (ch === ',' && !q) { res.push(c.trim()); c = ''; }
-                else c += ch;
+                else if (ch === ',' && !q) { res.push(cur.trim()); cur = ''; }
+                else cur += ch;
             }
-            res.push(c.trim()); return res;
+            res.push(cur.trim()); return res;
         });
     }
 
-    // 表の表示
-    function displayRawData(rows) {
-        let html = '<table>';
-        rows.forEach((row, index) => {
-            html += '<tr>';
-            row.forEach(cell => {
-                const tag = index === 0 ? 'th' : 'td';
-                html += `<${tag}>${cell.replace(/"/g, '')}</${tag}>`;
+    function renderTable() {
+        const region = document.getElementById('region-select').value;
+        const tbody = document.getElementById('table-body');
+        tbody.innerHTML = '';
+
+        const items = [
+            { n: '売上', k: '売上', t: ['予算', '実績', '達成率'] },
+            { n: '稼働原価', k: '稼働原価', t: ['予算', '実績', '達成率'] },
+            { n: 'A利益', k: 'A利益', t: ['予算', '実績', '達成率'] },
+            { n: '待機原価', k: '待機原価', t: ['実績'] },
+            { n: 'プロパー(稼働)', k: 'プロパー(稼働)', t: ['予算', '実績', '達成率'] },
+            { n: 'BP', k: 'BP', t: ['実績'] },
+            { n: '稼働エンジニア数', k: '稼働エンジニア数', t: ['予算', '実績'] },
+            { n: 'プロパー(待機)', k: 'プロパー(待機)', t: ['予算', '実績'] },
+            { n: '待機率', k: '待機率', t: ['実績'] },
+            { n: 'エンジニア総数', k: 'エンジニア総数', t: ['予算', '実績', '達成率'] }
+        ];
+
+        items.forEach(item => {
+            item.t.forEach((type, idx) => {
+                const tr = document.createElement('tr');
+                if (idx === item.t.length - 1) tr.className = 'item-bottom-bold';
+
+                let html = idx === 0 ? `<td rowspan="${item.t.length}" class="cat-header">${item.n}</td>` : '';
+                html += `<td class="type-col">${type}</td>`;
+
+                const data = getMonthlyValues(region, item.k, type);
+                let h1 = 0, h2 = 0;
+                
+                data.forEach((v, i) => {
+                    html += `<td>${format(v, item.k, type)}</td>`;
+                    if (i < 6) h1 += v; else h2 += v;
+                    if (i === 5) html += `<td class="total-col">${format(h1, item.k, type)}</td>`;
+                });
+
+                html += `<td class="total-col">${format(h2, item.k, type)}</td>`;
+                html += `<td class="total-col">${format(h1 + h2, item.k, type)}</td>`;
+                tr.innerHTML = html;
+                tbody.appendChild(tr);
             });
-            html += '</tr>';
         });
-        html += '</table>';
-        document.getElementById('data_area').innerHTML = html;
+    }
+
+    function getMonthlyValues(region, itemK, type) {
+        let res = new Array(12).fill(0);
+        if (type === '達成率') {
+            const b = getMonthlyValues(region, itemK, '予算');
+            const a = getMonthlyValues(region, itemK, '実績');
+            return a.map((v, i) => b[i] === 0 ? 0 : (v / b[i]) * 100);
+        }
+        rawRows.slice(1).forEach(r => {
+            const rN = r[0] || '', iN = r[1] || '', tN = r[2] || '';
+            let match = region === '全社' ? true : 
+                        region === '東日本' ? (rN.includes('東海') || rN.includes('首都圏')) : rN.includes(region);
+            if (match && iN.includes(itemK) && tN.includes(type)) {
+                for (let i = 0; i < 12; i++) res[i] += parseFloat(String(r[i+3]||'0').replace(/,/g,'')) || 0;
+            }
+        });
+        return res;
+    }
+
+    function format(v, k, t) {
+        if (v === 0 && t !== '達成率') return '-';
+        return (k === '待機率' || t === '達成率') ? v.toFixed(1) + '%' : Math.round(v).toLocaleString();
     }
 </script>
 </body>
 </html>
+
 
 
 
