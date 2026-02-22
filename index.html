@@ -190,7 +190,7 @@
                 currentPromotionRows = rows;
                 filterPromotion();
             }
-        } catch (e) { alert('取得失敗'); }
+        } catch (e) { console.error(e); alert('取得失敗'); }
         finally { document.getElementById('loading').style.display = 'none'; }
     }
 
@@ -242,7 +242,6 @@
                 cList.push(parseNum(m[DataStartCol + i * 2 + 1]));
             }
             
-            // 修正：利益 = 売上 - 月次原価(cList)
             const pList = sList.map((s, i) => s > 0 ? s - cList[i] : 0);
             const mList = sList.map((s, i) => s > 0 ? ((s - cList[i]) / s * 100) : 0);
             const oList = sList.map(s => (s > 0 && calcBaseForRate > 0) ? (s / calcBaseForRate) : 0);
@@ -257,6 +256,7 @@
             return { name: m[NameIndex], no: m[NoIndex], aff: m[AffIndex], salVal, costVal, sList, pList, mList, oList };
         });
 
+        // 全体合計行
         html += `<tr><td colspan="18" class="affiliation-header">全体合計 (${filterRegion==='total'?'全社':filterRegion})</td></tr>`;
         ['売上','利益','利益率','運用率'].forEach((label, idx) => {
             html += `<tr class="${idx === 3 ? 'item-bottom-bold' : 'row-border'}">`;
@@ -271,7 +271,7 @@
                 else v = overall.counts[i] ? overall.opRate[i] / overall.counts[i] : 0;
 
                 html += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${fmtVal(v, type)}</td>`;
-                if(v > 0 || (idx<2 && v!==0)) { if(i < 6) { h1Sum += v; h1Cnt++; } else { h2Sum += v; h2Cnt++; } }
+                if(v !== 0) { if(i < 6) { h1Sum += v; h1Cnt++; } else { h2Sum += v; h2Cnt++; } }
                 if(i === 5) html += `<td class="total-col">${idx < 2 ? Math.round(h1Sum).toLocaleString() : (h1Cnt ? fmtVal(h1Sum / h1Cnt, type) : '-')}</td>`;
             }
             let h2D = idx < 2 ? Math.round(h2Sum).toLocaleString() : (h2Cnt ? fmtVal(h2Sum / h2Cnt, (idx===2?'pct':'ratio')) : '-');
@@ -279,6 +279,7 @@
             html += `<td class="total-col">${h2D}</td><td class="total-col">${yrD}</td></tr>`;
         });
 
+        // 拠点別描画
         const affs = [...new Set(techProcessed.map(t => t.aff))];
         affs.forEach(aff => {
             html += `<tr><td colspan="18" class="affiliation-header">${aff}</td></tr>`;
@@ -297,9 +298,9 @@
                         if(v !== 0) { if(i < 6) { h1I += v; h1C++; } else { h2I += v; h2C++; } }
                         if(i === 5) html += `<td class="total-col">${met.t === 'num' ? Math.round(h1I).toLocaleString() : (h1C ? fmtVal(h1I / h1C, met.t) : '-')}</td>`;
                     });
-                    let h2D = met.t === 'num' ? Math.round(h2S || h2I).toLocaleString() : (h2C ? fmtVal(h2I / h2C, met.t) : '-');
-                    let yrD = met.t === 'num' ? Math.round(h1I + h2I).toLocaleString() : ((h1C + h2C) ? fmtVal((h1I + h2I) / (h1C + h2C), met.t) : '-');
-                    html += `<td class="total-col">${h2D}</td><td class="total-col">${yrD}</td></tr>`;
+                    let h2DisplayVal = met.t === 'num' ? Math.round(h2I).toLocaleString() : (h2C ? fmtVal(h2I / h2C, met.t) : '-');
+                    let yrDisplayVal = met.t === 'num' ? Math.round(h1I + h2I).toLocaleString() : ((h1C + h2C) ? fmtVal((h1I + h2I) / (h1C + h2C), met.t) : '-');
+                    html += `<td class="total-col">${h2DisplayVal}</td><td class="total-col">${yrDisplayVal}</td></tr>`;
                 });
             });
         });
@@ -322,7 +323,6 @@
         document.getElementById('generic-content').innerHTML = html;
     }
 
-    // 営業実績・予算管理表（現状維持）
     function renderSalesTable() {
         const rk = document.getElementById('region-select').value;
         const d = getRD(rk); const tb = document.getElementById('table-body');
