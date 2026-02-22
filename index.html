@@ -21,28 +21,22 @@
         h2 { font-size: 1.4rem; margin: 0; color: #1a202c; border-left: 5px solid #3182ce; padding-left: 15px; text-align: left; }
         
         table { width: 100%; border-collapse: collapse; background: white; border: 2px solid black !important; table-layout: fixed; }
-        th, td { border: 1px solid black; padding: 6px 4px; text-align: right; font-size: 0.82rem; word-break: break-all; }
-        th { background: #edf2f7; color: #4a5568; text-align: center; border-bottom: 2px solid black !important; }
+        th, td { border: 1px solid black; padding: 8px 6px; text-align: center; font-size: 0.85rem; word-break: break-all; }
+        th { background: #edf2f7; color: #4a5568; border-bottom: 2px solid black !important; }
         
-        .cat-header { background: #ebf8ff; font-weight: bold; text-align: center; color: #2c5282; border-right: 2px solid black !important; border-bottom: 2px solid black !important; width: 130px; }
-        .type-col { text-align: center; border-right: 2px solid black !important; width: 75px; }
-        .month-sep { border-right: 2px solid black !important; }
-        .second-half-start { border-left: 2px solid black !important; }
-        .total-header { background: #edf2f7; color: #4a5568; text-align: center; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
-        .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .affiliation-header { background: #1a202c !important; color: white !important; text-align: left !important; padding: 10px 15px !important; font-size: 1rem !important; border-bottom: 2px solid black !important; }
         
-        .item-bottom-bold td { border-bottom: 2px solid black !important; }
-        .row-border td:not(.cat-header) { border-bottom: 1px solid #ddd !important; }
-
-        .flex-stack-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
-        .header-label-bold { font-weight: bold; font-size: 0.88rem; color: #1a202c; }
-        .header-label-sub { font-size: 0.72rem; color: #666; font-weight: normal; }
-        .data-value-std { font-weight: normal !important; font-size: 0.82rem !important; color: #333; }
-        .tech-name-label { font-weight: bold; font-size: 0.9rem; }
-        .tech-no-label { font-size: 0.7rem; color: #666; }
+        .row-main { background: white; }
+        .row-sub { background: #f9fafb; }
+        .cell-main-text { font-weight: bold; font-size: 0.92rem; color: #1a202c; }
+        .cell-sub-text { font-size: 0.72rem; color: #666; margin-top: 2px; }
+        .border-bottom-bold { border-bottom: 2px solid black !important; }
         
-        .metric-label { text-align: center; vertical-align: middle; line-height: 1.2; }
+        .col-name { width: 180px; }
+        .col-status { width: 120px; }
+        .col-date { width: 110px; }
+        .col-project { width: auto; text-align: left !important; }
+        .col-kakudo { width: 100px; }
 
         .chart-box { height: 400px; width: 100%; margin-bottom: 20px; position: relative; }
         #loading { font-weight: bold; color: #3182ce; margin-top: 10px; }
@@ -139,7 +133,7 @@
         }
     };
     let dataSet = { west: { budget:{}, actual:{} }, tokai: { budget:{}, actual:{} }, tokyo: { budget:{}, actual:{} } };
-    let currentPromotionRows = [];
+    let currentDataRows = [];
     let salesChart, waitingChart, engineerChart;
     const months = ["6月","7月","8月","9月","10月","11月","12月","1月","2月","3月","4月","5月"];
 
@@ -176,6 +170,7 @@
             const rows = parseCSV(csvText);
             document.getElementById('pw_screen').style.display = 'none';
             document.getElementById('main_content').style.display = 'block';
+            
             if (toolKey === 'sales') {
                 document.getElementById('dashboard-sales').style.display = 'block';
                 document.getElementById('dashboard-generic').style.display = 'none';
@@ -188,7 +183,7 @@
                 document.getElementById('sales-region-container').style.display = 'none';
                 document.getElementById('promotion-filter-container').style.display = 'inline-block';
                 document.getElementById('generic-title').innerText = toolKey === 'promotion' ? '営業推進管理表' : '売込状況一覧';
-                currentPromotionRows = rows;
+                currentDataRows = rows;
                 filterPromotion();
             }
         } catch (e) { console.error(e); alert('取得失敗'); }
@@ -210,102 +205,85 @@
     function filterPromotion() {
         const region = document.getElementById('promotion-region-select').value;
         const toolKey = document.getElementById('tool-select').value;
-        if (toolKey === 'promotion') renderPromotionTable(currentPromotionRows, region);
-        else renderGenericTable(currentPromotionRows, region);
+        if (toolKey === 'promotion') renderPromotionTable(currentDataRows, region);
+        else renderStatusTable(currentDataRows, region);
     }
 
     function fmtVal(v, type) {
-        if (v === 0 || isNaN(v) || !isFinite(v)) return '-';
+        if (v === 0 || v === "0" || isNaN(v) || !isFinite(v)) return '-';
         if (type === 'num') return Math.round(v).toLocaleString();
         if (type === 'ratio') return (Math.floor(v * 100) / 100).toFixed(2);
         return v.toFixed(1) + '%';
+    }
+
+    // 拠点判定ヘルパー
+    function getMatchRegion(affStr) {
+        if (!affStr) return "";
+        if (affStr.includes("東京") || affStr.includes("首都圏")) return "首都圏";
+        if (affStr.includes("名古屋") || affStr.includes("東海")) return "東海";
+        if (affStr.includes("大阪") || affStr.includes("西日本")) return "西日本";
+        return affStr;
     }
 
     function renderPromotionTable(rows, filterRegion) {
         if (rows.length < 2) return;
         const AffIndex = 2, NoIndex = 3, NameIndex = 4, SalaryIndex = 10, CostIndex = 11, DataStartCol = 12;
         let rawData = rows.slice(1).filter(r => r[NoIndex] && r[NoIndex].trim() !== "" && r[NoIndex] !== "技術者№");
-        let data = (filterRegion === 'total') ? rawData : (filterRegion === '東日本' ? rawData.filter(r => r[AffIndex] === '東海' || r[AffIndex] === '首都圏') : rawData.filter(r => r[AffIndex] === filterRegion));
+        let data = (filterRegion === 'total') ? rawData : (filterRegion === '東日本' ? rawData.filter(r => getMatchRegion(r[AffIndex]) === '東海' || getMatchRegion(r[AffIndex]) === '首都圏') : rawData.filter(r => getMatchRegion(r[AffIndex]) === filterRegion));
         
-        let html = `<table><thead><tr><th rowspan="2" class="cat-header"><div class="flex-stack-box"><div class="header-label-bold">技術者名</div><div class="header-label-sub">スキルシートNO</div></div></th><th rowspan="2" class="cat-header"><div class="flex-stack-box"><div class="header-label-bold">給与</div><div class="header-label-bold">コスト</div></div></th><th rowspan="2" class="type-col">項目</th><th colspan="6">上期実績</th><th class="total-header">上期計</th><th colspan="6" class="second-half-start">下期実績・予想</th><th class="total-header">下期合計</th><th class="total-header">年間合計</th></tr><tr><th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th class="month-sep">11月</th><th class="total-header">計</th><th class="second-half-start">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th class="month-sep">5月</th><th class="total-header">計</th><th class="total-header">合計</th></tr></thead><tbody>`;
+        let html = `<table><thead><tr><th rowspan="2" class="cat-header">技術者名<br><span style="font-size:0.7rem; font-weight:normal;">スキルシートNO</span></th><th rowspan="2" class="cat-header">給与<br>コスト</th><th rowspan="2" class="type-col">項目</th><th colspan="6">上期実績</th><th class="total-header">上期計</th><th colspan="6" class="second-half-start">下期実績・予想</th><th class="total-header">下期合計</th><th class="total-header">年間合計</th></tr><tr><th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th class="month-sep">11月</th><th class="total-header">計</th><th class="second-half-start">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th class="month-sep">5月</th><th class="total-header">計</th><th class="total-header">合計</th></tr></thead><tbody>`;
 
-        const overall = { 
-            sales: Array(12).fill(0), profit: Array(12).fill(0), margin: Array(12).fill(0), opRate: Array(12).fill(0), counts: Array(12).fill(0), properCounts: Array(12).fill(0), bpCounts: Array(12).fill(0)
-        };
-        
+        const overall = { sales: Array(12).fill(0), profit: Array(12).fill(0), margin: Array(12).fill(0), opRate: Array(12).fill(0), counts: Array(12).fill(0), properCounts: Array(12).fill(0), bpCounts: Array(12).fill(0) };
         const techProcessed = data.map(m => {
             const isBP = (m[NoIndex] === 'BP 要員');
-            const salVal = parseNum(m[SalaryIndex]);
-            const costVal = parseNum(m[CostIndex]);
+            const salVal = parseNum(m[SalaryIndex]); const costVal = parseNum(m[CostIndex]);
             const calcBase = isBP ? costVal : salVal;
             const sList = []; const cList = [];
             for(let i=0; i<12; i++) { sList.push(parseNum(m[DataStartCol + i * 2])); cList.push(parseNum(m[DataStartCol + i * 2 + 1])); }
             const pList = sList.map((s, i) => s > 0 ? s - cList[i] : 0);
             const mList = sList.map((s, i) => s > 0 ? ((s - cList[i]) / s * 100) : 0);
             const oList = sList.map(s => (s > 0 && calcBase > 0) ? (s / calcBase) : 0);
-            sList.forEach((s, i) => {
-                if(s > 0) {
-                    overall.sales[i] += s; overall.profit[i] += pList[i];
-                    overall.margin[i] += mList[i]; overall.opRate[i] += oList[i];
-                    overall.counts[i]++;
-                    if(isBP) overall.bpCounts[i]++; else overall.properCounts[i]++;
-                }
-            });
+            sList.forEach((s, i) => { if(s > 0) { overall.sales[i] += s; overall.profit[i] += pList[i]; overall.margin[i] += mList[i]; overall.opRate[i] += oList[i]; overall.counts[i]++; if(isBP) overall.bpCounts[i]++; else overall.properCounts[i]++; } });
             return { name: m[NameIndex], no: m[NoIndex], aff: m[AffIndex], salVal, costVal, sList, pList, mList, oList };
         });
 
         html += `<tr><td colspan="18" class="affiliation-header">全体合計 (${filterRegion==='total'?'全社':filterRegion})</td></tr>`;
-        const totalRows = ['売上','利益','利益率','運用率','稼働<br>プロパー','稼働BP','総稼働'];
-        totalRows.forEach((label, idx) => {
-            html += `<tr class="${idx === totalRows.length - 1 ? 'item-bottom-bold' : 'row-border'}">`;
+        ['売上','利益','利益率','運用率','稼働<br>プロパー','稼働BP','総稼働'].forEach((label, idx) => {
+            html += `<tr class="${idx === 6 ? 'item-bottom-bold' : 'row-border'}">`;
             if(idx === 0) html += `<td rowspan="7" colspan="2" class="cat-header" style="background:white; font-size:1rem;">全体合計</td>`;
             html += `<td class="metric-label">${label}</td>`;
-            let h1Sum = 0, h1Cnt = 0, h2Sum = 0, h2Cnt = 0;
+            let h1=0, c1=0, h2=0, c2=0;
             for(let i=0; i<12; i++) {
                 let v = 0;
-                if (idx === 0) v = overall.sales[i];
-                else if (idx === 1) v = overall.profit[i];
-                else if (idx === 2) v = overall.counts[i] ? overall.margin[i] / overall.counts[i] : 0;
-                else if (idx === 3) v = overall.counts[i] ? overall.opRate[i] / overall.counts[i] : 0;
-                else if (idx === 4) v = overall.properCounts[i];
-                else if (idx === 5) v = overall.bpCounts[i];
-                else v = overall.counts[i];
+                if (idx === 0) v = overall.sales[i]; else if (idx === 1) v = overall.profit[i]; else if (idx === 2) v = overall.counts[i] ? overall.margin[i] / overall.counts[i] : 0; else if (idx === 3) v = overall.counts[i] ? overall.opRate[i] / overall.counts[i] : 0; else if (idx === 4) v = overall.properCounts[i]; else if (idx === 5) v = overall.bpCounts[i]; else v = overall.counts[i];
                 let mType = (idx < 2 || idx >= 4) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
                 html += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${fmtVal(v, mType)}</td>`;
-                if(v !== 0) { if(i < 6) { h1Sum += v; h1Cnt++; } else { h2Sum += v; h2Cnt++; } }
+                if(v !== 0) { if(i < 6) { h1 += v; c1++; } else { h2 += v; c2++; } }
                 if(i === 5) {
                     let sType = (idx < 2) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
-                    let h1D = (idx < 2) ? Math.round(h1Sum).toLocaleString() : (h1Cnt ? fmtVal(h1Sum / h1Cnt, sType) : '-');
-                    html += `<td class="total-col">${h1D}</td>`;
+                    html += `<td class="total-col">${(idx < 2) ? Math.round(h1).toLocaleString() : (c1 ? fmtVal(h1 / c1, sType) : '-')}</td>`;
                 }
             }
-            let sTypeFinal = (idx < 2) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
-            let h2D = (idx < 2) ? Math.round(h2Sum).toLocaleString() : (h2Cnt ? fmtVal(h2Sum / h2Cnt, sTypeFinal) : '-');
-            let yrD = (idx < 2) ? Math.round(h1Sum + h2Sum).toLocaleString() : ((h1Cnt + h2Cnt) ? fmtVal((h1Sum + h2Sum) / (h1Cnt + h2Cnt), sTypeFinal) : '-');
-            html += `<td class="total-col">${h2D}</td><td class="total-col">${yrD}</td></tr>`;
+            let sFinal = (idx < 2) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
+            html += `<td class="total-col">${idx < 2 ? Math.round(h2).toLocaleString() : (c2 ? fmtVal(h2 / c2, sFinal) : '-')}</td><td class="total-col">${idx < 2 ? Math.round(h1 + h2).toLocaleString() : ((c1 + c2) ? fmtVal((h1 + h2) / (c1 + c2), sFinal) : '-')}</td></tr>`;
         });
 
         const affs = [...new Set(techProcessed.map(t => t.aff))];
         affs.forEach(aff => {
             html += `<tr><td colspan="18" class="affiliation-header">${aff}</td></tr>`;
             techProcessed.filter(t => t.aff === aff).forEach(t => {
-                const metrics = [ { n:'売上', d:t.sList, t:'num' }, { n:'利益', d:t.pList, t:'num' }, { n:'利益率', d:t.mList, t:'pct' }, { n:'運用率', d:t.oList, t:'ratio' } ];
-                metrics.forEach((met, idx) => {
+                const ms = [ { n:'売上', d:t.sList, t:'num' }, { n:'利益', d:t.pList, t:'num' }, { n:'利益率', d:t.mList, t:'pct' }, { n:'運用率', d:t.oList, t:'ratio' } ];
+                ms.forEach((met, idx) => {
                     html += `<tr class="${idx === 3 ? 'item-bottom-bold' : 'row-border'}">`;
-                    if(idx === 0) {
-                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="tech-info-box"><div class="tech-name-label">${t.name}</div><div class="tech-no-label">${t.no}</div></div></td>`;
-                        html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="flex-stack-box"><div class="data-value-std">${t.salVal.toLocaleString()}</div><div class="data-value-std">${t.costVal.toLocaleString()}</div></div></td>`;
-                    }
+                    if(idx === 0) { html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="cell-main-text">${t.name}</div><div class="cell-sub-text">${t.no}</div></td><td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;">${t.salVal.toLocaleString()}<br>${t.costVal.toLocaleString()}</td>`; }
                     html += `<td class="metric-label">${met.n}</td>`;
-                    let h1I = 0, h1C = 0, h2I = 0, h2C = 0;
+                    let h1=0, c1=0, h2=0, c2=0;
                     met.d.forEach((v, i) => {
                         html += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${fmtVal(v, met.t)}</td>`;
-                        if(v !== 0) { if(i < 6) { h1I += v; h1C++; } else { h2I += v; h2C++; } }
-                        if(i === 5) html += `<td class="total-col">${met.t === 'num' ? Math.round(h1I).toLocaleString() : (h1C ? fmtVal(h1I / h1C, met.t) : '-')}</td>`;
+                        if(v !== 0) { if(i < 6) { h1 += v; c1++; } else { h2 += v; c2++; } }
+                        if(i === 5) html += `<td class="total-col">${met.t === 'num' ? Math.round(h1).toLocaleString() : (c1 ? fmtVal(h1 / c1, met.t) : '-')}</td>`;
                     });
-                    let h2DisplayVal = met.t === 'num' ? Math.round(h2I).toLocaleString() : (h2C ? fmtVal(h2I / h2C, met.t) : '-');
-                    let yrDisplayVal = met.t === 'num' ? Math.round(h1I + h2I).toLocaleString() : ((h1C + h2C) ? fmtVal((h1I + h2I) / (h1C + h2C), met.t) : '-');
-                    html += `<td class="total-col">${h2DisplayVal}</td><td class="total-col">${yrDisplayVal}</td></tr>`;
+                    html += `<td class="total-col">${met.t === 'num' ? Math.round(h2).toLocaleString() : (c2 ? fmtVal(h2 / c2, met.t) : '-')}</td><td class="total-col">${met.t === 'num' ? Math.round(h1 + h2).toLocaleString() : ((c1 + c2) ? fmtVal((h1 + h2) / (c1 + c2), met.t) : '-')}</td></tr>`;
                 });
             });
         });
@@ -313,41 +291,68 @@
         document.getElementById('generic-content').innerHTML = html;
     }
 
-    function renderGenericTable(rows, filterRegion) {
-        if (rows.length < 1) return;
-        const AffIndex = 2;
+    // --- 売込状況一覧（修正版インデックス） ---
+    function renderStatusTable(rows, filterRegion) {
+        if (rows.length < 2) return;
+        // 統合シートの列順序に合わせて修正
+        const NoIndex = 0;      // A: 社員番号
+        const NameIndex = 1;    // B: 従業員名
+        const AffIndex = 2;     // C: 所属
+        const StatusIndex = 3;  // D: 現状
+        const EndIndex = 4;     // E: 稼働終了
+        const RepIndex = 10;    // K: 営業担当
+        const ProjectIndex = 11; // L: 提案先/案件名
+        const PriceIndex = 12;  // M: 売込単価
+        const KakudoIndex = 13; // N: 確度
+        const MonthIndex = 14;  // O: 提案月
+
         let data = rows.slice(1);
         if (filterRegion !== 'total') {
-            data = (filterRegion === '東日本') ? data.filter(r => r[AffIndex] === '東海' || r[AffIndex] === '首都圏') : data.filter(r => r[AffIndex] === filterRegion);
+            if (filterRegion === '東日本') {
+                data = data.filter(r => getMatchRegion(r[AffIndex]) === '東海' || getMatchRegion(r[AffIndex]) === '首都圏');
+            } else {
+                data = data.filter(r => getMatchRegion(r[AffIndex]) === filterRegion);
+            }
         }
-        let html = `<table><thead><tr>`;
-        rows[0].forEach(h => html += `<th>${h}</th>`);
-        html += `</tr></thead><tbody>`;
-        data.forEach(row => { html += `<tr>`; row.forEach(cell => html += `<td>${cell || '-'}</td>`); html += `</tr>`; });
+
+        let html = `<table><thead><tr>
+            <th class="col-name">技術者名<br><span style="font-size:0.7rem; font-weight:normal;">スキルシートNO</span></th>
+            <th class="col-status">現状<br><span style="font-size:0.7rem; font-weight:normal;">所属</span></th>
+            <th class="col-date">稼働終了<br><span style="font-size:0.7rem; font-weight:normal;">営業担当</span></th>
+            <th class="col-project">案件名<br><span style="font-size:0.7rem; font-weight:normal;">売込単価</span></th>
+            <th class="col-kakudo">提案月<br><span style="font-size:0.7rem; font-weight:normal;">確度</span></th>
+        </tr></thead><tbody>`;
+
+        const affs = [...new Set(data.map(r => r[AffIndex]))];
+        affs.forEach(aff => {
+            html += `<tr><td colspan="5" class="affiliation-header">${aff}</td></tr>`;
+            data.filter(r => r[AffIndex] === aff).forEach(r => {
+                const price = parseNum(r[PriceIndex]);
+                html += `<tr class="row-main">
+                    <td class="cell-main-text">${r[NameIndex] || '-'}</td>
+                    <td class="cell-main-text">${r[StatusIndex] || '-'}</td>
+                    <td class="cell-main-text">${r[EndIndex] || '-'}</td>
+                    <td class="cell-main-text col-project" style="text-align:left; padding-left:10px;">${r[ProjectIndex] || '-'}</td>
+                    <td class="cell-main-text">${r[MonthIndex] || '-'}</td>
+                </tr>
+                <tr class="row-sub border-bottom-bold">
+                    <td class="cell-sub-text">${r[NoIndex] || '-'}</td>
+                    <td class="cell-sub-text">${r[AffIndex] || '-'}</td>
+                    <td class="cell-sub-text">${r[RepIndex] || '-'}</td>
+                    <td class="cell-sub-text col-project" style="text-align:left; padding-left:10px;">${price ? price.toLocaleString() : '-'}</td>
+                    <td class="cell-sub-text">${r[KakudoIndex] || '-'}</td>
+                </tr>`;
+            });
+        });
         html += `</tbody></table>`;
         document.getElementById('generic-content').innerHTML = html;
     }
 
-    // --- 営業実績・予算管理表 ---
     function renderSalesTable() {
         const rk = document.getElementById('region-select').value;
         const d = getRD(rk); const tb = document.getElementById('table-body');
         tb.innerHTML = "";
-        
-        // エンジニア総数を最後に移動
-        const labels = [
-            {l:'売上',c:'sales',r:['B','A','R']},
-            {l:'稼働原価',c:'kCost',r:['B','A','R']},
-            {l:'A利益',c:'aProfit',r:['B','A','R']},
-            {l:'待機原価',c:'waitCost',r:['A']},
-            {l:'プロパー(稼働)',c:'propK',r:['B','A','R']},
-            {l:'BP',c:'bpK',r:['A']},
-            {l:'稼働エンジニア数',c:'workEngTotal',r:['B','A']},
-            {l:'プロパー(待機)',c:'propW',r:['B','A']},
-            {l:'待機率',c:'waitRate',r:['A']},
-            {l:'エンジニア総数',c:'totalEng',r:['B','A','R']} // ここが最下部へ移動
-        ];
-        
+        const labels = [{l:'売上',c:'sales',r:['B','A','R']},{l:'稼働原価',c:'kCost',r:['B','A','R']},{l:'A利益',c:'aProfit',r:['B','A','R']},{l:'待機原価',c:'waitCost',r:['A']},{l:'プロパー(稼働)',c:'propK',r:['B','A','R']},{l:'BP',c:'bpK',r:['A']},{l:'稼働エンジニア数',c:'workEngTotal',r:['B','A']},{l:'プロパー(待機)',c:'propW',r:['B','A']},{l:'待機率',c:'waitRate',r:['A']},{l:'エンジニア総数',c:'totalEng',r:['B','A','R']}];
         labels.forEach(item => {
             const hasB=item.r.includes('B'), hasA=item.r.includes('A'), hasR=item.r.includes('R'), rCnt=item.r.length;
             let rB=`<tr class="row-border"><td rowspan="${rCnt}" class="cat-header">${item.l}</td><td class="type-col">予算</td>`, rA=`<tr class="${!hasR?'item-bottom-bold':'row-border'}"><td class="type-col">実績</td>`, rR=`<tr class="item-bottom-bold"><td class="type-col">達成率</td>`;
@@ -360,11 +365,7 @@
                 if(hasB) rB+=`<td class="${cls}">${bV?Math.round(bV).toLocaleString():'-'}</td>`;
                 if(hasA) rA+=`<td class="${cls}">${d.actual[item.c]?.[i]!==null?(item.c==='waitRate'?d.actual[item.c][i].toFixed(1)+'%':Math.round(d.actual[item.c][i]).toLocaleString()):'-'}</td>`;
                 if(hasR) rR+=`<td class="${cls}">${(d.actual[item.c]?.[i]!==null&&bV)?(d.actual[item.c][i]/bV*100).toFixed(1)+'%':'-'}</td>`;
-                if(i===5){
-                    if(hasB) rB+=`<td class="total-col">${Math.round(b1).toLocaleString()}</td>`;
-                    if(hasA) rA+=`<td class="total-col">${Math.round(a1).toLocaleString()}</td>`;
-                    if(hasR) rR+=`<td class="total-col">${b1?(a1/b1*100).toFixed(1)+'%':'-'}</td>`;
-                }
+                if(i===5){ if(hasB) rB+=`<td class="total-col">${Math.round(b1).toLocaleString()}</td>`; if(hasA) rA+=`<td class="total-col">${Math.round(a1).toLocaleString()}</td>`; if(hasR) rR+=`<td class="total-col">${b1?(a1/b1*100).toFixed(1)+'%':'-'}</td>`; }
             }
             if(hasB) rB+=`<td class="total-col">${Math.round(b2).toLocaleString()}</td><td class="total-col">${Math.round(b1+b2).toLocaleString()}</td></tr>`;
             if(hasA) rA+=`<td class="total-col">${Math.round(a2).toLocaleString()}</td><td class="total-col">${Math.round(a1+a2).toLocaleString()}</td></tr>`;
@@ -389,13 +390,7 @@
         const regMap = {'西日本':'west','東海':'tokai','首都圏':'tokyo'}, lblMap = {'売上':'sales','稼働原価':'kCost','A利益':'aProfit','待機原価':'waitCost','プロパー(稼働)':'propK','BP':'bpK','稼働エンジニア総数':'workEngTotal','エンジニア総数':'totalEng','プロパー(待機)':'propW','待機率':'waitRate'};
         rows.slice(1).forEach(row => {
             const rK = regMap[row[0]], lK = lblMap[row[1]], type = row[2] === '予算' ? 'budget' : 'actual';
-            if(rK && lK) {
-                if(!dataSet[rK][type][lK]) dataSet[rK][type][lK] = Array(12).fill(null);
-                for(let i=3; i<15; i++) {
-                    let v = row[i] ? row[i].replace(/,/g, '').replace('%', '') : null;
-                    dataSet[rK][type][lK][i-3] = (v===null||v===""||isNaN(v))?null:parseFloat(v);
-                }
-            }
+            if(rK && lK) { if(!dataSet[rK][type][lK]) dataSet[rK][type][lK] = Array(12).fill(null); for(let i=3; i<15; i++) { let v = row[i] ? row[i].replace(/,/g, '').replace('%', '') : null; dataSet[rK][type][lK][i-3] = (v===null||v===""||isNaN(v))?null:parseFloat(v); } }
         });
     }
 
@@ -404,18 +399,13 @@
         const res = { budget:{}, actual:{} }, lbls = ['sales','kCost','aProfit','waitCost','propK','bpK','workEngTotal','totalEng','propW','waitRate'];
         lbls.forEach(c => {
             res.budget[c] = Array(12).fill(0).map((_,i)=>rs.reduce((s,r)=>s+(dataSet[r].budget[c]?.[i]||0),0));
-            res.actual[c] = Array(12).fill(null).map((_,i)=>{
-                let h=false, s=0; rs.forEach(r=>{if(dataSet[r].actual[c]?.[i]!==null){h=true; s+=dataSet[r].actual[c][i];}});
-                return h?s:null;
-            });
+            res.actual[c] = Array(12).fill(null).map((_,i)=>{ let h=false, s=0; rs.forEach(r=>{if(dataSet[r].actual[c]?.[i]!==null){h=true; s+=dataSet[r].actual[c][i];}}); return h?s:null; });
         });
         return res;
     }
 </script>
 </body>
 </html>
-
-
 
 
 
