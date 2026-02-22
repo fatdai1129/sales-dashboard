@@ -11,8 +11,7 @@
         #pw_screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a202c; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; }
         #pw_box { padding: 40px; background: white; border-radius: 12px; color: #333; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         input#pass_val { padding: 12px; font-size: 18px; border: 2px solid #ddd; border-radius: 6px; margin-bottom: 15px; width: 250px; text-align: center; }
-        button.login-btn { padding: 12px 30px; background: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; transition: background 0.2s; }
-        button.login-btn:hover { background: #2b6cb0; }
+        button.login-btn { padding: 12px 30px; background: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; }
         #main_content { display: none; }
         body { font-family: 'Hiragino Sans', sans-serif; background-color: #f0f4f8; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 1750px; margin: auto; }
@@ -21,7 +20,7 @@
         .nav-select { background: #2d3748; color: white; border: 1px solid #4a5568; padding: 8px 15px; border-radius: 6px; font-size: 1rem; margin-right: 15px; cursor: pointer; }
         h2 { font-size: 1.4rem; margin: 0; color: #1a202c; border-left: 5px solid #3182ce; padding-left: 15px; text-align: left; }
         
-        /* 表全体の基本設定 */
+        /* 表全体の枠線 */
         table { width: 100%; border-collapse: collapse; background: white; border: 2px solid black !important; table-layout: fixed; }
         th, td { border: 1px solid black !important; padding: 8px 6px; text-align: center; font-size: 0.85rem; word-break: break-all; }
         th { background: #edf2f7; color: #4a5568; border-bottom: 2px solid black !important; }
@@ -34,11 +33,11 @@
         .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .affiliation-header { background: #1a202c !important; color: white !important; text-align: left !important; padding: 10px 15px !important; font-size: 1rem !important; border-bottom: 2px solid black !important; }
         
-        /* 項目グループの区切りを3px太線に固定 */
+        /* 下太線（3px）の設定 */
         .item-bottom-bold td { border-bottom: 3px solid black !important; }
         .row-border td:not(.cat-header) { border-bottom: 1px solid black !important; }
 
-        /* 売込状況一覧用デザイン */
+        /* 売込状況一覧レイアウト */
         .row-main { background: white; }
         .row-sub { background: #f9fafb; }
         .cell-main-text { font-weight: bold; font-size: 0.95rem; color: #1a202c; }
@@ -56,7 +55,7 @@
 <body class="notranslate">
 <div id="pw_screen">
     <div id="pw_box">
-        <div style="font-size: 1.4rem; font-weight: bold; color: #2d3748; margin-bottom: 10px;">実績管理ログイン</div>
+        <div style="font-size: 1.2rem; font-weight: bold; color: #2d3748; margin-bottom: 10px;">実績管理ログイン</div>
         <input type="password" id="pass_val" placeholder="パスワードを入力" onkeydown="if(event.keyCode==13)checkPW()">
         <br>
         <button class="login-btn" onclick="checkPW()">ログイン</button>
@@ -164,7 +163,8 @@
     function parseNum(val) {
         if (val === null || val === undefined || val === '') return 0;
         let s = String(val).replace(/,/g, '').replace(/[^-0-9.]/g, '');
-        return Math.round(parseFloat(s)) || 0;
+        let n = parseFloat(s);
+        return isNaN(n) ? 0 : Math.round(n);
     }
 
     async function initApp() { await switchTool(); }
@@ -231,7 +231,7 @@
         return aff;
     }
 
-    // --- 営業推進管理表（致命的な変数名ミスを修正済） ---
+    // --- 営業推進管理表（変数重複エラーを完全に修正済） ---
     function renderPromotionTable(rows, filterRegion) {
         if (rows.length < 2) return;
         const AffIdx = 2, NoIdx = 3, NameIdx = 4, SalIdx = 10, CostIdx = 11, DataStart = 12;
@@ -245,16 +245,18 @@
         const ov = { s: Array(12).fill(0), p: Array(12).fill(0), m: Array(12).fill(0), o: Array(12).fill(0), c: Array(12).fill(0), pc: Array(12).fill(0), bc: Array(12).fill(0) };
         const processed = data.map(m => {
             const isBP = (m[NoIdx] === 'BP 要員');
-            const calcBase = isBP ? parseNum(m[CostIdx]) : parseNum(m[SalIdx]);
+            const salVal = parseNum(m[SalIdx]), costVal = parseNum(m[CostIdx]);
+            const calcBase = isBP ? costVal : salVal;
             const sl = [], pl = [], ml = [], ol = [];
             for(let i=0; i<12; i++) {
                 let s = parseNum(m[DataStart + i*2]), c = parseNum(m[DataStart + i*2 + 1]);
                 sl.push(s); pl.push(s > 0 ? s - c : 0);
-                ml.push(s > 0 ? ((s - c) / s * 100) : 0);
-                ol.push((s > 0 && calcBase > 0) ? (s / calcBase) : 0);
-                if(s > 0) { ov.s[i]+=s; ov.p[i]+=(s-c); ov.m[i]+=ml[i]; ov.o[i]+=ol[i]; ov.c[i]++; if(isBP) ov.bc[i]++; else ov.pc[i]++; }
+                let marginVal = s > 0 ? ((s - c) / s * 100) : 0;
+                let opRateVal = (s > 0 && calcBase > 0) ? (s / calcBase) : 0;
+                ml.push(marginVal); ol.push(opRateVal);
+                if(s > 0) { ov.s[i]+=s; ov.p[i]+=(s-c); ov.m[i]+=marginVal; ov.o[i]+=opRateVal; ov.c[i]++; if(isBP) ov.bc[i]++; else ov.pc[i]++; }
             }
-            return { name: m[NameIdx], no: m[NoIdx], aff: m[AffIdx], sal: parseNum(m[SalIdx]), cost: parseNum(m[CostIdx]), sl, pl, ml, ol };
+            return { name: m[NameIdx], no: m[NoIdx], aff: m[AffIdx], sal: salVal, cost: costVal, sl, pl, ml, ol };
         });
 
         html += `<tr><td colspan="18" class="affiliation-header">全体合計 (${filterRegion==='total'?'全社':filterRegion})</td></tr>`;
@@ -262,17 +264,18 @@
             html += `<tr class="${idx === 6 ? 'item-bottom-bold' : 'row-border'}">`;
             if(idx === 0) html += `<td rowspan="7" colspan="2" class="cat-header" style="background:white; font-size:1rem;">全体合計</td>`;
             html += `<td class="metric-label">${lbl}</td>`;
-            let h1S=0, h1C=0, h2S=0, h2C=0;
+            
+            let h1Sum=0, h1Cnt=0, h2Sum=0, h2Cnt=0; // Fix: No duplicate declarations
             for(let i=0; i<12; i++) {
-                let v = 0;
+                let v = 0; 
                 if(idx===0) v=ov.s[i]; else if(idx===1) v=ov.p[i]; else if(idx===2) v=ov.c[i]?ov.m[i]/ov.c[i]:0; else if(idx===3) v=ov.c[i]?ov.o[i]/ov.c[i]:0; else if(idx===4) v=ov.pc[i]; else if(idx===5) v=ov.bc[i]; else v=ov.c[i];
                 let type = (idx < 2 || idx >= 4) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
                 html += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${fmtVal(v, type)}</td>`;
-                if(v !== 0) { if(i < 6) { h1S += v; h1C++; } else { h2S += v; h2C++; } }
-                if(i === 5) html += `<td class="total-col">${idx < 2 ? Math.round(h1S).toLocaleString() : (h1C ? fmtVal(h1S / h1C, type) : '-')}</td>`;
+                if(v !== 0) { if(i < 6) { h1Sum += v; h1Cnt++; } else { h2Sum += v; h2Cnt++; } }
+                if(i === 5) html += `<td class="total-col">${idx < 2 ? Math.round(h1Sum).toLocaleString() : (h1Cnt ? fmtVal(h1Sum / h1Cnt, type) : '-')}</td>`;
             }
-            let sF = (idx < 2) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
-            html += `<td class="total-col">${idx < 2 ? Math.round(h2S).toLocaleString() : (h2C ? fmtVal(h2S / h2C, sF) : '-')}</td><td class="total-col">${idx < 2 ? Math.round(h1S + h2S).toLocaleString() : ((h1C + h2C) ? fmtVal((h1S + h2S) / (h1C + h2C), sF) : '-')}</td></tr>`;
+            let sFinal = (idx < 2) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
+            html += `<td class="total-col">${idx < 2 ? Math.round(h2Sum).toLocaleString() : (h2Cnt ? fmtVal(h2Sum / h2Cnt, sFinal) : '-')}</td><td class="total-col">${idx < 2 ? Math.round(h1Sum + h2Sum).toLocaleString() : ((h1Cnt + h2Cnt) ? fmtVal((h1Sum + h2Sum) / (h1Cnt + h2Cnt), sFinal) : '-')}</td></tr>`;
         });
         const affs = [...new Set(processed.map(t => t.aff))];
         affs.forEach(aff => {
@@ -296,7 +299,7 @@
         html += `</tbody></table>`; document.getElementById('generic-content').innerHTML = html;
     }
 
-    // --- 売込状況一覧（画像通りの3列×2段構成） ---
+    // --- 売込状況一覧（画像・指示通りの3列2段構成） ---
     function renderStatusTable(rows, filterRegion) {
         if (rows.length < 2) return;
         const NameIdx=1, AffIdx=2, StatusIdx=3, ReasonIdx=4, DateIdx=5, PeriodIdx=7;
@@ -313,13 +316,14 @@
         sorted.forEach(st => {
             html += `<tr><td colspan="3" class="affiliation-header">${st} (${grouped[st].length}名)</td></tr>`;
             grouped[st].forEach(r => {
-                html += `<tr class="row-main"><td class="cell-main-text">${r[NameIdx]||'-'}</td><td class="cell-main-text">${r[StatusIdx]||'-'}</td><td class="cell-main-text">${r[DateIdx]||'-'}</td></tr><tr class="row-sub border-bottom-bold"><td class="cell-sub-text">${r[AffIdx]||'-'}</td><td class="cell-sub-text">${r[ReasonIdx]||'-'}</td><td class="cell-sub-text">${r[PeriodIdx]||'-'}</td></tr>`;
+                //指示通り: 左(従業員名/所属)、中(退場理由/稼働状況)、右(参画可能日/未参画期間)
+                html += `<tr class="row-main"><td class="cell-main-text">${r[NameIdx]||'-'}</td><td class="cell-main-text">${r[ReasonIdx]||'-'}</td><td class="cell-main-text">${r[DateIdx]||'-'}</td></tr><tr class="row-sub border-bottom-bold"><td class="cell-sub-text">${r[AffIdx]||'-'}</td><td class="cell-sub-text">${r[StatusIdx]||'-'}</td><td class="cell-sub-text">${r[PeriodIdx]||'-'}</td></tr>`;
             });
         });
         html += `</tbody></table>`; document.getElementById('generic-content').innerHTML = html;
     }
 
-    // --- 営業実績・予算管理表（枠線修正版） ---
+    // --- 営業実績・予算管理表（太線修正版） ---
     function renderSalesTable() {
         const rk = document.getElementById('region-select').value;
         const d = getRD(rk); const tb = document.getElementById('table-body'); tb.innerHTML = "";
@@ -349,14 +353,14 @@
             }
             if(hasR) {
                 let row = `<tr class="item-bottom-bold"><td class="type-col">達成率</td>`;
-                let b1=0, a1=0, b2=0, a2=0;
+                let rb1=0, ra1=0, rb2=0, ra2=0;
                 for(let i=0; i<12; i++){
-                    let bV=d.budget[item.c]?.[i]||0, aV=d.actual[item.c]?.[i]||0;
-                    if(i<6){b1+=bV; a1+=aV;} else {b2+=bV; a2+=aV;}
-                    row += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${(d.actual[item.c]?.[i]!==null&&bV)?(d.actual[item.c][i]/bV*100).toFixed(1)+'%':'-'}</td>`;
-                    if(i===5) row += `<td class="total-col">${b1?(a1/b1*100).toFixed(1)+'%':'-'}</td>`;
+                    let bv=d.budget[item.c]?.[i]||0, av=d.actual[item.c]?.[i]||0;
+                    if(i<6){rb1+=bv; ra1+=av;} else {rb2+=bv; ra2+=av;}
+                    row += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${(d.actual[item.c]?.[i]!==null&&bv)?(d.actual[item.c][i]/bv*100).toFixed(1)+'%':'-'}</td>`;
+                    if(i===5) row += `<td class="total-col">${rb1?(ra1/rb1*100).toFixed(1)+'%':'-'}</td>`;
                 }
-                rowsHtml += row + `<td class="total-col">${b2?(a2/b2*100).toFixed(1)+'%':'-'}</td><td class="total-col">${(b1+b2)?((a1+a2)/(b1+b2)*100).toFixed(1)+'%':'-'}</td></tr>`;
+                rowsHtml += row + `<td class="total-col">${rb2?(ra2/rb2*100).toFixed(1)+'%':'-'}</td><td class="total-col">${(rb1+rb2)?((ra1+ra2)/(rb1+rb2)*100).toFixed(1)+'%':'-'}</td></tr>`;
             }
             tb.innerHTML += rowsHtml;
         });
@@ -392,6 +396,7 @@
 </script>
 </body>
 </html>
+
 
 
 
