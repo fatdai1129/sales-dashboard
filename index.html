@@ -11,7 +11,7 @@
         #main_content { display: none; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 枠線設計 --- */
+        /* --- 枠線：固定（一切の変更禁止） --- */
         table { 
             width: 100%; 
             border-collapse: collapse; 
@@ -43,9 +43,8 @@
         .type-col { width: 70px; text-align: center !important; }
         .total-col { background: #fffaf0; font-weight: bold; }
 
-        /* 横線の太さ制御 */
-        tr.bb-4px td { border-bottom: 4px solid black !important; } /* 項目ごとの区切り */
-        tr.bb-3px td { border-bottom: 3px solid black !important; } /* 今回の修正：達成率の上(実績の下) */
+        tr.bb-4px td { border-bottom: 4px solid black !important; } 
+        tr.bb-3px td { border-bottom: 3px solid black !important; }
 
         .text-right { text-align: right !important; padding-right: 8px !important; }
         .text-center { text-align: center !important; }
@@ -175,12 +174,10 @@
         items.forEach(item => {
             item.t.forEach((type, idx) => {
                 const tr = document.createElement('tr');
-                
-                // 行の境界線クラス判定
                 if (idx === item.t.length - 1) {
                     tr.className = 'bb-4px'; 
                 } else if (target3px.includes(item.n) && type === '実績') {
-                    tr.className = 'bb-3px'; // 達成率の上の線を3pxに変更
+                    tr.className = 'bb-3px'; 
                 }
 
                 let html = idx === 0 ? `<td rowspan="${item.t.length}" class="cat-header">${item.n}</td>` : '';
@@ -265,7 +262,7 @@
 
     function updateCharts() {
         const region = document.getElementById('region-select').value;
-        const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
+        const months = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
 
         renderChart('salesChart', '売上推移', [
             { label: '実績', data: getMonthlyValues(region, '売上', '実績'), type: 'bar', backgroundColor: '#3182ce' },
@@ -273,13 +270,13 @@
         ]);
 
         renderChart('profitChart', 'A利益推移', [
-            { label: 'A利益実績', data: getMonthlyValues(region, 'A利益', '実績'), fill: true, backgroundColor: 'rgba(72, 187, 120, 0.2)', borderColor: '#48bb78', tension: 0.3 }
+            { label: 'A利益実績', data: getMonthlyValues(region, 'A利益', '実績'), type: 'line', fill: true, backgroundColor: 'rgba(72, 187, 120, 0.2)', borderColor: '#48bb78', tension: 0.3 }
         ]);
 
         renderChart('engChart', 'エンジニア内訳', [
-            { label: 'プロパー(稼働)', data: getMonthlyValues(region, 'プロパー(稼働)', '実績'), backgroundColor: '#4299e1' },
-            { label: 'BP', data: getMonthlyValues(region, 'BP', '実績'), backgroundColor: '#ed64a6' },
-            { label: 'プロパー(待機)', data: getMonthlyValues(region, 'プロパー(待機)', '実績'), backgroundColor: '#a0aec0' }
+            { label: 'プロパー(稼働)', data: getMonthlyValues(region, 'プロパー(稼働)', '実績'), type: 'bar', backgroundColor: '#4299e1' },
+            { label: 'BP', data: getMonthlyValues(region, 'BP', '実績'), type: 'bar', backgroundColor: '#ed64a6' },
+            { label: 'プロパー(待機)', data: getMonthlyValues(region, 'プロパー(待機)', '実績'), type: 'bar', backgroundColor: '#a0aec0' }
         ], 'stacked');
     }
 
@@ -288,6 +285,7 @@
         if (charts[id]) charts[id].destroy();
 
         charts[id] = new Chart(ctx, {
+            type: 'bar',
             data: { labels: ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'], datasets: datasets },
             options: {
                 responsive: true,
@@ -303,8 +301,6 @@
 </script>
 </body>
 </html>
-
-
 
 
 
