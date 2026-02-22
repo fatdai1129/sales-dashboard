@@ -10,7 +10,7 @@
         #main_content { display: none; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; }
         
-        /* --- 枠線の優先順位設定 --- */
+        /* --- 枠線の絶対優先設定 --- */
         table { 
             width: 100%; 
             border-collapse: collapse; 
@@ -19,7 +19,7 @@
             table-layout: fixed; 
         }
         
-        /* 基本は全て3px */
+        /* 基本の枠線は全て3pxに固定 */
         th, td { 
             border: 3px solid black !important; 
             padding: 8px 4px; 
@@ -29,15 +29,17 @@
         
         th { background: #edf2f7; text-align: center; }
 
-        /* セレクタの優先順位を上げ、1pxと2pxを強制反映 */
-        table tr.row-border-1px td { border-bottom: 1px solid black !important; }
-        table tr.row-border-2px td { border-bottom: 2px solid black !important; }
+        /* 「実績と達成率の間」を2pxにするための専用クラス */
+        /* セレクタの優先順位を物理的に引き上げ、3px指定を上書きします */
+        table tr.border-2px-bottom td { 
+            border-bottom: 2px solid black !important; 
+        }
 
         .cat-header { background: #ebf8ff; font-weight: bold; width: 130px; text-align: center !important; }
         .type-col { width: 70px; text-align: center !important; }
         .total-col { background: #fffaf0; font-weight: bold; }
         
-        /* 数値配置 */
+        /* 数値・テキスト配置 */
         .text-right { text-align: right !important; padding-right: 8px !important; }
         .text-center { text-align: center !important; }
         
@@ -149,18 +151,16 @@
             { n: 'エンジニア総数', k: 'エンジニア総数', t: ['予算', '実績', '達成率'] }
         ];
 
-        const b1pxList = ['売上', '稼働原価', 'A利益', 'プロパー(稼働)', '稼働エンジニア数', 'エンジニア総数', 'プロパー(待機)'];
-        const b2pxList = ['売上', '稼働原価', 'A利益', 'プロパー(稼働)', 'エンジニア総数'];
+        // 2pxにすべき境界線を持つ項目のリスト
+        const targetItemsFor2px = ['売上', '稼働原価', 'A利益', 'プロパー(稼働)', 'エンジニア総数'];
 
         items.forEach(item => {
             item.t.forEach((type, idx) => {
                 const tr = document.createElement('tr');
                 
-                // 枠線クラスの付与（優先度の高いCSSを適用）
-                if (b1pxList.includes(item.n) && type === '予算') {
-                    tr.className = 'row-border-1px';
-                } else if (b2pxList.includes(item.n) && type === '実績') {
-                    tr.className = 'row-border-2px';
+                // 実績行の下の線を2pxにする（達成率との境界）
+                if (targetItemsFor2px.includes(item.n) && type === '実績') {
+                    tr.className = 'border-2px-bottom';
                 }
 
                 let html = idx === 0 ? `<td rowspan="${item.t.length}" class="cat-header">${item.n}</td>` : '';
@@ -213,11 +213,11 @@
         }
 
         rawRows.slice(1).forEach(r => {
-            const rN = (r[0] || '').trim();
-            const iN = (r[1] || '').trim();
-            const tN = (r[2] || '').trim();
-            let match = (region === '全体合計') ? true : (rN === region);
-            if (match && iN.includes(itemK) && tN.includes(type)) {
+            const rowRegion = (r[0] || '').trim();
+            const rowItem = (r[1] || '').trim();
+            const rowType = (r[2] || '').trim();
+            let match = (region === '全体合計') ? true : (rowRegion === region);
+            if (match && rowItem.includes(itemK) && rowType.includes(type)) {
                 for (let i = 0; i < 12; i++) {
                     let cellVal = r[i+3];
                     if (cellVal !== undefined && cellVal !== "") {
@@ -238,9 +238,6 @@
 </script>
 </body>
 </html>
-
-
-
 
 
 
