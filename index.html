@@ -11,7 +11,7 @@
         #main_content { display: none; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 枠線：固定（一切の変更禁止） --- */
+        /* --- 枠線：固定 --- */
         table { 
             width: 100%; 
             border-collapse: collapse; 
@@ -99,8 +99,8 @@
 
     <div class="charts-container">
         <div class="chart-box"><canvas id="salesChart"></canvas></div>
-        <div class="chart-box"><canvas id="profitChart"></canvas></div>
         <div class="chart-box"><canvas id="engChart"></canvas></div>
+        <div class="chart-box"><canvas id="waitCostChart"></canvas></div>
     </div>
 </div>
 
@@ -262,22 +262,25 @@
 
     function updateCharts() {
         const region = document.getElementById('region-select').value;
-        const months = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
+        const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
 
+        // 1. 売上推移
         renderChart('salesChart', '売上推移', [
             { label: '実績', data: getMonthlyValues(region, '売上', '実績'), type: 'bar', backgroundColor: '#3182ce' },
             { label: '予算', data: getMonthlyValues(region, '売上', '予算'), type: 'line', borderColor: '#e53e3e', tension: 0.1 }
         ]);
 
-        renderChart('profitChart', 'A利益推移', [
-            { label: 'A利益実績', data: getMonthlyValues(region, 'A利益', '実績'), type: 'line', fill: true, backgroundColor: 'rgba(72, 187, 120, 0.2)', borderColor: '#48bb78', tension: 0.3 }
-        ]);
-
+        // 2. エンジニア内訳（中央）
         renderChart('engChart', 'エンジニア内訳', [
             { label: 'プロパー(稼働)', data: getMonthlyValues(region, 'プロパー(稼働)', '実績'), type: 'bar', backgroundColor: '#4299e1' },
             { label: 'BP', data: getMonthlyValues(region, 'BP', '実績'), type: 'bar', backgroundColor: '#ed64a6' },
             { label: 'プロパー(待機)', data: getMonthlyValues(region, 'プロパー(待機)', '実績'), type: 'bar', backgroundColor: '#a0aec0' }
         ], 'stacked');
+
+        // 3. 待機原価（右側）
+        renderChart('waitCostChart', '待機原価推移', [
+            { label: '待機原価実績', data: getMonthlyValues(region, '待機原価', '実績'), type: 'line', fill: true, backgroundColor: 'rgba(237, 137, 54, 0.2)', borderColor: '#ed8936', tension: 0.3 }
+        ]);
     }
 
     function renderChart(id, title, datasets, mode = 'default') {
@@ -301,6 +304,7 @@
 </script>
 </body>
 </html>
+
 
 
 
