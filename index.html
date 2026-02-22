@@ -10,36 +10,40 @@
         #main_content { display: none; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; }
         
-        /* --- 枠線の絶対優先設定 --- */
+        /* --- 枠線設計：細線(1px)から太線(3px)へ --- */
         table { 
             width: 100%; 
             border-collapse: collapse; 
             background: white; 
-            border: 3px solid black !important; 
+            border: 3px solid black !important; /* 外枠は3px */
             table-layout: fixed; 
         }
         
-        /* 基本の枠線は全て3pxに固定 */
+        /* 1. まず全ての線を1px（細線）にする */
         th, td { 
-            border: 3px solid black !important; 
+            border: 1px solid black; 
             padding: 8px 4px; 
             font-size: 0.85rem; 
             word-break: break-all; 
         }
         
-        th { background: #edf2f7; text-align: center; }
+        /* 2. ヘッダーの下線を太く(3px) */
+        th { background: #edf2f7; text-align: center; border-bottom: 3px solid black !important; }
 
-        /* 「実績と達成率の間」を2pxにするための専用クラス */
-        /* セレクタの優先順位を物理的に引き上げ、3px指定を上書きします */
-        table tr.border-2px-bottom td { 
-            border-bottom: 2px solid black !important; 
-        }
+        /* 3. 縦の主要な区切りを太く(3px) */
+        .border-right-thick { border-right: 3px solid black !important; }
+        .border-left-thick { border-left: 3px solid black !important; }
 
+        /* 4. 行の区切りを上書き */
+        .bb-3px td { border-bottom: 3px solid black !important; } /* 項目ごとの区切り(3px) */
+        .bb-2px td { border-bottom: 2px solid black !important; } /* 実績と達成率の間(2px) */
+
+        /* 背景色 */
         .cat-header { background: #ebf8ff; font-weight: bold; width: 130px; text-align: center !important; }
         .type-col { width: 70px; text-align: center !important; }
         .total-col { background: #fffaf0; font-weight: bold; }
         
-        /* 数値・テキスト配置 */
+        /* テキスト配置 */
         .text-right { text-align: right !important; padding-right: 8px !important; }
         .text-center { text-align: center !important; }
         
@@ -74,15 +78,21 @@
         <table id="sales-table">
             <thead>
                 <tr>
-                    <th rowspan="2" class="cat-header">項目</th>
-                    <th rowspan="2" class="type-col">区分</th>
-                    <th colspan="6">上期実績</th><th class="total-col">上期計</th>
-                    <th colspan="6">下期実績・予想</th><th class="total-col">下期計</th>
+                    <th rowspan="2" class="cat-header border-right-thick">項目</th>
+                    <th rowspan="2" class="type-col border-right-thick">区分</th>
+                    <th colspan="6">上期実績</th>
+                    <th class="total-col border-right-thick border-left-thick">上期計</th>
+                    <th colspan="6">下期実績・予想</th>
+                    <th class="total-col border-right-thick border-left-thick">下期計</th>
                     <th class="total-col">年間計</th>
                 </tr>
                 <tr>
-                    <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th>11月</th><th class="total-col">計</th>
-                    <th>12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th>5月</th><th class="total-col">計</th>
+                    <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th>
+                    <th class="border-right-thick">11月</th>
+                    <th class="total-col border-right-thick">計</th>
+                    <th>12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th>
+                    <th class="border-right-thick">5月</th>
+                    <th class="total-col border-right-thick">計</th>
                     <th class="total-col">合計</th>
                 </tr>
             </thead>
@@ -115,7 +125,6 @@
             renderTable();
         } catch (e) {
             alert('取得失敗');
-            console.error(e);
         } finally {
             document.getElementById('loading').style.display = 'none';
         }
@@ -151,20 +160,24 @@
             { n: 'エンジニア総数', k: 'エンジニア総数', t: ['予算', '実績', '達成率'] }
         ];
 
-        // 2pxにすべき境界線を持つ項目のリスト
-        const targetItemsFor2px = ['売上', '稼働原価', 'A利益', 'プロパー(稼働)', 'エンジニア総数'];
+        const itemsWith2px = ['売上', '稼働原価', 'A利益', 'プロパー(稼働)', 'エンジニア総数'];
 
         items.forEach(item => {
             item.t.forEach((type, idx) => {
                 const tr = document.createElement('tr');
                 
-                // 実績行の下の線を2pxにする（達成率との境界）
-                if (targetItemsFor2px.includes(item.n) && type === '実績') {
-                    tr.className = 'border-2px-bottom';
+                // 線の太さクラスの判定
+                const isLastRow = (idx === item.t.length - 1);
+                const isActualRowFor2px = (itemsWith2px.includes(item.n) && type === '実績');
+
+                if (isLastRow) {
+                    tr.className = 'bb-3px'; // グループの最後は3px
+                } else if (isActualRowFor2px) {
+                    tr.className = 'bb-2px'; // 実績と達成率の間は2px
                 }
 
-                let html = idx === 0 ? `<td rowspan="${item.t.length}" class="cat-header">${item.n}</td>` : '';
-                html += `<td class="type-col">${type}</td>`;
+                let html = idx === 0 ? `<td rowspan="${item.t.length}" class="cat-header border-right-thick">${item.n}</td>` : '';
+                html += `<td class="type-col border-right-thick">${type}</td>`;
 
                 const data = getMonthlyValues(region, item.k, type);
                 let h1Sum = null; let h2Sum = null;
@@ -172,22 +185,26 @@
                 data.forEach((v, i) => {
                     const disp = formatVal(v, item.k, type);
                     const align = disp === '-' ? 'text-center' : 'text-right';
-                    html += `<td class="${align}">${disp}</td>`;
+                    const borderR = (i === 5 || i === 11) ? 'border-right-thick' : '';
+                    const borderL = (i === 6) ? 'border-left-thick' : '';
+                    
+                    html += `<td class="${align} ${borderR} ${borderL}">${disp}</td>`;
+                    
                     if (v !== null) {
                         if (i < 6) h1Sum = (h1Sum || 0) + v;
                         else h2Sum = (h2Sum || 0) + v;
                     }
                     if (i === 5) {
                         const h1Disp = formatVal(h1Sum, item.k, type);
-                        html += `<td class="total-col ${h1Disp==='-'?'text-center':'text-right'}">${h1Disp}</td>`;
+                        html += `<td class="total-col border-right-thick ${h1Disp === '-' ? 'text-center' : 'text-right'}">${h1Disp}</td>`;
                     }
                 });
 
                 const h2Disp = formatVal(h2Sum, item.k, type);
-                html += `<td class="total-col ${h2Disp==='-'?'text-center':'text-right'}">${h2Disp}</td>`;
-                const totVal = (h1Sum === null && h2Sum === null) ? null : (h1Sum || 0) + (h2Sum || 0);
-                const totDisp = formatVal(totVal, item.k, type);
-                html += `<td class="total-col ${totDisp==='-'?'text-center':'text-right'}">${totDisp}</td>`;
+                html += `<td class="total-col border-right-thick ${h2Disp === '-' ? 'text-center' : 'text-right'}">${h2Disp}</td>`;
+                const totalVal = (h1Sum === null && h2Sum === null) ? null : (h1Sum || 0) + (h2Sum || 0);
+                const totalDisp = formatVal(totalVal, item.k, type);
+                html += `<td class="total-col ${totalDisp === '-' ? 'text-center' : 'text-right'}">${totalDisp}</td>`;
 
                 tr.innerHTML = html;
                 tbody.appendChild(tr);
@@ -216,13 +233,14 @@
             const rowRegion = (r[0] || '').trim();
             const rowItem = (r[1] || '').trim();
             const rowType = (r[2] || '').trim();
-            let match = (region === '全体合計') ? true : (rowRegion === region);
-            if (match && rowItem.includes(itemK) && rowType.includes(type)) {
+            let isMatch = (region === '全体合計') ? true : (rowRegion === region);
+
+            if (isMatch && rowItem.includes(itemK) && rowType.includes(type)) {
                 for (let i = 0; i < 12; i++) {
-                    let cellVal = r[i+3];
-                    if (cellVal !== undefined && cellVal !== "") {
+                    let cellValue = r[i+3];
+                    if (cellValue !== undefined && cellValue !== "") {
                         if (res[i] === null) res[i] = 0;
-                        res[i] += parseFloat(String(cellVal).replace(/,/g,'').replace(/"/g, '')) || 0;
+                        res[i] += parseFloat(String(cellValue).replace(/,/g,'').replace(/"/g, '')) || 0;
                     }
                 }
             }
@@ -238,6 +256,7 @@
 </script>
 </body>
 </html>
+
 
 
 
