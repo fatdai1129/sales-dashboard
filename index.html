@@ -216,7 +216,6 @@
         return v.toFixed(1) + '%';
     }
 
-    // 拠点判定ヘルパー
     function getMatchRegion(affStr) {
         if (!affStr) return "";
         if (affStr.includes("東京") || affStr.includes("首都圏")) return "首都圏";
@@ -291,29 +290,25 @@
         document.getElementById('generic-content').innerHTML = html;
     }
 
-    // --- 売込状況一覧（修正版インデックス） ---
+    // --- 売込状況一覧（指定順序でのグルーピング） ---
     function renderStatusTable(rows, filterRegion) {
         if (rows.length < 2) return;
-        // 統合シートの列順序に合わせて修正
-        const NoIndex = 0;      // A: 社員番号
-        const NameIndex = 1;    // B: 従業員名
-        const AffIndex = 2;     // C: 所属
-        const StatusIndex = 3;  // D: 現状
-        const EndIndex = 4;     // E: 稼働終了
-        const RepIndex = 10;    // K: 営業担当
-        const ProjectIndex = 11; // L: 提案先/案件名
-        const PriceIndex = 12;  // M: 売込単価
-        const KakudoIndex = 13; // N: 確度
-        const MonthIndex = 14;  // O: 提案月
+        const NoIndex = 0, NameIndex = 1, AffIndex = 2, StatusIndex = 3, EndIndex = 5, RepIndex = 7, ProjectIndex = 8, PriceIndex = 12, KakudoIndex = 13, MonthIndex = 14;
 
-        let data = rows.slice(1);
-        if (filterRegion !== 'total') {
-            if (filterRegion === '東日本') {
-                data = data.filter(r => getMatchRegion(r[AffIndex]) === '東海' || getMatchRegion(r[AffIndex]) === '首都圏');
-            } else {
-                data = data.filter(r => getMatchRegion(r[AffIndex]) === filterRegion);
-            }
-        }
+        let rawData = rows.slice(1);
+        let data = (filterRegion === 'total') ? rawData : (filterRegion === '東日本' ? rawData.filter(r => getMatchRegion(r[AffIndex]) === '東海' || getMatchRegion(r[AffIndex]) === '首都圏') : rawData.filter(r => getMatchRegion(r[AffIndex]) === filterRegion));
+
+        // 指定された順序でグルーピング
+        const statusPriority = { "稼働中": 1, "待機中": 2, "休業中": 3, "休職中": 4 };
+        const groupedData = {};
+        data.forEach(r => {
+            const st = r[StatusIndex] || "未設定";
+            if (!groupedData[st]) groupedData[st] = [];
+            groupedData[st].push(r);
+        });
+
+        // 表示すべきステータスをソートして取得
+        const sortedStatuses = Object.keys(groupedData).sort((a, b) => (statusPriority[a] || 99) - (statusPriority[b] || 99));
 
         let html = `<table><thead><tr>
             <th class="col-name">技術者名<br><span style="font-size:0.7rem; font-weight:normal;">スキルシートNO</span></th>
@@ -323,10 +318,9 @@
             <th class="col-kakudo">提案月<br><span style="font-size:0.7rem; font-weight:normal;">確度</span></th>
         </tr></thead><tbody>`;
 
-        const affs = [...new Set(data.map(r => r[AffIndex]))];
-        affs.forEach(aff => {
-            html += `<tr><td colspan="5" class="affiliation-header">${aff}</td></tr>`;
-            data.filter(r => r[AffIndex] === aff).forEach(r => {
+        sortedStatuses.forEach(st => {
+            html += `<tr><td colspan="5" class="affiliation-header">${st}</td></tr>`;
+            groupedData[st].forEach(r => {
                 const price = parseNum(r[PriceIndex]);
                 html += `<tr class="row-main">
                     <td class="cell-main-text">${r[NameIndex] || '-'}</td>
