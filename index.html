@@ -41,6 +41,8 @@
         .data-value-std { font-weight: normal !important; font-size: 0.82rem !important; color: #333; }
         .tech-name-label { font-weight: bold; font-size: 0.9rem; }
         .tech-no-label { font-size: 0.7rem; color: #666; }
+        
+        .metric-label { text-align: center; vertical-align: middle; line-height: 1.2; }
 
         .chart-box { height: 400px; width: 100%; margin-bottom: 20px; position: relative; }
         #loading { font-weight: bold; color: #3182ce; margin-top: 10px; }
@@ -174,6 +176,7 @@
             const rows = parseCSV(csvText);
             document.getElementById('pw_screen').style.display = 'none';
             document.getElementById('main_content').style.display = 'block';
+            
             if (toolKey === 'sales') {
                 document.getElementById('dashboard-sales').style.display = 'block';
                 document.getElementById('dashboard-generic').style.display = 'none';
@@ -227,15 +230,8 @@
         
         let html = `<table><thead><tr><th rowspan="2" class="cat-header"><div class="flex-stack-box"><div class="header-label-bold">技術者名</div><div class="header-label-sub">スキルシートNO</div></div></th><th rowspan="2" class="cat-header"><div class="flex-stack-box"><div class="header-label-bold">給与</div><div class="header-label-bold">コスト</div></div></th><th rowspan="2" class="type-col">項目</th><th colspan="6">上期実績</th><th class="total-header">上期計</th><th colspan="6" class="second-half-start">下期実績・予想</th><th class="total-header">下期合計</th><th class="total-header">年間合計</th></tr><tr><th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th class="month-sep">11月</th><th class="total-header">計</th><th class="second-half-start">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th class="month-sep">5月</th><th class="total-header">計</th><th class="total-header">合計</th></tr></thead><tbody>`;
 
-        // 全体集計の初期化（追加項目分も配列を用意）
         const overall = { 
-            sales: Array(12).fill(0), 
-            profit: Array(12).fill(0), 
-            margin: Array(12).fill(0), 
-            opRate: Array(12).fill(0), 
-            counts: Array(12).fill(0),
-            properCounts: Array(12).fill(0), // 稼働プロパー
-            bpCounts: Array(12).fill(0)      // 稼働BP
+            sales: Array(12).fill(0), profit: Array(12).fill(0), margin: Array(12).fill(0), opRate: Array(12).fill(0), counts: Array(12).fill(0), properCounts: Array(12).fill(0), bpCounts: Array(12).fill(0)
         };
         
         const techProcessed = data.map(m => {
@@ -259,15 +255,17 @@
             return { name: m[NameIndex], no: m[NoIndex], aff: m[AffIndex], salVal, costVal, sList, pList, mList, oList };
         });
 
+        // 全体合計セクション
         html += `<tr><td colspan="18" class="affiliation-header">全体合計 (${filterRegion==='total'?'全社':filterRegion})</td></tr>`;
-        const totalRows = ['売上','利益','利益率','運用率','稼働プロパー','稼働BP','総稼働'];
+        const totalRows = ['売上','利益','利益率','運用率','稼働<br>プロパー','稼働BP','総稼働'];
         totalRows.forEach((label, idx) => {
             html += `<tr class="${idx === totalRows.length - 1 ? 'item-bottom-bold' : 'row-border'}">`;
             if(idx === 0) html += `<td rowspan="7" colspan="2" class="cat-header" style="background:white; font-size:1rem;">全体合計</td>`;
             html += `<td class="metric-label">${label}</td>`;
-            let h1S = 0, h1C = 0, h2S = 0, h2C = 0;
+            
+            let h1Sum = 0, h1Cnt = 0, h2Sum = 0, h2Cnt = 0;
             for(let i=0; i<12; i++) {
-                let v = 0, type = (idx < 2 || idx > 3) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
+                let v = 0;
                 if (idx === 0) v = overall.sales[i];
                 else if (idx === 1) v = overall.profit[i];
                 else if (idx === 2) v = overall.counts[i] ? overall.margin[i] / overall.counts[i] : 0;
@@ -276,18 +274,27 @@
                 else if (idx === 5) v = overall.bpCounts[i];
                 else v = overall.counts[i];
 
-                html += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${fmtVal(v, type)}</td>`;
-                if(v !== 0) { if(i < 6) { h1S += v; h1C++; } else { h2S += v; h2C++; } }
+                // 月次セルは整数表示(idx < 2 || idx >= 4)、または所定形式
+                let mType = (idx < 2 || idx >= 4) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
+                html += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${fmtVal(v, mType)}</td>`;
+                
+                // 集計用
+                if(v !== 0) { if(i < 6) { h1Sum += v; h1Cnt++; } else { h2Sum += v; h2Cnt++; } }
+                
                 if(i === 5) {
-                    let h1D = (idx < 2 || idx > 3) ? Math.round(h1S).toLocaleString() : (h1C ? fmtVal(h1S / h1C, type) : '-');
+                    // 合計欄のタイプ: 稼働人数項目(idx >= 4)も平均値(ratio)にする
+                    let sType = (idx < 2) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
+                    let h1D = (idx < 2) ? Math.round(h1Sum).toLocaleString() : (h1Cnt ? fmtVal(h1Sum / h1Cnt, sType) : '-');
                     html += `<td class="total-col">${h1D}</td>`;
                 }
             }
-            let h2D = (idx < 2 || idx > 3) ? Math.round(h2S).toLocaleString() : (h2C ? fmtVal(h2S / h2C, (idx===2?'pct':'ratio')) : '-');
-            let yrD = (idx < 2 || idx > 3) ? Math.round(h1S + h2S).toLocaleString() : ((h1C + h2C) ? fmtVal((h1S + h2S) / (h1C + h2C), (idx===2?'pct':'ratio')) : '-');
+            let sTypeFinal = (idx < 2) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
+            let h2D = (idx < 2) ? Math.round(h2Sum).toLocaleString() : (h2Cnt ? fmtVal(h2Sum / h2Cnt, sTypeFinal) : '-');
+            let yrD = (idx < 2) ? Math.round(h1Sum + h2Sum).toLocaleString() : ((h1Cnt + h2Cnt) ? fmtVal((h1Sum + h2Sum) / (h1Cnt + h2Cnt), sTypeFinal) : '-');
             html += `<td class="total-col">${h2D}</td><td class="total-col">${yrD}</td></tr>`;
         });
 
+        // 各拠点
         const affs = [...new Set(techProcessed.map(t => t.aff))];
         affs.forEach(aff => {
             html += `<tr><td colspan="18" class="affiliation-header">${aff}</td></tr>`;
@@ -402,6 +409,7 @@
 </script>
 </body>
 </html>
+
 
 
 
