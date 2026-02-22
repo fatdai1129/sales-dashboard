@@ -174,7 +174,6 @@
             const rows = parseCSV(csvText);
             document.getElementById('pw_screen').style.display = 'none';
             document.getElementById('main_content').style.display = 'block';
-            
             if (toolKey === 'sales') {
                 document.getElementById('dashboard-sales').style.display = 'block';
                 document.getElementById('dashboard-generic').style.display = 'none';
@@ -228,58 +227,67 @@
         
         let html = `<table><thead><tr><th rowspan="2" class="cat-header"><div class="flex-stack-box"><div class="header-label-bold">技術者名</div><div class="header-label-sub">スキルシートNO</div></div></th><th rowspan="2" class="cat-header"><div class="flex-stack-box"><div class="header-label-bold">給与</div><div class="header-label-bold">コスト</div></div></th><th rowspan="2" class="type-col">項目</th><th colspan="6">上期実績</th><th class="total-header">上期計</th><th colspan="6" class="second-half-start">下期実績・予想</th><th class="total-header">下期合計</th><th class="total-header">年間合計</th></tr><tr><th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th class="month-sep">11月</th><th class="total-header">計</th><th class="second-half-start">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th class="month-sep">5月</th><th class="total-header">計</th><th class="total-header">合計</th></tr></thead><tbody>`;
 
-        const overall = { sales: Array(12).fill(0), profit: Array(12).fill(0), margin: Array(12).fill(0), opRate: Array(12).fill(0), counts: Array(12).fill(0) };
+        // 全体集計の初期化（追加項目分も配列を用意）
+        const overall = { 
+            sales: Array(12).fill(0), 
+            profit: Array(12).fill(0), 
+            margin: Array(12).fill(0), 
+            opRate: Array(12).fill(0), 
+            counts: Array(12).fill(0),
+            properCounts: Array(12).fill(0), // 稼働プロパー
+            bpCounts: Array(12).fill(0)      // 稼働BP
+        };
         
         const techProcessed = data.map(m => {
             const isBP = (m[NoIndex] === 'BP 要員');
             const salVal = parseNum(m[SalaryIndex]);
             const costVal = parseNum(m[CostIndex]);
-            const calcBaseForRate = isBP ? costVal : salVal;
-
+            const calcBase = isBP ? costVal : salVal;
             const sList = []; const cList = [];
-            for(let i=0; i<12; i++) {
-                sList.push(parseNum(m[DataStartCol + i * 2])); 
-                cList.push(parseNum(m[DataStartCol + i * 2 + 1]));
-            }
-            
+            for(let i=0; i<12; i++) { sList.push(parseNum(m[DataStartCol + i * 2])); cList.push(parseNum(m[DataStartCol + i * 2 + 1])); }
             const pList = sList.map((s, i) => s > 0 ? s - cList[i] : 0);
             const mList = sList.map((s, i) => s > 0 ? ((s - cList[i]) / s * 100) : 0);
-            const oList = sList.map(s => (s > 0 && calcBaseForRate > 0) ? (s / calcBaseForRate) : 0);
-            
+            const oList = sList.map(s => (s > 0 && calcBase > 0) ? (s / calcBase) : 0);
             sList.forEach((s, i) => {
                 if(s > 0) {
                     overall.sales[i] += s; overall.profit[i] += pList[i];
                     overall.margin[i] += mList[i]; overall.opRate[i] += oList[i];
                     overall.counts[i]++;
+                    if(isBP) overall.bpCounts[i]++; else overall.properCounts[i]++;
                 }
             });
             return { name: m[NameIndex], no: m[NoIndex], aff: m[AffIndex], salVal, costVal, sList, pList, mList, oList };
         });
 
-        // 全体合計行
         html += `<tr><td colspan="18" class="affiliation-header">全体合計 (${filterRegion==='total'?'全社':filterRegion})</td></tr>`;
-        ['売上','利益','利益率','運用率'].forEach((label, idx) => {
-            html += `<tr class="${idx === 3 ? 'item-bottom-bold' : 'row-border'}">`;
-            if(idx === 0) html += `<td rowspan="4" colspan="2" class="cat-header" style="background:white; font-size:1rem;">全体合計</td>`;
+        const totalRows = ['売上','利益','利益率','運用率','稼働プロパー','稼働BP','総稼働'];
+        totalRows.forEach((label, idx) => {
+            html += `<tr class="${idx === totalRows.length - 1 ? 'item-bottom-bold' : 'row-border'}">`;
+            if(idx === 0) html += `<td rowspan="7" colspan="2" class="cat-header" style="background:white; font-size:1rem;">全体合計</td>`;
             html += `<td class="metric-label">${label}</td>`;
-            let h1Sum = 0, h1Cnt = 0, h2Sum = 0, h2Cnt = 0;
+            let h1S = 0, h1C = 0, h2S = 0, h2C = 0;
             for(let i=0; i<12; i++) {
-                let v = 0, type = (idx === 0 || idx === 1) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
+                let v = 0, type = (idx < 2 || idx > 3) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
                 if (idx === 0) v = overall.sales[i];
                 else if (idx === 1) v = overall.profit[i];
                 else if (idx === 2) v = overall.counts[i] ? overall.margin[i] / overall.counts[i] : 0;
-                else v = overall.counts[i] ? overall.opRate[i] / overall.counts[i] : 0;
+                else if (idx === 3) v = overall.counts[i] ? overall.opRate[i] / overall.counts[i] : 0;
+                else if (idx === 4) v = overall.properCounts[i];
+                else if (idx === 5) v = overall.bpCounts[i];
+                else v = overall.counts[i];
 
                 html += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${fmtVal(v, type)}</td>`;
-                if(v !== 0) { if(i < 6) { h1Sum += v; h1Cnt++; } else { h2Sum += v; h2Cnt++; } }
-                if(i === 5) html += `<td class="total-col">${idx < 2 ? Math.round(h1Sum).toLocaleString() : (h1Cnt ? fmtVal(h1Sum / h1Cnt, type) : '-')}</td>`;
+                if(v !== 0) { if(i < 6) { h1S += v; h1C++; } else { h2S += v; h2C++; } }
+                if(i === 5) {
+                    let h1D = (idx < 2 || idx > 3) ? Math.round(h1S).toLocaleString() : (h1C ? fmtVal(h1S / h1C, type) : '-');
+                    html += `<td class="total-col">${h1D}</td>`;
+                }
             }
-            let h2D = idx < 2 ? Math.round(h2Sum).toLocaleString() : (h2Cnt ? fmtVal(h2Sum / h2Cnt, (idx===2?'pct':'ratio')) : '-');
-            let yrD = idx < 2 ? Math.round(h1Sum + h2Sum).toLocaleString() : ((h1Cnt + h2Cnt) ? fmtVal((h1Sum + h2Sum) / (h1Cnt + h2Cnt), (idx===2?'pct':'ratio')) : '-');
+            let h2D = (idx < 2 || idx > 3) ? Math.round(h2S).toLocaleString() : (h2C ? fmtVal(h2S / h2C, (idx===2?'pct':'ratio')) : '-');
+            let yrD = (idx < 2 || idx > 3) ? Math.round(h1S + h2S).toLocaleString() : ((h1C + h2C) ? fmtVal((h1S + h2S) / (h1C + h2C), (idx===2?'pct':'ratio')) : '-');
             html += `<td class="total-col">${h2D}</td><td class="total-col">${yrD}</td></tr>`;
         });
 
-        // 拠点別描画
         const affs = [...new Set(techProcessed.map(t => t.aff))];
         affs.forEach(aff => {
             html += `<tr><td colspan="18" class="affiliation-header">${aff}</td></tr>`;
@@ -394,6 +402,7 @@
 </script>
 </body>
 </html>
+
 
 
 
