@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="google" content="notranslate">
     <title>実績管理ポータル</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -18,7 +17,7 @@
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 30px; overflow-x: auto; }
         .top-nav { background: #1a202c; padding: 15px 20px; color: white; display: flex; align-items: center; margin-bottom: 20px; border-radius: 0 0 12px 12px; }
         .nav-select { background: #2d3748; color: white; border: 1px solid #4a5568; padding: 8px 15px; border-radius: 6px; font-size: 1rem; margin-right: 15px; cursor: pointer; }
-        h2 { font-size: 1.4rem; margin: 0; color: #1a202c; border-left: 5px solid #3182ce; padding-left: 15px; text-align: left; }
+        h2 { font-size: 1.4rem; margin: 0; color: #1a202c; border-left: 5px solid #3182ce; padding-left: 15px; }
         
         table { width: 100%; border-collapse: collapse; background: white; border: 2px solid black !important; table-layout: fixed; }
         th, td { border: 1px solid black !important; padding: 8px 6px; text-align: center; font-size: 0.85rem; word-break: break-all; }
@@ -28,12 +27,11 @@
         .total-header, .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .month-sep { border-right: 2px solid black !important; }
         .second-half-start { border-left: 2px solid black !important; }
-        .affiliation-header { background: #1a202c !important; color: white !important; text-align: left !important; padding: 10px 15px !important; font-size: 1rem !important; }
+        .affiliation-header { background: #1a202c !important; color: white !important; text-align: left !important; padding: 10px 15px !important; }
         
-        /* 3pxの太線 */
+        /* 項目ごとの太下線（3px）の設定 */
         .item-bottom-bold td { border-bottom: 3px solid black !important; }
         .row-border td:not(.cat-header) { border-bottom: 1px solid black !important; }
-        
         .row-main { background: white; }
         .row-sub { background: #f9fafb; }
         .cell-main-text { font-weight: bold; font-size: 0.95rem; }
@@ -45,12 +43,12 @@
 <body class="notranslate">
 <div id="pw_screen">
     <div id="pw_box">
-        <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 10px;">実績管理ログイン</div>
+        <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 10px;">実績管理ポータル</div>
         <input type="password" id="pass_val" placeholder="パスワードを入力" onkeydown="if(event.keyCode==13)checkPW()">
         <br>
         <button class="login-btn" onclick="checkPW()">ログイン</button>
         <div id="loading" style="display:none;">データを取得中...</div>
-        <p id="err_msg" style="color: red; display: none; margin-top:10px;">パスワードが違います</p>
+        <p id="err_msg" style="color: red; display: none;">パスワードが違います</p>
     </div>
 </div>
 <div id="main_content">
@@ -61,7 +59,7 @@
             <option value="promotion">営業推進管理表</option>
             <option value="status">売込状況一覧</option>
         </select>
-        <span id="sales-region-container" style="display:none;">
+        <span id="sales-region-container">
             <select id="region-select" class="nav-select" onchange="renderSalesTable()">
                 <option value="total">全社</option><option value="west">西日本</option><option value="east">東日本</option><option value="tokai">東海</option><option value="tokyo">首都圏</option>
             </select>
@@ -87,9 +85,9 @@
                 </div>
             </div>
             <div class="card">
-                <div style="height:400px;"><canvas id="salesChart"></canvas></div><hr style="margin:40px 0; border:0; border-top:1px solid #eee;">
-                <div style="height:400px;"><canvas id="engineerChart"></canvas></div><hr style="margin:40px 0; border:0; border-top:1px solid #eee;">
-                <div style="height:400px;"><canvas id="waitingChart"></canvas></div>
+                <div style="height:350px;"><canvas id="salesChart"></canvas></div><hr style="margin:30px 0; border:0; border-top:1px solid #eee;">
+                <div style="height:350px;"><canvas id="engineerChart"></canvas></div><hr style="margin:30px 0; border:0; border-top:1px solid #eee;">
+                <div style="height:350px;"><canvas id="waitingChart"></canvas></div>
             </div>
         </div>
         <div id="dashboard-generic" class="dashboard-view" style="display:none;"><div class="card"><h2 id="generic-title">管理表</h2><div id="generic-content" style="margin-top:20px; overflow-x:auto;"></div></div></div>
@@ -114,13 +112,13 @@
     async function initApp() { await switchTool(); }
 
     async function switchTool() {
-        const tk = document.getElementById('tool-select').value;
+        const yr = document.getElementById('year-select').value, tk = document.getElementById('tool-select').value;
         const sheetMap = { sales: '実績データ', promotion: '営業推進管理表', status: '売込状況一覧' };
         document.getElementById('loading').style.display = 'block';
         try {
             const resp = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetMap[tk])}`);
             if (!resp.ok) throw new Error();
-            const text = await resp.text(); const rows = parseCSV(text);
+            const rows = parseCSV(await resp.text());
             document.getElementById('pw_screen').style.display = 'none'; document.getElementById('main_content').style.display = 'block';
             if (tk === 'sales') {
                 document.getElementById('dashboard-sales').style.display = 'block'; document.getElementById('dashboard-generic').style.display = 'none';
@@ -132,22 +130,11 @@
                 document.getElementById('generic-title').innerText = tk === 'promotion' ? '営業推進管理表' : '売込状況一覧';
                 currentDataRows = rows; filterPromotion();
             }
-        } catch (e) { console.error(e); alert('取得失敗'); } finally { document.getElementById('loading').style.display = 'none'; }
+        } catch (e) { alert('データ取得に失敗しました。URLまたはシート名を確認してください。'); console.error(e); } finally { document.getElementById('loading').style.display = 'none'; }
     }
 
-    function parseCSV(t) {
-        return t.split(/\r?\n/).filter(l => l.trim() !== "").map(l => {
-            const res = []; let cur = '', q = false;
-            for (let ch of l) { if (ch === '"') q = !q; else if (ch === ',' && !q) { res.push(cur.trim()); cur = ''; } else cur += ch; }
-            res.push(cur.trim()); return res;
-        });
-    }
-
-    function filterPromotion() {
-        const reg = document.getElementById('promotion-region-select').value, tk = document.getElementById('tool-select').value;
-        if (tk === 'promotion') renderPromotionTable(currentDataRows, reg); else renderStatusTable(currentDataRows, reg);
-    }
-
+    function parseCSV(t) { return t.split(/\r?\n/).filter(l => l.trim() !== "").map(l => { const res = []; let c = '', q = false; for (let ch of l) { if (ch === '"') q = !q; else if (ch === ',' && !q) { res.push(c.trim()); c = ''; } else c += ch; } res.push(c.trim()); return res; }); }
+    function filterPromotion() { const reg = document.getElementById('promotion-region-select').value, tk = document.getElementById('tool-select').value; if (tk === 'promotion') renderPromotionTable(currentDataRows, reg); else renderStatusTable(currentDataRows, reg); }
     function fmt(v, t) { if (v === 0 || v === "0" || isNaN(v) || !isFinite(v) || v === "") return '-'; if (t === 'num') return Math.round(v).toLocaleString(); if (t === 'ratio') return (Math.floor(v * 100) / 100).toFixed(2); return v.toFixed(1) + '%'; }
     function getMatchRegion(af) { if (!af) return ""; const s = String(af).toLowerCase(); if (s.includes("東京") || s.includes("首都圏")) return "首都圏"; if (s.includes("名古屋") || s.includes("東海")) return "東海"; if (s.includes("大阪") || s.includes("西日本")) return "西日本"; return af; }
 
@@ -156,31 +143,31 @@
         const AffI=2, NoI=3, NameI=4, SalI=10, CostI=11, Start=12;
         let data = rows.slice(1).filter(r => r[NoI] && r[NoI] !== "技術者№");
         if (reg !== 'total') data = (reg === '東日本' ? data.filter(r => getMatchRegion(r[AffI]) === '東海' || getMatchRegion(r[AffI]) === '首都圏') : data.filter(r => getMatchRegion(r[AffI]) === reg));
-        let h = `<table><thead><tr><th rowspan="2" class="cat-header">技術者名<br><span style="font-size:0.7rem; font-weight:normal;">スキルNO</span></th><th rowspan="2" class="cat-header">給与/コスト</th><th rowspan="2" class="type-col">項目</th><th colspan="6">上期実績</th><th class="total-header">上期計</th><th colspan="6" class="second-half-start">下期実績</th><th class="total-header">下期合計</th><th class="total-header">年間合計</th></tr><tr><th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th class="month-sep">11月</th><th class="total-header">計</th><th class="second-half-start">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th class="month-sep">5月</th><th class="total-header">計</th><th class="total-header">合計</th></tr></thead><tbody>`;
+        let h = `<table><thead><tr><th rowspan="2" class="cat-header">技術者名<br><span style="font-size:0.7rem; font-weight:normal;">スキルシートNO</span></th><th rowspan="2" class="cat-header">給与<br>コスト</th><th rowspan="2" class="type-col">項目</th><th colspan="6">上期実績</th><th class="total-header">上期計</th><th colspan="6" class="second-half-start">下期実績・予想</th><th class="total-header">下期合計</th><th class="total-header">年間合計</th></tr><tr><th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th class="month-sep">11月</th><th class="total-header">計</th><th class="second-half-start">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th class="month-sep">5月</th><th class="total-header">計</th><th class="total-header">合計</th></tr></thead><tbody>`;
         const ov = {s:Array(12).fill(0), p:Array(12).fill(0), m:Array(12).fill(0), o:Array(12).fill(0), c:Array(12).fill(0), pc:Array(12).fill(0), bc:Array(12).fill(0)};
         const proc = data.map(m => {
             const isBP = (m[NoI] === 'BP 要員'), base = isBP ? parseNum(m[CostI]) : parseNum(m[SalI]), sl=[], pl=[], ml=[], ol=[];
             for(let i=0; i<12; i++) {
-                let sv=parseNum(m[Start+i*2]), cv=parseNum(m[Start+i*2+1]); sl.push(sv); pl.push(sv>0?sv-cv:0);
-                let mv=sv>0?((sv-cv)/sv*100):0, ovr=(sv>0&&base>0)?(sv/base):0; ml.push(mv); ol.push(ovr);
-                if(sv>0){ov.s[i]+=sv; ov.p[i]+=(sv-cv); ov.m[i]+=mv; ov.o[i]+=ovr; ov.c[i]++; if(isBP) ov.bc[i]++; else ov.pc[i]++;}
+                let sVal=parseNum(m[Start+i*2]), cVal=parseNum(m[Start+i*2+1]); sl.push(sVal); pl.push(sVal>0?sVal-cVal:0);
+                let mVal=sVal>0?((sVal-cVal)/sVal*100):0, oVal=(sVal>0&&base>0)?(sVal/base):0; ml.push(mVal); ol.push(oVal);
+                if(sVal>0){ov.s[i]+=sVal; ov.p[i]+=(sVal-cVal); ov.m[i]+=mVal; ov.o[i]+=oVal; ov.c[i]++; if(isBP) ov.bc[i]++; else ov.pc[i]++;}
             }
             return {name:m[NameI]||'', no:m[NoI]||'', aff:m[AffI]||'', sal:parseNum(m[SalI]), cost:parseNum(m[CostI]), sl, pl, ml, ol};
         });
-        h += `<tr><td colspan="18" class="affiliation-header">全体合計 (${reg==='total'?'全社':reg})</td></tr>`;
-        ['売上','利益','利益率','運用率','稼働プロパー','稼働BP','総稼働'].forEach((lbl, idx) => {
+        h += `<tr><td colspan="18" class="affiliation-header">全体合計</td></tr>`;
+        ['売上','利益','利益率','運用率','稼働プロパー','稼働BP','総稼働'].forEach((label, idx) => {
             h += `<tr class="${idx === 6 ? 'item-bottom-bold' : 'row-border'}">`;
             if(idx === 0) h += `<td rowspan="7" colspan="2" class="cat-header" style="background:white; font-size:1rem;">全体合計</td>`;
-            h += `<td class="metric-label">${lbl}</td>`;
-            let s1_S=0, c1_N=0, s2_S=0, c2_N=0;
+            h += `<td class="metric-label">${label}</td>`;
+            let s1_Total=0, c1_Total=0, s2_Total=0, c2_Total=0;
             for(let i=0; i<12; i++) {
-                let val = (idx===0)?ov.s[i]:(idx===1)?ov.p[i]:(idx===2)?(ov.c[i]?ov.m[i]/ov.c[i]:0):(idx===3)?(ov.c[i]?ov.o[i]/ov.c[i]:0):(idx===4)?ov.pc[i]:(idx===5)?ov.bc[i]:ov.c[i];
+                let v = (idx===0)?ov.s[i]:(idx===1)?ov.p[i]:(idx===2)?(ov.c[i]?ov.m[i]/ov.c[i]:0):(idx===3)?(ov.c[i]?ov.o[i]/ov.c[i]:0):(idx===4)?ov.pc[i]:(idx===5)?ov.bc[i]:ov.c[i];
                 let ty = (idx<2 || idx>=4)?'num':(idx===2)?'pct':'ratio';
-                h += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${fmt(val, ty)}</td>`;
-                if(val!==0){if(i<6){s1_S+=val; c1_N++;}else{s2_S+=val; c2_N++;}}
-                if(i===5) h += `<td class="total-col">${idx<2?Math.round(s1_S).toLocaleString():(c1_N?fmt(s1_S/c1_N, ty):'-')}</td>`;
+                h += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${fmt(v, ty)}</td>`;
+                if(v!==0){if(i<6){s1_Total+=v; c1_Total++;}else{s2_Total+=v; c2_Total++;}}
+                if(i===5) h += `<td class="total-col">${idx<2?Math.round(s1_Total).toLocaleString():(c1_Total?fmt(s1_Total/c1_Total, ty):'-')}</td>`;
             }
-            h += `<td class="total-col">${idx<2?Math.round(s2_S).toLocaleString():(c2_N?fmt(s2_S/c2_N, (idx===2?'pct':'ratio')):'-')}</td><td class="total-col">${idx<2?Math.round(s1_S+s2_S).toLocaleString():((c1_N+c2_N)?fmt((s1_S+s2_S)/(c1_N+c2_N), (idx===2?'pct':'ratio')):'-')}</td></tr>`;
+            h += `<td class="total-col">${idx<2?Math.round(s2_Total).toLocaleString():(c2_Total?fmt(s2_Total/c2_Total, (idx===2?'pct':'ratio')):'-')}</td><td class="total-col">${idx<2?Math.round(s1_Total+s2_Total).toLocaleString():((c1_Total+c2_Total)?fmt((s1_Total+s2_Total)/(c1_Total+c2_Total), (idx===2?'pct':'ratio')):'-')}</td></tr>`;
         });
         const afs = [...new Set(proc.map(t => t.aff))];
         afs.forEach(af => {
@@ -188,7 +175,7 @@
             proc.filter(t => t.aff === af).forEach(t => {
                 [{n:'売上',d:t.sl,t:'num'},{n:'利益',d:t.pl,t:'num'},{n:'利益率',d:t.ml,t:'pct'},{n:'運用率',d:t.ol,t:'ratio'}].forEach((m, i) => {
                     h += `<tr class="${i === 3 ? 'item-bottom-bold' : 'row-border'}">`;
-                    if(i === 0) h += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="cell-main-text">${t.name}</div><div class="cell-sub-text">${t.no}</div></td><td rowspan="4" class="cat-header" style="background:white;">${t.sal.toLocaleString()}<br>${t.cost.toLocaleString()}</td>`;
+                    if(i === 0) h += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="cell-main-text">${t.name}</div><div class="cell-sub-text">${t.no}</div></td><td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;">${t.sal.toLocaleString()}<br>${t.cost.toLocaleString()}</td>`;
                     h += `<td class="metric-label">${m.n}</td>`;
                     let ts1=0, tc1=0, ts2=0, tc2=0;
                     m.d.forEach((v, mi) => {
@@ -210,57 +197,52 @@
         if (reg !== 'total') data = (reg === '東日本' ? data.filter(r => getMatchRegion(r[AffI]) === '東海' || getMatchRegion(r[AffI]) === '首都圏') : data.filter(r => getMatchRegion(r[AffI]) === reg));
         const grp = {}; data.forEach(r => { const st = r[StatusI] || "未設定"; if (!grp[st]) grp[st] = []; grp[st].push(r); });
         const sorted = Object.keys(grp).sort((a,b) => ({"稼働中":1,"待機中":2,"休業中":3,"休職中":4}[a]||99)-({"稼働中":1,"待機中":2,"休業中":3,"休職中":4}[b]||99));
-        let h = `<table><thead><tr><th class="col-33">従業員名/所属</th><th class="col-33">退場理由/稼働状況</th><th class="col-33">参画可能日/未参画期間</th></tr></thead><tbody>`;
+        let h = `<table><thead><tr><th class="col-33">従業員名/所属</th><th class="col-33">稼働状況/退場理由</th><th class="col-33">参画可能日/未参画期間</th></tr></thead><tbody>`;
         sorted.forEach(st => {
             h += `<tr><td colspan="3" class="affiliation-header">${st} (${grp[st].length}名)</td></tr>`;
             grp[st].forEach(r => {
-                h += `<tr class="row-main"><td class="cell-main-text">${r[NameI]||'-'}</td><td class="cell-main-text">${r[ReasonI]||'-'}</td><td class="cell-main-text">${r[DateI]||'-'}</td></tr><tr class="row-sub border-bottom-bold"><td class="cell-sub-text">${r[AffI]||'-'}</td><td class="cell-sub-text">${r[StatusI]||'-'}</td><td class="cell-sub-text">${r[PeriodI]||'-'}</td></tr>`;
+                h += `<tr class="row-main"><td class="cell-main-text">${r[NameI]||'-'}</td><td class="cell-main-text">${r[StatusI]||'-'}</td><td class="cell-main-text">${r[DateI]||'-'}</td></tr><tr class="row-sub border-bottom-bold"><td class="cell-sub-text">${r[AffI]||'-'}</td><td class="cell-sub-text">${r[ReasonI]||'-'}</td><td class="cell-sub-text">${r[PeriodI]||'-'}</td></tr>`;
             });
         });
         document.getElementById('generic-content').innerHTML = h + `</tbody></table>`;
     }
 
     function processSalesData(rows) {
-        dataSet = { west: { budget:{}, actual:{} }, tokai: { budget:{}, actual:{} }, tokyo: { budget:{}, actual:{} } };
-        const lm = { '売上':'sales','稼働原価':'kCost','A利益':'aProfit','待機原価':'waitCost','プロパー(稼働)':'propK','BP':'bpK','稼働エンジニア数':'workEngTotal','エンジニア総数':'totalEng','プロパー(待機)':'propW','待機率':'waitRate' };
-        rows.slice(1).forEach(row => {
-            if (!row || row.length < 3) return;
-            const r_Raw = String(row[0]).trim(); const l_Raw = String(row[1]).trim();
-            const rK = r_Raw.includes('西日本')?'west':r_Raw.includes('東海')?'tokai':r_Raw.includes('首都圏')?'tokyo':null;
-            const lK = lm[l_Raw] || Object.keys(lm).find(k => l_Raw.includes(k) && lm[k]);
-            const type = String(row[2]).trim().includes('予算')?'budget':'actual';
-            if (rK && lK) {
-                if (!dataSet[rK][type][lK]) dataSet[rK][type][lK] = Array(12).fill(null);
-                for (let i=3; i<15; i++) { let v = row[i] ? String(row[i]).replace(/,/g, '').replace('%', '') : null; dataSet[rK][type][lK][i-3] = (v===null||v===""||isNaN(v))?null:parseFloat(v); }
-            }
+        dataSet = { west:{budget:{},actual:{}}, tokai:{budget:{},actual:{}}, tokyo:{budget:{},actual:{}} };
+        const rm = {'西日本':'west','東海':'tokai','首都圏':'tokyo'}, lm = {'売上':'sales','稼働原価':'kCost','A利益':'aProfit','待機原価':'waitCost','プロパー(稼働)':'propK','BP':'bpK','稼働エンジニア数':'workEngTotal','エンジニア総数':'totalEng','プロパー(待機)':'propW','待機率':'waitRate'};
+        rows.slice(1).forEach(row => { 
+            const r_raw = String(row[0]).trim(); const l_raw = String(row[1]).trim();
+            const rK = Object.keys(rm).find(k => r_raw.includes(k)) ? rm[Object.keys(rm).find(k => r_raw.includes(k))] : null;
+            const lK = Object.keys(lm).find(k => l_raw === k) ? lm[Object.keys(lm).find(k => l_raw === k)] : null;
+            const type = String(row[2]).trim()==='予算'?'budget':'actual';
+            if(rK && lK){ if(!dataSet[rK][type][lK]) dataSet[rK][type][lK]=Array(12).fill(null); for(let i=3; i<15; i++){ let v=row[i]?String(row[i]).replace(/,/g,'').replace('%',''):null; dataSet[rK][type][lK][i-3]=(v===null||v===""||isNaN(v))?null:parseFloat(v); } }
         });
     }
 
     function renderSalesTable() {
-        const rk = document.getElementById('region-select').value, d = getRD(rk); const tb = document.getElementById('table-body'); tb.innerHTML = "";
+        const rk = document.getElementById('region-select').value, d = getRD(rk), tb = document.getElementById('table-body'); tb.innerHTML = "";
         const lbls = [{l:'売上',c:'sales',r:['B','A','R']},{l:'稼働原価',c:'kCost',r:['B','A','R']},{l:'A利益',c:'aProfit',r:['B','A','R']},{l:'待機原価',c:'waitCost',r:['A']},{l:'プロパー(稼働)',c:'propK',r:['B','A','R']},{l:'BP',c:'bpK',r:['A']},{l:'稼働エンジニア数',c:'workEngTotal',r:['B','A']},{l:'プロパー(待機)',c:'propW',r:['B','A']},{l:'待機率',c:'waitRate',r:['A']},{l:'エンジニア総数',c:'totalEng',r:['B','A','R']}];
         lbls.forEach(item => {
             const hB=item.r.includes('B'), hA=item.r.includes('A'), hR=item.r.includes('R'), rC=item.r.length;
             let rowsHtml = "";
             if(hB){
                 let row = `<tr class="${(!hA && !hR) ? 'item-bottom-bold' : 'row-border'}"><td rowspan="${rC}" class="cat-header">${item.l}</td><td class="type-col">予算</td>`;
-                let b1=0, b2=0; for(let i=0; i<12; i++){ let v=d.budget[item.c]?.[i]||0; if(i<6) b1+=v; else b2+=v; row += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${v?Math.round(v).toLocaleString():'-'}</td>`; if(i===5) row += `<td class="total-col">${Math.round(b1).toLocaleString()}</td>`; }
+                let b1=0, b2=0; for(let i=0; i<12; i++){ let v=d.budget[item.c]?.[i]||0; if(i<6) b1+=v; else b2+=v; row += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${fmt(v, 'num')}</td>`; if(i===5) row += `<td class="total-col">${Math.round(b1).toLocaleString()}</td>`; }
                 rowsHtml += row + `<td class="total-col">${Math.round(b2).toLocaleString()}</td><td class="total-col">${Math.round(b1+b2).toLocaleString()}</td></tr>`;
             }
             if(hA){
                 let row = `<tr class="${!hR ? 'item-bottom-bold' : 'row-border'}">${!hB ? `<td rowspan="${rC}" class="cat-header">${item.l}</td>` : ''}<td class="type-col">実績</td>`;
-                let a1=0, a2=0; for(let i=0; i<12; i++){ let v=d.actual[item.c]?.[i]||0; if(i<6) a1+=v; else a2+=v; row += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${d.actual[item.c]?.[i]!==null?(item.c==='waitRate'?d.actual[item.c][i].toFixed(1)+'%':Math.round(d.actual[item.c][i]).toLocaleString()):'-'}</td>`; if(i===5) row += `<td class="total-col">${Math.round(a1).toLocaleString()}</td>`; }
+                let a1=0, a2=0; for(let i=0; i<12; i++){ let v=d.actual[item.c]?.[i]||0; if(i<6) a1+=v; else a2+=v; row += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${item.c==='waitRate'&&v!==0?v.toFixed(1)+'%':fmt(v, 'num')}</td>`; if(i===5) row += `<td class="total-col">${Math.round(a1).toLocaleString()}</td>`; }
                 rowsHtml += row + `<td class="total-col">${Math.round(a2).toLocaleString()}</td><td class="total-col">${Math.round(a1+a2).toLocaleString()}</td></tr>`;
             }
             if(hR){
                 let row = `<tr class="item-bottom-bold"><td class="type-col">達成率</td>`;
-                let rb1=0, ra1=0, rb2=0, ra2=0; for(let i=0; i<12; i++){ let bv=d.budget[item.c]?.[i]||0, av=d.actual[item.c]?.[i]||0; if(i<6){rb1+=bv; ra1+=av;} else {rb2+=bv; ra2+=av;} row += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${(d.actual[item.c]?.[i]!==null&&bv)?(d.actual[item.c][i]/bv*100).toFixed(1)+'%':'-'}</td>`; if(i===5) row += `<td class="total-col">${rb1?(ra1/rb1*100).toFixed(1)+'%':'-'}</td>`; }
+                let rb1=0, ra1=0, rb2=0, ra2=0; for(let i=0; i<12; i++){ let bv=d.budget[item.c]?.[i]||0, av=d.actual[item.c]?.[i]||0; if(i<6){rb1+=bv; ra1+=av;} else {rb2+=bv; ra2+=av;} row += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${bv?(av/bv*100).toFixed(1)+'%':'-'}</td>`; if(i===5) row += `<td class="total-col">${rb1?(ra1/rb1*100).toFixed(1)+'%':'-'}</td>`; }
                 rowsHtml += row + `<td class="total-col">${rb2?(ra2/rb2*100).toFixed(1)+'%':'-'}</td><td class="total-col">${(rb1+rb2)?((ra1+ra2)/(rb1+rb2)*100).toFixed(1)+'%':'-'}</td></tr>`;
             }
             tb.innerHTML += rowsHtml;
         }); drawCharts(d);
     }
-
     let salesChart, waitingChart, engineerChart;
     function drawCharts(d) {
         const opt = { responsive:true, maintainAspectRatio:false, plugins:{datalabels:{anchor:'end',align:'top',formatter:v=>v?v.toLocaleString():''}} };
@@ -268,7 +250,6 @@
         if(engineerChart) engineerChart.destroy(); engineerChart = new Chart(document.getElementById('engineerChart'), { type:'bar', data:{ labels:months, datasets:[{label:'プロパー',data:d.actual.propK.map((v,i)=>i<9?v:undefined),backgroundColor:'#10b981'},{label:'BP',data:d.actual.bpK.map((v,i)=>i<9?v:undefined),backgroundColor:'#8b5cf6'}] }, options:{...opt, scales:{x:{stacked:true},y:{stacked:true}}, plugins:{datalabels:{color:'#fff'}}} });
         if(waitingChart) waitingChart.destroy(); waitingChart = new Chart(document.getElementById('waitingChart'), { type:'bar', data:{ labels:months, datasets:[{label:'待機原価',data:d.actual.waitCost.map((v,i)=>i<9?v:undefined),backgroundColor:'#e53e3e'}] }, options:opt });
     }
-
     function getRD(k) {
         let rs = k==='total'?['west','tokai','tokyo']:(k==='east'?['tokai','tokyo']:[k]);
         const res={budget:{},actual:{}}, lbls=['sales','kCost','aProfit','waitCost','propK','bpK','workEngTotal','totalEng','propW','waitRate'];
@@ -278,9 +259,6 @@
 </script>
 </body>
 </html>
-
-
-
 
 
 
