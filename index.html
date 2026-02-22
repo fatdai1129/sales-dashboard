@@ -144,8 +144,9 @@
                 html += `<td class="type-col">${type}</td>`;
 
                 const data = getMonthlyValues(region, item.k, type);
-                let h1 = 0, h2 = 0;
-                
+                let h1Sum = null;
+                let h2Sum = null;
+
                 data.forEach((v, i) => {
                     const isMonthSep = (i === 5 || i === 11);
                     const isSecondHalfStart = (i === 6);
@@ -156,20 +157,26 @@
                     const alignCls = displayVal === '-' ? 'text-center' : 'text-right';
                     
                     html += `<td class="${cls} ${alignCls}" style="${borderStyle}">${displayVal}</td>`;
-                    if (i < 6) h1 += v; else h2 += v;
+                    
+                    // 合計計算用のロジック
+                    if (v !== null) {
+                        if (i < 6) h1Sum = (h1Sum || 0) + v;
+                        else h2Sum = (h2Sum || 0) + v;
+                    }
 
                     if (i === 5) {
-                        const h1Display = formatVal(h1, item.k, type);
+                        const h1Display = formatVal(h1Sum, item.k, type);
                         const h1Align = h1Display === '-' ? 'text-center' : 'text-right';
                         html += `<td class="total-col ${h1Align}">${h1Display}</td>`;
                     }
                 });
 
-                const h2Display = formatVal(h2, item.k, type);
+                const h2Display = formatVal(h2Sum, item.k, type);
                 const h2Align = h2Display === '-' ? 'text-center' : 'text-right';
                 html += `<td class="total-col ${h2Align}">${h2Display}</td>`;
 
-                const totalDisplay = formatVal(h1 + h2, item.k, type);
+                const totalVal = (h1Sum === null && h2Sum === null) ? null : (h1Sum || 0) + (h2Sum || 0);
+                const totalDisplay = formatVal(totalVal, item.k, type);
                 const totalAlign = totalDisplay === '-' ? 'text-center' : 'text-right';
                 html += `<td class="total-col ${totalAlign}">${totalDisplay}</td>`;
 
@@ -180,12 +187,17 @@
     }
 
     function getMonthlyValues(region, itemK, type) {
-        let res = new Array(12).fill(0);
+        let res = new Array(12).fill(null);
+        
         if (type === '達成率') {
             const b = getMonthlyValues(region, itemK, '予算');
             const a = getMonthlyValues(region, itemK, '実績');
-            return a.map((v, i) => b[i] === 0 ? 0 : (v / b[i]) * 100);
+            return a.map((v, i) => {
+                if (b[i] === null || a[i] === null) return null;
+                return b[i] === 0 ? 0 : (v / b[i]) * 100;
+            });
         }
+
         rawRows.slice(1).forEach(r => {
             const rowRegion = (r[0] || '').trim();
             const rowItem = (r[1] || '').trim();
@@ -194,8 +206,11 @@
 
             if (isMatch && rowItem.includes(itemK) && rowType.includes(type)) {
                 for (let i = 0; i < 12; i++) {
-                    let val = String(r[i+3] || '0').replace(/,/g,'').replace(/"/g, '');
-                    res[i] += parseFloat(val) || 0;
+                    let rawVal = r[i+3];
+                    if (rawVal !== undefined && rawVal !== "") {
+                        if (res[i] === null) res[i] = 0;
+                        res[i] += parseFloat(String(rawVal).replace(/,/g,'').replace(/"/g, '')) || 0;
+                    }
                 }
             }
         });
@@ -203,16 +218,13 @@
     }
 
     function formatVal(v, k, t) {
-        if (v === 0 && t !== '達成率') return '-';
+        if (v === null) return '-';
         if (k === '待機率' || t === '達成率') return v.toFixed(1) + '%';
         return Math.round(v).toLocaleString();
     }
 </script>
 </body>
 </html>
-
-
-
 
 
 
