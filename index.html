@@ -28,15 +28,14 @@
         
         .row-main { background: white; }
         .row-sub { background: #f9fafb; }
-        .cell-main-text { font-weight: bold; font-size: 0.92rem; color: #1a202c; }
-        .cell-sub-text { font-size: 0.72rem; color: #666; margin-top: 2px; }
+        .cell-main-text { font-weight: bold; font-size: 0.95rem; color: #1a202c; }
+        .cell-sub-text { font-size: 0.75rem; color: #666; margin-top: 2px; }
         .border-bottom-bold { border-bottom: 2px solid black !important; }
         
-        .col-name { width: 180px; }
-        .col-status { width: 120px; }
-        .col-date { width: 110px; }
-        .col-project { width: auto; text-align: left !important; }
-        .col-kakudo { width: 100px; }
+        .col-name { width: 220px; }
+        .col-status { width: 150px; }
+        .col-reason { width: auto; text-align: left !important; }
+        .col-date { width: 180px; }
 
         .chart-box { height: 400px; width: 100%; margin-bottom: 20px; position: relative; }
         #loading { font-weight: bold; color: #3182ce; margin-top: 10px; }
@@ -210,7 +209,7 @@
     }
 
     function fmtVal(v, type) {
-        if (v === 0 || v === "0" || isNaN(v) || !isFinite(v)) return '-';
+        if (v === 0 || v === "0" || isNaN(v) || !isFinite(v) || v === "") return '-';
         if (type === 'num') return Math.round(v).toLocaleString();
         if (type === 'ratio') return (Math.floor(v * 100) / 100).toFixed(2);
         return v.toFixed(1) + '%';
@@ -218,9 +217,10 @@
 
     function getMatchRegion(affStr) {
         if (!affStr) return "";
-        if (affStr.includes("東京") || affStr.includes("首都圏")) return "首都圏";
-        if (affStr.includes("名古屋") || affStr.includes("東海")) return "東海";
-        if (affStr.includes("大阪") || affStr.includes("西日本")) return "西日本";
+        const s = affStr.toLowerCase();
+        if (s.includes("東京") || s.includes("首都圏")) return "首都圏";
+        if (s.includes("名古屋") || s.includes("東海")) return "東海";
+        if (s.includes("大阪") || s.includes("西日本")) return "西日本";
         return affStr;
     }
 
@@ -290,15 +290,19 @@
         document.getElementById('generic-content').innerHTML = html;
     }
 
-    // --- 売込状況一覧（指定順序でのグルーピング） ---
+    // --- 売込状況一覧（人数表示対応） ---
     function renderStatusTable(rows, filterRegion) {
         if (rows.length < 2) return;
-        const NoIndex = 0, NameIndex = 1, AffIndex = 2, StatusIndex = 3, EndIndex = 5, RepIndex = 7, ProjectIndex = 8, PriceIndex = 12, KakudoIndex = 13, MonthIndex = 14;
+        const NameIndex = 1;    // B: 従業員名
+        const AffIndex = 2;     // C: 所属
+        const StatusIndex = 3;  // D: 稼働状況
+        const ReasonIndex = 5;  // F: 退場理由
+        const DateIndex = 6;    // G: 参画可能日
+        const PeriodIndex = 7;  // H: 未参画期間
 
         let rawData = rows.slice(1);
         let data = (filterRegion === 'total') ? rawData : (filterRegion === '東日本' ? rawData.filter(r => getMatchRegion(r[AffIndex]) === '東海' || getMatchRegion(r[AffIndex]) === '首都圏') : rawData.filter(r => getMatchRegion(r[AffIndex]) === filterRegion));
 
-        // 指定された順序でグルーピング
         const statusPriority = { "稼働中": 1, "待機中": 2, "休業中": 3, "休職中": 4 };
         const groupedData = {};
         data.forEach(r => {
@@ -307,34 +311,27 @@
             groupedData[st].push(r);
         });
 
-        // 表示すべきステータスをソートして取得
         const sortedStatuses = Object.keys(groupedData).sort((a, b) => (statusPriority[a] || 99) - (statusPriority[b] || 99));
 
         let html = `<table><thead><tr>
-            <th class="col-name">技術者名<br><span style="font-size:0.7rem; font-weight:normal;">スキルシートNO</span></th>
-            <th class="col-status">現状<br><span style="font-size:0.7rem; font-weight:normal;">所属</span></th>
-            <th class="col-date">稼働終了<br><span style="font-size:0.7rem; font-weight:normal;">営業担当</span></th>
-            <th class="col-project">案件名<br><span style="font-size:0.7rem; font-weight:normal;">売込単価</span></th>
-            <th class="col-kakudo">提案月<br><span style="font-size:0.7rem; font-weight:normal;">確度</span></th>
+            <th class="col-name">従業員名<br><span style="font-size:0.7rem; font-weight:normal;">所属</span></th>
+            <th class="col-status">稼働状況<br><span style="font-size:0.7rem; font-weight:normal;">退場理由</span></th>
+            <th class="col-date">参画可能日<br><span style="font-size:0.7rem; font-weight:normal;">未参画期間</span></th>
         </tr></thead><tbody>`;
 
         sortedStatuses.forEach(st => {
-            html += `<tr><td colspan="5" class="affiliation-header">${st}</td></tr>`;
+            const count = groupedData[st].length;
+            html += `<tr><td colspan="3" class="affiliation-header">${st} (${count}名)</td></tr>`;
             groupedData[st].forEach(r => {
-                const price = parseNum(r[PriceIndex]);
                 html += `<tr class="row-main">
                     <td class="cell-main-text">${r[NameIndex] || '-'}</td>
                     <td class="cell-main-text">${r[StatusIndex] || '-'}</td>
-                    <td class="cell-main-text">${r[EndIndex] || '-'}</td>
-                    <td class="cell-main-text col-project" style="text-align:left; padding-left:10px;">${r[ProjectIndex] || '-'}</td>
-                    <td class="cell-main-text">${r[MonthIndex] || '-'}</td>
+                    <td class="cell-main-text">${r[DateIndex] || '-'}</td>
                 </tr>
                 <tr class="row-sub border-bottom-bold">
-                    <td class="cell-sub-text">${r[NoIndex] || '-'}</td>
                     <td class="cell-sub-text">${r[AffIndex] || '-'}</td>
-                    <td class="cell-sub-text">${r[RepIndex] || '-'}</td>
-                    <td class="cell-sub-text col-project" style="text-align:left; padding-left:10px;">${price ? price.toLocaleString() : '-'}</td>
-                    <td class="cell-sub-text">${r[KakudoIndex] || '-'}</td>
+                    <td class="cell-sub-text col-reason" style="text-align:left;">${r[ReasonIndex] || '-'}</td>
+                    <td class="cell-sub-text">${r[PeriodIndex] || '-'}</td>
                 </tr>`;
             });
         });
