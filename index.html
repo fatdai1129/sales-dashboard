@@ -9,7 +9,7 @@
         #main_content { display: none; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; }
         
-        /* --- 全体枠線の基本設定(3px) --- */
+        /* --- 全ての枠線を3pxの太線に設定 --- */
         table { 
             width: 100%; 
             border-collapse: collapse; 
@@ -28,7 +28,7 @@
             text-align: center; 
         }
         
-        /* --- 特定箇所の境界線を2pxに変更 --- */
+        /* --- 特定箇所の境界線(実績と達成率の間)を2pxに変更 --- */
         .border-bottom-2px td {
             border-bottom: 2px solid black !important;
         }
@@ -113,6 +113,7 @@
             renderTable();
         } catch (e) {
             alert('取得失敗');
+            console.error(e);
         } finally {
             document.getElementById('loading').style.display = 'none';
         }
@@ -148,14 +149,11 @@
             { n: 'エンジニア総数', k: 'エンジニア総数', t: ['予算', '実績', '達成率'] }
         ];
 
-        // 実績と達成率の間を2pxにする対象項目
         const border2pxItems = ['売上', '稼働原価', 'A利益', 'プロパー(稼働)', 'エンジニア総数'];
 
         items.forEach(item => {
             item.t.forEach((type, idx) => {
                 const tr = document.createElement('tr');
-                
-                // 特定条件にクラスを付与
                 if (border2pxItems.includes(item.n) && type === '実績') {
                     tr.className = 'border-bottom-2px';
                 }
@@ -222,7 +220,7 @@
             if (isMatch && rowItem.includes(itemK) && rowType.includes(type)) {
                 for (let i = 0; i < 12; i++) {
                     let val = r[i+3];
-                    if (val !== undefined && rawVal !== "") {
+                    if (val !== undefined && val !== "") {
                         if (res[i] === null) res[i] = 0;
                         res[i] += parseFloat(String(val).replace(/,/g,'').replace(/"/g, '')) || 0;
                     }
@@ -240,7 +238,6 @@
 </script>
 </body>
 </html>
-
 
 
 
