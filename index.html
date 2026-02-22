@@ -176,7 +176,6 @@
             const rows = parseCSV(csvText);
             document.getElementById('pw_screen').style.display = 'none';
             document.getElementById('main_content').style.display = 'block';
-            
             if (toolKey === 'sales') {
                 document.getElementById('dashboard-sales').style.display = 'block';
                 document.getElementById('dashboard-generic').style.display = 'none';
@@ -255,14 +254,12 @@
             return { name: m[NameIndex], no: m[NoIndex], aff: m[AffIndex], salVal, costVal, sList, pList, mList, oList };
         });
 
-        // 全体合計セクション
         html += `<tr><td colspan="18" class="affiliation-header">全体合計 (${filterRegion==='total'?'全社':filterRegion})</td></tr>`;
         const totalRows = ['売上','利益','利益率','運用率','稼働<br>プロパー','稼働BP','総稼働'];
         totalRows.forEach((label, idx) => {
             html += `<tr class="${idx === totalRows.length - 1 ? 'item-bottom-bold' : 'row-border'}">`;
             if(idx === 0) html += `<td rowspan="7" colspan="2" class="cat-header" style="background:white; font-size:1rem;">全体合計</td>`;
             html += `<td class="metric-label">${label}</td>`;
-            
             let h1Sum = 0, h1Cnt = 0, h2Sum = 0, h2Cnt = 0;
             for(let i=0; i<12; i++) {
                 let v = 0;
@@ -273,16 +270,10 @@
                 else if (idx === 4) v = overall.properCounts[i];
                 else if (idx === 5) v = overall.bpCounts[i];
                 else v = overall.counts[i];
-
-                // 月次セルは整数表示(idx < 2 || idx >= 4)、または所定形式
                 let mType = (idx < 2 || idx >= 4) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
                 html += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${fmtVal(v, mType)}</td>`;
-                
-                // 集計用
                 if(v !== 0) { if(i < 6) { h1Sum += v; h1Cnt++; } else { h2Sum += v; h2Cnt++; } }
-                
                 if(i === 5) {
-                    // 合計欄のタイプ: 稼働人数項目(idx >= 4)も平均値(ratio)にする
                     let sType = (idx < 2) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
                     let h1D = (idx < 2) ? Math.round(h1Sum).toLocaleString() : (h1Cnt ? fmtVal(h1Sum / h1Cnt, sType) : '-');
                     html += `<td class="total-col">${h1D}</td>`;
@@ -294,7 +285,6 @@
             html += `<td class="total-col">${h2D}</td><td class="total-col">${yrD}</td></tr>`;
         });
 
-        // 各拠点
         const affs = [...new Set(techProcessed.map(t => t.aff))];
         affs.forEach(aff => {
             html += `<tr><td colspan="18" class="affiliation-header">${aff}</td></tr>`;
@@ -338,11 +328,26 @@
         document.getElementById('generic-content').innerHTML = html;
     }
 
+    // --- 営業実績・予算管理表 ---
     function renderSalesTable() {
         const rk = document.getElementById('region-select').value;
         const d = getRD(rk); const tb = document.getElementById('table-body');
         tb.innerHTML = "";
-        const labels = [{l:'売上',c:'sales',r:['B','A','R']},{l:'稼働原価',c:'kCost',r:['B','A','R']},{l:'A利益',c:'aProfit',r:['B','A','R']},{l:'待機原価',c:'waitCost',r:['A']},{l:'プロパー(稼働)',c:'propK',r:['B','A','R']},{l:'BP',c:'bpK',r:['A']},{l:'稼働エンジニア数',c:'workEngTotal',r:['B','A']},{l:'エンジニア総数',c:'totalEng',r:['B','A','R']},{l:'プロパー(待機)',c:'propW',r:['B','A']},{l:'待機率',c:'waitRate',r:['A']}];
+        
+        // エンジニア総数を最後に移動
+        const labels = [
+            {l:'売上',c:'sales',r:['B','A','R']},
+            {l:'稼働原価',c:'kCost',r:['B','A','R']},
+            {l:'A利益',c:'aProfit',r:['B','A','R']},
+            {l:'待機原価',c:'waitCost',r:['A']},
+            {l:'プロパー(稼働)',c:'propK',r:['B','A','R']},
+            {l:'BP',c:'bpK',r:['A']},
+            {l:'稼働エンジニア数',c:'workEngTotal',r:['B','A']},
+            {l:'プロパー(待機)',c:'propW',r:['B','A']},
+            {l:'待機率',c:'waitRate',r:['A']},
+            {l:'エンジニア総数',c:'totalEng',r:['B','A','R']} // ここが最下部へ移動
+        ];
+        
         labels.forEach(item => {
             const hasB=item.r.includes('B'), hasA=item.r.includes('A'), hasR=item.r.includes('R'), rCnt=item.r.length;
             let rB=`<tr class="row-border"><td rowspan="${rCnt}" class="cat-header">${item.l}</td><td class="type-col">予算</td>`, rA=`<tr class="${!hasR?'item-bottom-bold':'row-border'}"><td class="type-col">実績</td>`, rR=`<tr class="item-bottom-bold"><td class="type-col">達成率</td>`;
@@ -409,6 +414,7 @@
 </script>
 </body>
 </html>
+
 
 
 
