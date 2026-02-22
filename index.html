@@ -158,7 +158,6 @@
                     
                     html += `<td class="${cls} ${alignCls}" style="${borderStyle}">${displayVal}</td>`;
                     
-                    // 合計計算用のロジック
                     if (v !== null) {
                         if (i < 6) h1Sum = (h1Sum || 0) + v;
                         else h2Sum = (h2Sum || 0) + v;
@@ -187,6 +186,22 @@
     }
 
     function getMonthlyValues(region, itemK, type) {
+        // --- 稼働エンジニア数のカスタムロジック ---
+        if (itemK === '稼働エンジニア数') {
+            if (type === '予算') {
+                // (予算) = プロパー(稼働)の予算
+                return getMonthlyValues(region, 'プロパー(稼働)', '予算');
+            } else if (type === '実績') {
+                // (実績) = プロパー(稼働)の実績 + BPの実績
+                const propActual = getMonthlyValues(region, 'プロパー(稼働)', '実績');
+                const bpActual = getMonthlyValues(region, 'BP', '実績');
+                return propActual.map((v, i) => {
+                    if (v === null && bpActual[i] === null) return null;
+                    return (v || 0) + (bpActual[i] || 0);
+                });
+            }
+        }
+
         let res = new Array(12).fill(null);
         
         if (type === '達成率') {
@@ -225,6 +240,7 @@
 </script>
 </body>
 </html>
+
 
 
 
