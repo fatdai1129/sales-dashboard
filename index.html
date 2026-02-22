@@ -9,22 +9,31 @@
         #main_content { display: none; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; }
         
-        /* --- 線の太さ設定 --- */
-        table { width: 100%; border-collapse: collapse; background: white; border: 2px solid black !important; table-layout: fixed; }
-        th, td { border: 1px solid black !important; padding: 8px 4px; font-size: 0.85rem; word-break: break-all; }
-        th { background: #edf2f7; border-bottom: 2px solid black !important; text-align: center; }
+        /* --- 全ての枠線を3pxの太線に設定 --- */
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            background: white; 
+            border: 3px solid black !important; /* 外枠 */
+            table-layout: fixed; 
+        }
+        th, td { 
+            border: 3px solid black !important; /* 全ての仕切り線 */
+            padding: 8px 4px; 
+            font-size: 0.85rem; 
+            word-break: break-all; 
+        }
+        th { 
+            background: #edf2f7; 
+            text-align: center; 
+        }
         
-        /* 項目ごとの区切りを3pxの太線にする */
-        .item-bottom-bold td { border-bottom: 3px solid black !important; }
+        /* 列の背景色設定 */
+        .cat-header { background: #ebf8ff; font-weight: bold; width: 130px; text-align: center !important; }
+        .type-col { width: 70px; text-align: center !important; }
+        .total-col { background: #fffaf0; font-weight: bold; }
         
-        /* 列の境界線 */
-        .cat-header { background: #ebf8ff; font-weight: bold; width: 130px; border-right: 2px solid black !important; text-align: center !important; }
-        .type-col { width: 70px; border-right: 2px solid black !important; text-align: center !important; }
-        .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
-        .month-sep { border-right: 2px solid black !important; }
-        .second-half-start { border-left: 2px solid black !important; }
-        
-        /* 文字の配置 */
+        /* 文字の配置設定 */
         .text-right { text-align: right !important; padding-right: 8px !important; }
         .text-center { text-align: center !important; }
         
@@ -62,12 +71,12 @@
                     <th rowspan="2" class="cat-header">項目</th>
                     <th rowspan="2" class="type-col">区分</th>
                     <th colspan="6">上期実績</th><th class="total-col">上期計</th>
-                    <th colspan="6" class="second-half-start">下期実績・予想</th><th class="total-col">下期計</th>
+                    <th colspan="6">下期実績・予想</th><th class="total-col">下期計</th>
                     <th class="total-col">年間計</th>
                 </tr>
                 <tr>
-                    <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th class="month-sep">11月</th><th class="total-col">計</th>
-                    <th class="second-half-start">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th class="month-sep">5月</th><th class="total-col">計</th>
+                    <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th>11月</th><th class="total-col">計</th>
+                    <th>12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th>5月</th><th class="total-col">計</th>
                     <th class="total-col">合計</th>
                 </tr>
             </thead>
@@ -138,7 +147,6 @@
         items.forEach(item => {
             item.t.forEach((type, idx) => {
                 const tr = document.createElement('tr');
-                if (idx === item.t.length - 1) tr.className = 'item-bottom-bold';
 
                 let html = idx === 0 ? `<td rowspan="${item.t.length}" class="cat-header">${item.n}</td>` : '';
                 html += `<td class="type-col">${type}</td>`;
@@ -148,15 +156,10 @@
                 let h2Sum = null;
 
                 data.forEach((v, i) => {
-                    const isMonthSep = (i === 5 || i === 11);
-                    const isSecondHalfStart = (i === 6);
-                    const borderStyle = isSecondHalfStart ? 'border-left:2px solid black !important;' : '';
-                    const cls = isMonthSep ? 'month-sep' : '';
-                    
                     const displayVal = formatVal(v, item.k, type);
                     const alignCls = displayVal === '-' ? 'text-center' : 'text-right';
                     
-                    html += `<td class="${cls} ${alignCls}" style="${borderStyle}">${displayVal}</td>`;
+                    html += `<td class="${alignCls}">${displayVal}</td>`;
                     
                     if (v !== null) {
                         if (i < 6) h1Sum = (h1Sum || 0) + v;
