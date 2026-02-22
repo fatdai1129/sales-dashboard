@@ -32,10 +32,9 @@
         .cell-sub-text { font-size: 0.75rem; color: #666; margin-top: 2px; }
         .border-bottom-bold { border-bottom: 2px solid black !important; }
         
-        .col-name { width: 220px; }
-        .col-status { width: 150px; }
-        .col-reason { width: auto; text-align: left !important; }
-        .col-date { width: 180px; }
+        .col-name { width: 300px; }
+        .col-reason { width: auto; }
+        .col-date { width: 300px; }
 
         .chart-box { height: 400px; width: 100%; margin-bottom: 20px; position: relative; }
         #loading { font-weight: bold; color: #3182ce; margin-top: 10px; }
@@ -169,7 +168,6 @@
             const rows = parseCSV(csvText);
             document.getElementById('pw_screen').style.display = 'none';
             document.getElementById('main_content').style.display = 'block';
-            
             if (toolKey === 'sales') {
                 document.getElementById('dashboard-sales').style.display = 'block';
                 document.getElementById('dashboard-generic').style.display = 'none';
@@ -263,8 +261,8 @@
                     html += `<td class="total-col">${(idx < 2) ? Math.round(h1).toLocaleString() : (c1 ? fmtVal(h1 / c1, sType) : '-')}</td>`;
                 }
             }
-            let sFinal = (idx < 2) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
-            html += `<td class="total-col">${idx < 2 ? Math.round(h2).toLocaleString() : (c2 ? fmtVal(h2 / c2, sFinal) : '-')}</td><td class="total-col">${idx < 2 ? Math.round(h1 + h2).toLocaleString() : ((c1 + c2) ? fmtVal((h1 + h2) / (c1 + c2), sFinal) : '-')}</td></tr>`;
+            let sf = (idx < 2) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
+            html += `<td class="total-col">${idx < 2 ? Math.round(h2).toLocaleString() : (c2 ? fmtVal(h2 / c2, sf) : '-')}</td><td class="total-col">${idx < 2 ? Math.round(h1 + h2).toLocaleString() : ((c1 + c2) ? fmtVal((h1 + h2) / (c1 + c2), sf) : '-')}</td></tr>`;
         });
 
         const affs = [...new Set(techProcessed.map(t => t.aff))];
@@ -290,7 +288,7 @@
         document.getElementById('generic-content').innerHTML = html;
     }
 
-    // --- 売込状況一覧（人数表示対応） ---
+    // --- 売込状況一覧（カラム順序・構成修正版） ---
     function renderStatusTable(rows, filterRegion) {
         if (rows.length < 2) return;
         const NameIndex = 1;    // B: 従業員名
@@ -315,7 +313,7 @@
 
         let html = `<table><thead><tr>
             <th class="col-name">従業員名<br><span style="font-size:0.7rem; font-weight:normal;">所属</span></th>
-            <th class="col-status">稼働状況<br><span style="font-size:0.7rem; font-weight:normal;">退場理由</span></th>
+            <th class="col-reason">退場理由<br><span style="font-size:0.7rem; font-weight:normal;">稼働状況</span></th>
             <th class="col-date">参画可能日<br><span style="font-size:0.7rem; font-weight:normal;">未参画期間</span></th>
         </tr></thead><tbody>`;
 
@@ -325,12 +323,12 @@
             groupedData[st].forEach(r => {
                 html += `<tr class="row-main">
                     <td class="cell-main-text">${r[NameIndex] || '-'}</td>
-                    <td class="cell-main-text">${r[StatusIndex] || '-'}</td>
+                    <td class="cell-main-text" style="text-align:center;">${r[ReasonIndex] || '-'}</td>
                     <td class="cell-main-text">${r[DateIndex] || '-'}</td>
                 </tr>
                 <tr class="row-sub border-bottom-bold">
                     <td class="cell-sub-text">${r[AffIndex] || '-'}</td>
-                    <td class="cell-sub-text col-reason" style="text-align:left;">${r[ReasonIndex] || '-'}</td>
+                    <td class="cell-sub-text" style="text-align:center;">${r[StatusIndex] || '-'}</td>
                     <td class="cell-sub-text">${r[PeriodIndex] || '-'}</td>
                 </tr>`;
             });
@@ -397,6 +395,7 @@
 </script>
 </body>
 </html>
+
 
 
 
