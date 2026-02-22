@@ -9,16 +9,16 @@
         #main_content { display: none; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; }
         
-        /* --- 全ての枠線を3pxの太線に設定 --- */
+        /* --- 全体枠線の基本設定(3px) --- */
         table { 
             width: 100%; 
             border-collapse: collapse; 
             background: white; 
-            border: 3px solid black !important; /* 外枠 */
+            border: 3px solid black !important; 
             table-layout: fixed; 
         }
         th, td { 
-            border: 3px solid black !important; /* 全ての仕切り線 */
+            border: 3px solid black !important; 
             padding: 8px 4px; 
             font-size: 0.85rem; 
             word-break: break-all; 
@@ -28,7 +28,11 @@
             text-align: center; 
         }
         
-        /* 列の背景色設定 */
+        /* --- 特定箇所の境界線を2pxに変更 --- */
+        .border-bottom-2px td {
+            border-bottom: 2px solid black !important;
+        }
+
         .cat-header { background: #ebf8ff; font-weight: bold; width: 130px; text-align: center !important; }
         .type-col { width: 70px; text-align: center !important; }
         .total-col { background: #fffaf0; font-weight: bold; }
@@ -144,9 +148,17 @@
             { n: 'エンジニア総数', k: 'エンジニア総数', t: ['予算', '実績', '達成率'] }
         ];
 
+        // 実績と達成率の間を2pxにする対象項目
+        const border2pxItems = ['売上', '稼働原価', 'A利益', 'プロパー(稼働)', 'エンジニア総数'];
+
         items.forEach(item => {
             item.t.forEach((type, idx) => {
                 const tr = document.createElement('tr');
+                
+                // 特定条件にクラスを付与
+                if (border2pxItems.includes(item.n) && type === '実績') {
+                    tr.className = 'border-bottom-2px';
+                }
 
                 let html = idx === 0 ? `<td rowspan="${item.t.length}" class="cat-header">${item.n}</td>` : '';
                 html += `<td class="type-col">${type}</td>`;
@@ -158,14 +170,11 @@
                 data.forEach((v, i) => {
                     const displayVal = formatVal(v, item.k, type);
                     const alignCls = displayVal === '-' ? 'text-center' : 'text-right';
-                    
                     html += `<td class="${alignCls}">${displayVal}</td>`;
-                    
                     if (v !== null) {
                         if (i < 6) h1Sum = (h1Sum || 0) + v;
                         else h2Sum = (h2Sum || 0) + v;
                     }
-
                     if (i === 5) {
                         const h1Display = formatVal(h1Sum, item.k, type);
                         const h1Align = h1Display === '-' ? 'text-center' : 'text-right';
@@ -213,7 +222,7 @@
             if (isMatch && rowItem.includes(itemK) && rowType.includes(type)) {
                 for (let i = 0; i < 12; i++) {
                     let val = r[i+3];
-                    if (val !== undefined && val !== "") {
+                    if (val !== undefined && rawVal !== "") {
                         if (res[i] === null) res[i] = 0;
                         res[i] += parseFloat(String(val).replace(/,/g,'').replace(/"/g, '')) || 0;
                     }
@@ -231,6 +240,7 @@
 </script>
 </body>
 </html>
+
 
 
 
