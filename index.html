@@ -9,7 +9,6 @@
         #main_content { display: none; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; }
         
-        /* 表全体の枠線設定 */
         table { width: 100%; border-collapse: collapse; background: white; border: 2px solid black !important; table-layout: fixed; }
         th, td { border: 1px solid black !important; padding: 8px 4px; text-align: center; font-size: 0.85rem; word-break: break-all; }
         th { background: #edf2f7; border-bottom: 2px solid black !important; }
@@ -20,7 +19,7 @@
         .month-sep { border-right: 2px solid black !important; }
         .second-half-start { border-left: 2px solid black !important; }
         
-        /* 下線3px太線設定 */
+        /* 3pxの太下線設定 */
         .item-bottom-bold td { border-bottom: 3px solid black !important; }
         
         #loading { font-weight: bold; color: #3182ce; margin-bottom: 10px; }
@@ -31,7 +30,7 @@
 <div id="pw_screen">
     <div style="background:white; color:black; padding:40px; border-radius:12px; text-align:center; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
         <h2 style="margin-top:0;">実績管理ログイン</h2>
-        <input type="password" id="pass_val" style="padding:12px; font-size:18px; border:2px solid #ddd; border-radius:6px; width:220px;" onkeydown="if(event.keyCode==13)checkPW()">
+        <input type="password" id="pass_val" style="padding:12px; font-size:18px; border: 2px solid #ddd; border-radius:6px; width:220px;" onkeydown="if(event.keyCode==13)checkPW()">
         <br><br>
         <button onclick="checkPW()" style="padding:12px 35px; background:#3182ce; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:16px;">ログイン</button>
         <p id="err_msg" style="color:red; display:none; margin-top:10px;">パスワードが違います</p>
@@ -43,11 +42,11 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h2 style="margin:0; border-left:5px solid #3182ce; padding-left:15px;">営業実績・予算管理表</h2>
             <select id="region-select" style="padding:8px 15px; border-radius:6px; font-size:1rem; cursor:pointer;" onchange="renderTable()">
-                <option value="全社">全社合計</option>
-                <option value="東日本">東日本 (東海＋首都圏)</option>
-                <option value="西日本">西日本</option>
+                <option value="全体合計">全体合計</option>
                 <option value="東海">東海</option>
                 <option value="首都圏">首都圏</option>
+                <option value="東日本">東日本</option>
+                <option value="西日本">西日本</option>
             </select>
         </div>
         <div id="loading" style="display:none;">データ読み込み中...</div>
@@ -94,7 +93,7 @@
             rawRows = parseCSV(text);
             renderTable();
         } catch (e) {
-            alert('データ取得に失敗しました。');
+            alert('取得失敗');
             console.error(e);
         } finally {
             document.getElementById('loading').style.display = 'none';
@@ -118,7 +117,6 @@
         const tbody = document.getElementById('table-body');
         tbody.innerHTML = '';
 
-        // 項目と並び順の定義
         const items = [
             { n: '売上', k: '売上', t: ['予算', '実績', '達成率'] },
             { n: '稼働原価', k: '稼働原価', t: ['予算', '実績', '達成率'] },
@@ -143,25 +141,19 @@
                 const data = getMonthlyValues(region, item.k, type);
                 let h1 = 0, h2 = 0;
                 
-                // 12ヶ月分のセル作成
                 data.forEach((v, i) => {
                     const isMonthSep = (i === 5 || i === 11);
                     const isSecondHalfStart = (i === 6);
                     const style = isSecondHalfStart ? 'border-left:2px solid black !important;' : '';
                     const cls = isMonthSep ? 'month-sep' : '';
                     
-                    html += `<td class="${cls}" style="${style}">${format(v, item.k, type)}</td>`;
-                    
+                    html += `<td class="${cls}" style="${style}">${formatVal(v, item.k, type)}</td>`;
                     if (i < 6) h1 += v; else h2 += v;
-                    
-                    // 上期計の挿入
-                    if (i === 5) html += `<td class="total-col">${format(h1, item.k, type)}</td>`;
+                    if (i === 5) html += `<td class="total-col">${formatVal(h1, item.k, type)}</td>`;
                 });
 
-                // 下期計と年間合計
-                html += `<td class="total-col">${format(h2, item.k, type)}</td>`;
-                html += `<td class="total-col">${format(h1 + h2, item.k, type)}</td>`;
-                
+                html += `<td class="total-col">${formatVal(h2, item.k, type)}</td>`;
+                html += `<td class="total-col">${formatVal(h1 + h2, item.k, type)}</td>`;
                 tr.innerHTML = html;
                 tbody.appendChild(tr);
             });
@@ -170,24 +162,29 @@
 
     function getMonthlyValues(region, itemK, type) {
         let res = new Array(12).fill(0);
+        
+        // 達成率の計算
         if (type === '達成率') {
             const b = getMonthlyValues(region, itemK, '予算');
             const a = getMonthlyValues(region, itemK, '実績');
             return a.map((v, i) => b[i] === 0 ? 0 : (v / b[i]) * 100);
         }
-        rawRows.slice(1).forEach(r => {
-            const rN = (r[0] || '').trim();
-            const iN = (r[1] || '').trim();
-            const tN = (r[2] || '').trim();
-            
-            let match = false;
-            if (region === '全社') match = true;
-            else if (region === '東日本') match = (rN.includes('東海') || rN.includes('首都圏'));
-            else match = rN.includes(region);
 
-            if (match && iN.includes(itemK) && tN.includes(type)) {
+        rawRows.slice(1).forEach(r => {
+            const rowRegion = (r[0] || '').trim();
+            const rowItem = (r[1] || '').trim();
+            const rowType = (r[2] || '').trim();
+            
+            let isMatch = false;
+            if (region === '全体合計') {
+                isMatch = true;
+            } else {
+                isMatch = (rowRegion === region);
+            }
+
+            if (isMatch && rowItem.includes(itemK) && rowType.includes(type)) {
                 for (let i = 0; i < 12; i++) {
-                    let val = String(r[i+3] || '0').replace(/,/g, '').replace(/"/g, '');
+                    let val = String(r[i+3] || '0').replace(/,/g,'').replace(/"/g, '');
                     res[i] += parseFloat(val) || 0;
                 }
             }
@@ -195,7 +192,7 @@
         return res;
     }
 
-    function format(v, k, t) {
+    function formatVal(v, k, t) {
         if (v === 0 && t !== '達成率') return '-';
         if (k === '待機率' || t === '達成率') return v.toFixed(1) + '%';
         return Math.round(v).toLocaleString();
@@ -203,6 +200,7 @@
 </script>
 </body>
 </html>
+
 
 
 
