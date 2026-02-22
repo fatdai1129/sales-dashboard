@@ -11,16 +11,20 @@
         
         /* 表のデザイン設定 */
         table { width: 100%; border-collapse: collapse; background: white; border: 2px solid black !important; table-layout: fixed; }
-        th, td { border: 1px solid black !important; padding: 8px 4px; text-align: center; font-size: 0.85rem; word-break: break-all; }
-        th { background: #edf2f7; border-bottom: 2px solid black !important; }
+        th, td { border: 1px solid black !important; padding: 8px 4px; font-size: 0.85rem; word-break: break-all; }
+        th { background: #edf2f7; border-bottom: 2px solid black !important; text-align: center; }
         
-        .cat-header { background: #ebf8ff; font-weight: bold; width: 130px; border-right: 2px solid black !important; }
-        .type-col { width: 70px; border-right: 2px solid black !important; }
+        .cat-header { background: #ebf8ff; font-weight: bold; width: 130px; border-right: 2px solid black !important; text-align: center !important; }
+        .type-col { width: 70px; border-right: 2px solid black !important; text-align: center !important; }
         .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .month-sep { border-right: 2px solid black !important; }
         .second-half-start { border-left: 2px solid black !important; }
         
-        /* 下線3px太線設定 */
+        /* 数字とハイフンの配置設定 */
+        .text-right { text-align: right !important; padding-right: 8px !important; }
+        .text-center { text-align: center !important; }
+        
+        /* 3pxの太下線設定 */
         .item-bottom-bold td { border-bottom: 3px solid black !important; }
         
         #loading { font-weight: bold; color: #3182ce; margin-bottom: 10px; }
@@ -145,16 +149,30 @@
                 data.forEach((v, i) => {
                     const isMonthSep = (i === 5 || i === 11);
                     const isSecondHalfStart = (i === 6);
-                    const style = isSecondHalfStart ? 'border-left:2px solid black !important;' : '';
+                    const borderStyle = isSecondHalfStart ? 'border-left:2px solid black !important;' : '';
                     const cls = isMonthSep ? 'month-sep' : '';
                     
-                    html += `<td class="${cls}" style="${style}">${formatVal(v, item.k, type)}</td>`;
+                    const displayVal = formatVal(v, item.k, type);
+                    const alignCls = displayVal === '-' ? 'text-center' : 'text-right';
+                    
+                    html += `<td class="${cls} ${alignCls}" style="${borderStyle}">${displayVal}</td>`;
                     if (i < 6) h1 += v; else h2 += v;
-                    if (i === 5) html += `<td class="total-col">${formatVal(h1, item.k, type)}</td>`;
+
+                    if (i === 5) {
+                        const h1Display = formatVal(h1, item.k, type);
+                        const h1Align = h1Display === '-' ? 'text-center' : 'text-right';
+                        html += `<td class="total-col ${h1Align}">${h1Display}</td>`;
+                    }
                 });
 
-                html += `<td class="total-col">${formatVal(h2, item.k, type)}</td>`;
-                html += `<td class="total-col">${formatVal(h1 + h2, item.k, type)}</td>`;
+                const h2Display = formatVal(h2, item.k, type);
+                const h2Align = h2Display === '-' ? 'text-center' : 'text-right';
+                html += `<td class="total-col ${h2Align}">${h2Display}</td>`;
+
+                const totalDisplay = formatVal(h1 + h2, item.k, type);
+                const totalAlign = totalDisplay === '-' ? 'text-center' : 'text-right';
+                html += `<td class="total-col ${totalAlign}">${totalDisplay}</td>`;
+
                 tr.innerHTML = html;
                 tbody.appendChild(tr);
             });
@@ -163,24 +181,16 @@
 
     function getMonthlyValues(region, itemK, type) {
         let res = new Array(12).fill(0);
-        
         if (type === '達成率') {
             const b = getMonthlyValues(region, itemK, '予算');
             const a = getMonthlyValues(region, itemK, '実績');
             return a.map((v, i) => b[i] === 0 ? 0 : (v / b[i]) * 100);
         }
-
         rawRows.slice(1).forEach(r => {
             const rowRegion = (r[0] || '').trim();
             const rowItem = (r[1] || '').trim();
             const rowType = (r[2] || '').trim();
-            
-            let isMatch = false;
-            if (region === '全体合計') {
-                isMatch = true;
-            } else {
-                isMatch = (rowRegion === region);
-            }
+            let isMatch = (region === '全体合計') ? true : (rowRegion === region);
 
             if (isMatch && rowItem.includes(itemK) && rowType.includes(type)) {
                 for (let i = 0; i < 12; i++) {
@@ -200,6 +210,7 @@
 </script>
 </body>
 </html>
+
 
 
 
