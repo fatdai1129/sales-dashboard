@@ -20,7 +20,7 @@
         .nav-select { background: #2d3748; color: white; border: 1px solid #4a5568; padding: 8px 15px; border-radius: 6px; font-size: 1rem; margin-right: 15px; cursor: pointer; }
         h2 { font-size: 1.4rem; margin: 0; color: #1a202c; border-left: 5px solid #3182ce; padding-left: 15px; text-align: left; }
         
-        /* 枠線設定 */
+        /* 枠線と下太線の設定 */
         table { width: 100%; border-collapse: collapse; background: white; border: 2px solid black !important; table-layout: fixed; }
         th, td { border: 1px solid black !important; padding: 8px 6px; text-align: center; font-size: 0.85rem; word-break: break-all; }
         th { background: #edf2f7; color: #4a5568; border-bottom: 2px solid black !important; }
@@ -33,7 +33,7 @@
         .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .affiliation-header { background: #1a202c !important; color: white !important; text-align: left !important; padding: 10px 15px !important; font-size: 1rem !important; border-bottom: 2px solid black !important; }
         
-        /* 各項目の下線を3pxの太線にする */
+        /* 指示通りの下太線設定 */
         .item-bottom-bold td { border-bottom: 3px solid black !important; }
         .row-border td:not(.cat-header) { border-bottom: 1px solid black !important; }
 
@@ -49,7 +49,7 @@
 <body class="notranslate">
 <div id="pw_screen">
     <div id="pw_box">
-        <div style="font-size: 1.2rem; font-weight: bold; color: #2d3748; margin-bottom: 10px;">実績管理ログイン</div>
+        <div style="font-size: 1.4rem; font-weight: bold; color: #2d3748; margin-bottom: 10px;">実績管理ログイン</div>
         <input type="password" id="pass_val" placeholder="パスワードを入力" onkeydown="if(event.keyCode==13)checkPW()">
         <br>
         <button class="login-btn" onclick="checkPW()">ログイン</button>
@@ -172,22 +172,23 @@
             h += `<tr class="${idx === 6 ? 'item-bottom-bold' : 'row-border'}">`;
             if(idx === 0) h += `<td rowspan="7" colspan="2" class="cat-header" style="background:white; font-size:1rem;">全体合計</td>`;
             h += `<td class="metric-label">${lbl}</td>`;
-            let hs1=0, hc1=0, hs2=0, hc2=0;
+            let r_h1Sum=0, r_h1Cnt=0, r_h2Sum=0, r_h2Cnt=0;
             for(let i=0; i<12; i++) {
                 let v = (idx===0)?ov.s[i]:(idx===1)?ov.p[i]:(idx===2)?(ov.c[i]?ov.m[i]/ov.c[i]:0):(idx===3)?(ov.c[i]?ov.o[i]/ov.c[i]:0):(idx===4)?ov.pc[i]:(idx===5)?ov.bc[i]:ov.c[i];
                 let ty = (idx<2 || idx>=4)?'num':(idx===2)?'pct':'ratio';
                 h += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${fmt(v, ty)}</td>`;
-                if(v!==0){if(i<6){hs1+=v; hc1++;}else{hs2+=v; hc2++;}}
-                if(i===5) h += `<td class="total-col">${idx<2?Math.round(hs1).toLocaleString():(hc1?fmt(hs1/hc1, ty):'-')}</td>`;
+                if(v!==0){if(i<6){r_h1Sum+=v; r_h1Cnt++;}else{r_h2Sum+=v; r_h2Cnt++;}}
+                if(i===5) h += `<td class="total-col">${idx<2?Math.round(r_h1Sum).toLocaleString():(r_h1Cnt?fmt(r_h1Sum/r_h1Cnt, ty):'-')}</td>`;
             }
-            h += `<td class="total-col">${idx<2?Math.round(hs2).toLocaleString():(hc2?fmt(hs2/hc2, (idx===2?'pct':'ratio')):'-')}</td><td class="total-col">${idx<2?Math.round(hs1+hs2).toLocaleString():((hc1+hc2)?fmt((hs1+hs2)/(hc1+hc2), (idx===2?'pct':'ratio')):'-')}</td></tr>`;
+            let tyFin = (idx<2)?'num':(idx===2?'pct':'ratio');
+            h += `<td class="total-col">${idx<2?Math.round(r_h2Sum).toLocaleString():(r_h2Cnt?fmt(r_h2Sum/r_h2Cnt, tyFin):'-')}</td><td class="total-col">${idx<2?Math.round(r_h1Sum+r_h2Sum).toLocaleString():((r_h1Cnt+r_h2Cnt)?fmt((r_h1Sum+r_h2Sum)/(r_h1Cnt+r_h2Cnt), tyFin):'-')}</td></tr>`;
         });
         const afs = [...new Set(proc.map(t => t.aff))];
         afs.forEach(af => {
             h += `<tr><td colspan="18" class="affiliation-header">${af}</td></tr>`;
             proc.filter(t => t.aff === af).forEach(t => {
-                const metricsList = [{n:'売上',d:t.sl,t:'num'},{n:'利益',d:t.pl,t:'num'},{n:'利益率',d:t.ml,t:'pct'},{n:'運用率',d:t.ol,t:'ratio'}];
-                metricsList.forEach((m, i) => {
+                const ms = [{n:'売上',d:t.sl,t:'num'},{n:'利益',d:t.pl,t:'num'},{n:'利益率',d:t.ml,t:'pct'},{n:'運用率',d:t.ol,t:'ratio'}];
+                ms.forEach((m, i) => {
                     h += `<tr class="${i === 3 ? 'item-bottom-bold' : 'row-border'}">`;
                     if(i === 0) h += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="cell-main-text">${t.name}</div><div class="cell-sub-text">${t.no}</div></td><td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;">${t.sal.toLocaleString()}<br>${t.cost.toLocaleString()}</td>`;
                     h += `<td class="metric-label">${m.n}</td>`;
@@ -211,11 +212,11 @@
         if (reg !== 'total') data = (reg === '東日本' ? data.filter(r => getMatchRegion(r[AffI]) === '東海' || getMatchRegion(r[AffI]) === '首都圏') : data.filter(r => getMatchRegion(r[AffI]) === reg));
         const grp = {}; data.forEach(r => { const st = r[StatusI] || "未設定"; if (!grp[st]) grp[st] = []; grp[st].push(r); });
         const sorted = Object.keys(grp).sort((a,b) => ({"稼働中":1,"待機中":2,"休業中":3,"休職中":4}[a]||99)-({"稼働中":1,"待機中":2,"休業中":3,"休職中":4}[b]||99));
-        let h = `<table><thead><tr><th class="col-33">従業員名<br><span style="font-size:0.7rem; font-weight:normal;">所属</span></th><th class="col-33">稼働状況<br><span style="font-size:0.7rem; font-weight:normal;">退場理由</span></th><th class="col-33">参画可能日<br><span style="font-size:0.7rem; font-weight:normal;">未参画期間</span></th></tr></thead><tbody>`;
+        let h = `<table><thead><tr><th class="col-33">従業員名<br><span style="font-size:0.7rem; font-weight:normal;">所属</span></th><th class="col-33">退場理由<br><span style="font-size:0.7rem; font-weight:normal;">稼働状況</span></th><th class="col-33">参画可能日<br><span style="font-size:0.7rem; font-weight:normal;">未参画期間</span></th></tr></thead><tbody>`;
         sorted.forEach(st => {
             h += `<tr><td colspan="3" class="affiliation-header">${st} (${grp[st].length}名)</td></tr>`;
             grp[st].forEach(r => {
-                h += `<tr class="row-main"><td class="cell-main-text">${r[NameI]||'-'}</td><td class="cell-main-text">${r[StatusI]||'-'}</td><td class="cell-main-text">${r[DateI]||'-'}</td></tr><tr class="row-sub border-bottom-bold"><td class="cell-sub-text">${r[AffI]||'-'}</td><td class="cell-sub-text">${r[ReasonI]||'-'}</td><td class="cell-sub-text">${r[PeriodI]||'-'}</td></tr>`;
+                h += `<tr class="row-main"><td class="cell-main-text">${r[NameI]||'-'}</td><td class="cell-main-text">${r[ReasonI]||'-'}</td><td class="cell-main-text">${r[DateI]||'-'}</td></tr><tr class="row-sub border-bottom-bold"><td class="cell-sub-text">${r[AffI]||'-'}</td><td class="cell-sub-text">${r[StatusI]||'-'}</td><td class="cell-sub-text">${r[PeriodI]||'-'}</td></tr>`;
             });
         });
         document.getElementById('generic-content').innerHTML = h + `</tbody></table>`;
@@ -265,6 +266,7 @@
 </script>
 </body>
 </html>
+
 
 
 
