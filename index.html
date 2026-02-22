@@ -10,7 +10,7 @@
         #main_content { display: none; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; }
         
-        /* --- 基本枠線設定 --- */
+        /* --- 枠線の優先順位設定 --- */
         table { 
             width: 100%; 
             border-collapse: collapse; 
@@ -18,20 +18,20 @@
             border: 3px solid black !important; 
             table-layout: fixed; 
         }
+        
+        /* 基本は全て3px */
         th, td { 
-            border: 3px solid black !important; /* 基本は全て3px */
+            border: 3px solid black !important; 
             padding: 8px 4px; 
             font-size: 0.85rem; 
             word-break: break-all; 
         }
+        
         th { background: #edf2f7; text-align: center; }
-        
-        /* --- 枠線の太さを上書きするための高優先度設定 --- */
-        /* 予算と実績の間の1px設定 */
-        tr.row-1px td { border-bottom: 1px solid black !important; }
-        
-        /* 実績と達成率の間の2px設定 */
-        tr.row-2px td { border-bottom: 2px solid black !important; }
+
+        /* セレクタの優先順位を上げ、1pxと2pxを強制反映 */
+        table tr.row-border-1px td { border-bottom: 1px solid black !important; }
+        table tr.row-border-2px td { border-bottom: 2px solid black !important; }
 
         .cat-header { background: #ebf8ff; font-weight: bold; width: 130px; text-align: center !important; }
         .type-col { width: 70px; text-align: center !important; }
@@ -149,19 +149,18 @@
             { n: 'エンジニア総数', k: 'エンジニア総数', t: ['予算', '実績', '達成率'] }
         ];
 
-        // 枠線の個別設定用リスト
-        const b1pxItems = ['売上', '稼働原価', 'A利益', 'プロパー(稼働)', '稼働エンジニア数', 'エンジニア総数', 'プロパー(待機)'];
-        const b2pxItems = ['売上', '稼働原価', 'A利益', 'プロパー(稼働)', 'エンジニア総数'];
+        const b1pxList = ['売上', '稼働原価', 'A利益', 'プロパー(稼働)', '稼働エンジニア数', 'エンジニア総数', 'プロパー(待機)'];
+        const b2pxList = ['売上', '稼働原価', 'A利益', 'プロパー(稼働)', 'エンジニア総数'];
 
         items.forEach(item => {
             item.t.forEach((type, idx) => {
                 const tr = document.createElement('tr');
                 
-                // 枠線のクラス割り当て（高優先度）
-                if (b1pxItems.includes(item.n) && type === '予算') {
-                    tr.className = 'row-1px';
-                } else if (b2pxItems.includes(item.n) && type === '実績') {
-                    tr.className = 'row-2px';
+                // 枠線クラスの付与（優先度の高いCSSを適用）
+                if (b1pxList.includes(item.n) && type === '予算') {
+                    tr.className = 'row-border-1px';
+                } else if (b2pxList.includes(item.n) && type === '実績') {
+                    tr.className = 'row-border-2px';
                 }
 
                 let html = idx === 0 ? `<td rowspan="${item.t.length}" class="cat-header">${item.n}</td>` : '';
@@ -239,6 +238,7 @@
 </script>
 </body>
 </html>
+
 
 
 
