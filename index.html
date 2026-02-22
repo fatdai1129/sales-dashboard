@@ -2,47 +2,76 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>実績管理（表示確認版）</title>
+    <title>実績管理ポータル（営業実績・集計版）</title>
     <style>
-        #pw_screen { position: fixed; top:0; left:0; width:100%; height:100%; background:#2d3748; color:white; display:flex; justify-content:center; align-items:center; z-index:1000; }
-        #main_content { display:none; padding:20px; font-family:sans-serif; }
-        table { width:100%; border-collapse:collapse; margin-top:20px; }
-        th, td { border:1px solid #333; padding:8px; text-align:right; font-size:12px; }
-        th { background:#f4f4f4; text-align:center; }
-        .item-label { text-align:left; background:#eef; font-weight:bold; }
+        body { font-family: 'Hiragino Sans', sans-serif; background-color: #f0f4f8; padding: 20px; color: #333; }
+        #pw_screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a202c; color: white; display: flex; justify-content: center; align-items: center; z-index: 10000; }
+        #main_content { display: none; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; }
+        
+        /* 表全体の枠線 */
+        table { width: 100%; border-collapse: collapse; background: white; border: 2px solid black !important; table-layout: fixed; }
+        th, td { border: 1px solid black !important; padding: 8px 4px; text-align: center; font-size: 0.85rem; }
+        th { background: #edf2f7; border-bottom: 2px solid black !important; }
+        
+        .cat-header { background: #ebf8ff; font-weight: bold; width: 130px; border-right: 2px solid black !important; }
+        .type-col { width: 70px; border-right: 2px solid black !important; }
+        .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; }
+        .month-sep { border-right: 2px solid black !important; }
+        
+        /* 3pxの下太線設定 */
+        .item-bottom-bold td { border-bottom: 3px solid black !important; }
+        
+        #loading { font-weight: bold; color: #3182ce; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div id="pw_screen">
-    <div style="background:white; color:black; padding:30px; border-radius:10px; text-align:center;">
-        <h3>パスワードを入力してください</h3>
-        <input type="password" id="pass_val" style="padding:10px; font-size:16px;">
-        <button onclick="checkPW()" style="padding:10px 20px;">ログイン</button>
-        <p id="err_msg" style="color:red; display:none;">パスワードが違います</p>
+    <div style="background:white; color:black; padding:40px; border-radius:12px; text-align:center; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+        <h2 style="margin-top:0;">実績管理ログイン</h2>
+        <input type="password" id="pass_val" style="padding:12px; font-size:18px; border:2px solid #ddd; border-radius:6px; width:200px;">
+        <button onclick="checkPW()" style="padding:12px 30px; background:#3182ce; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">ログイン</button>
+        <p id="err_msg" style="color:red; display:none; margin-top:10px;">パスワードが違います</p>
     </div>
 </div>
 
 <div id="main_content">
-    <h2>営業実績・予算管理表（データ表示テスト）</h2>
-    <div id="loading" style="color:blue;">データ取得中...</div>
-    
-    <table id="test-table">
-        <thead>
-            <tr>
-                <th>項目</th><th>区分</th>
-                <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th>11月</th>
-                <th>12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th>5月</th>
-            </tr>
-        </thead>
-        <tbody id="table-body">
-            </tbody>
-    </table>
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 style="margin:0; border-left:5px solid #3182ce; padding-left:15px;">営業実績・予算管理表</h2>
+            <select id="region-select" style="padding:8px; border-radius:6px;" onchange="renderTable()">
+                <option value="全社">全社合計</option>
+                <option value="西日本">西日本</option>
+                <option value="東海">東海</option>
+                <option value="首都圏">首都圏</option>
+            </select>
+        </div>
+        <div id="loading">データ集計中...</div>
+        <table id="sales-table">
+            <thead>
+                <tr>
+                    <th rowspan="2" class="cat-header">項目</th>
+                    <th rowspan="2" class="type-col">区分</th>
+                    <th colspan="6">上期実績</th><th class="total-col">上期計</th>
+                    <th colspan="6" style="border-left:2px solid black;">下期実績・予想</th><th class="total-col">下期計</th>
+                    <th class="total-col">年間計</th>
+                </tr>
+                <tr>
+                    <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th class="month-sep">11月</th><th class="total-col">計</th>
+                    <th style="border-left:2px solid black;">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th class="month-sep">5月</th><th class="total-col">計</th>
+                    <th class="total-col">合計</th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </div>
 </div>
 
 <script>
     const SHEET_ID = '1LRVwKu-YXWJvRgSophqF0VlORS5_dcjztSvfz95Qe_E';
-    
+    let rawRows = [];
+
     function checkPW() {
         if (document.getElementById('pass_val').value === "freeeks2022") {
             document.getElementById('pw_screen').style.display = 'none';
@@ -57,61 +86,130 @@
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('実績データ')}`;
         try {
             const response = await fetch(url);
-            const csvText = await response.text();
-            const rows = parseCSV(csvText);
-            displayTable(rows);
+            const text = await response.text();
+            rawRows = parseCSV(text);
+            renderTable();
         } catch (e) {
             alert('取得失敗');
-            console.error(e);
         } finally {
             document.getElementById('loading').style.display = 'none';
         }
     }
 
-    function parseCSV(text) {
-        return text.split(/\r?\n/).map(line => {
-            const res = []; let cur = '', q = false;
-            for (let ch of line) {
+    function parseCSV(t) {
+        return t.split(/\r?\n/).filter(l => l.trim() !== "").map(l => {
+            const res = []; let c = '', q = false;
+            for (let ch of l) {
                 if (ch === '"') q = !q;
-                else if (ch === ',' && !q) { res.push(cur.trim()); cur = ''; }
-                else cur += ch;
+                else if (ch === ',' && !q) { res.push(c.trim()); c = ''; }
+                else c += ch;
             }
-            res.push(cur.trim()); return res;
+            res.push(c.trim()); return res;
         });
     }
 
-    function displayTable(rows) {
+    function renderTable() {
+        const region = document.getElementById('region-select').value;
         const tbody = document.getElementById('table-body');
         tbody.innerHTML = '';
 
-        // スプレッドシートの2行目から表示（ヘッダーを除外）
-        rows.slice(1).forEach(row => {
-            if (row.length < 5) return; // 空行スキップ
+        // 表示する項目と順番の定義
+        const items = [
+            { name: '売上', key: '売上', types: ['予算', '実績', '達成率'] },
+            { name: '稼働原価', key: '稼働原価', types: ['予算', '実績', '達成率'] },
+            { name: 'A利益', key: 'A利益', types: ['予算', '実績', '達成率'] },
+            { name: '待機原価', key: '待機原価', types: ['実績'] },
+            { name: 'プロパー(稼働)', key: 'プロパー(稼働)', types: ['予算', '実績', '達成率'] },
+            { name: 'BP', key: 'BP', types: ['実績'] },
+            { name: '稼働エンジニア数', key: '稼働エンジニア数', types: ['予算', '実績'] },
+            { name: 'プロパー(待機)', key: 'プロパー(待機)', types: ['予算', '実績'] },
+            { name: '待機率', key: '待機率', types: ['実績'] },
+            { name: 'エンジニア総数', key: 'エンジニア総数', types: ['予算', '実績', '達成率'] }
+        ];
 
-            const tr = document.createElement('tr');
+        items.forEach(itemConfig => {
+            const rowCount = itemConfig.types.length;
             
-            // 項目名と区分
-            const itemCell = `<td class="item-label">${row[1]}</td>`;
-            const typeCell = `<td style="text-align:center;">${row[2]}</td>`;
-            
-            // 6月〜5月のデータ
-            let monthCells = '';
-            for (let i = 3; i <= 14; i++) {
-                let val = row[i] ? row[i].replace(/"/g, '') : '-';
-                monthCells += `<td>${val}</td>`;
-            }
+            itemConfig.types.forEach((type, idx) => {
+                const tr = document.createElement('tr');
+                // 項目の最後なら太線クラスを付与
+                if (idx === rowCount - 1) tr.className = 'item-bottom-bold';
 
-            tr.innerHTML = itemCell + typeCell + monthCells;
-            tbody.appendChild(tr);
+                // 項目名セル（最初の行だけ結合して表示）
+                let html = '';
+                if (idx === 0) {
+                    html += `<td rowspan="${rowCount}" class="cat-header">${itemConfig.name}</td>`;
+                }
+                html += `<td class="type-col">${type}</td>`;
+
+                // 各月の数値を計算
+                const data = getAggregatedData(region, itemConfig.key, type);
+                let h1Sum = 0;
+                let h2Sum = 0;
+
+                // 6月(3)〜11月(8)
+                for (let i = 3; i <= 8; i++) {
+                    const val = data[i - 3];
+                    html += `<td class="${i === 8 ? 'month-sep' : ''}">${formatVal(val, itemConfig.key)}</td>`;
+                    h1Sum += val;
+                }
+                html += `<td class="total-col">${formatVal(h1Sum, itemConfig.key)}</td>`;
+
+                // 12月(9)〜5月(14)
+                for (let i = 9; i <= 14; i++) {
+                    const val = data[i - 3];
+                    html += `<td style="${i === 9 ? 'border-left:2px solid black;' : ''}" class="${i === 14 ? 'month-sep' : ''}">${formatVal(val, itemConfig.key)}</td>`;
+                    h2Sum += val;
+                }
+                html += `<td class="total-col">${formatVal(h2Sum, itemConfig.key)}</td>`;
+                html += `<td class="total-col">${formatVal(h1Sum + h2Sum, itemConfig.key)}</td>`;
+
+                tr.innerHTML = html;
+                tbody.appendChild(tr);
+            });
         });
+    }
 
-        if (tbody.innerHTML === '') {
-            tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;">データが見つかりませんでした</td></tr>';
+    function getAggregatedData(region, itemKey, type) {
+        let results = new Array(12).fill(0);
+        
+        if (type === '達成率') {
+            const b = getAggregatedData(region, itemKey, '予算');
+            const a = getAggregatedData(region, itemKey, '実績');
+            return a.map((val, i) => (b[i] === 0 ? 0 : (val / b[i]) * 100));
         }
+
+        rawRows.slice(1).forEach(row => {
+            const rName = row[0] || '';
+            const iName = row[1] || '';
+            const tName = row[2] || '';
+
+            if ((region === '全社' || rName.includes(region)) && iName.includes(itemKey) && tName.includes(type)) {
+                for (let i = 3; i <= 14; i++) {
+                    results[i - 3] += parseNum(row[i]);
+                }
+            }
+        });
+        return results;
+    }
+
+    function formatVal(v, key) {
+        if (v === 0) return '-';
+        if (key === '待機率' || key === '達成率' || String(v).includes('.')) {
+            return v.toFixed(1) + '%';
+        }
+        return Math.round(v).toLocaleString();
+    }
+
+    function parseNum(v) {
+        if (!v) return 0;
+        let n = parseFloat(String(v).replace(/,/g, '').replace(/%/g, ''));
+        return isNaN(n) ? 0 : n;
     }
 </script>
 </body>
 </html>
+
 
 
 
