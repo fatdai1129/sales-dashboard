@@ -10,7 +10,7 @@
         #main_content { display: none; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; }
         
-        /* --- 枠線設計：縦はすべて3px、横は1pxベースで上書き --- */
+        /* --- 枠線設計：1pxベースに3pxを強制上書き --- */
         table { 
             width: 100%; 
             border-collapse: collapse; 
@@ -19,30 +19,40 @@
             table-layout: fixed; 
         }
         
-        /* 全てのセルの縦線を3px、横線を1pxにする */
+        /* 基本：全て1px */
         th, td { 
-            border-top: 1px solid black;
-            border-bottom: 1px solid black;
-            border-left: 3px solid black !important;
-            border-right: 3px solid black !important;
+            border: 1px solid black; 
             padding: 8px 4px; 
             font-size: 0.85rem; 
             word-break: break-all; 
         }
         
-        /* ヘッダーの下線を太く(3px) */
+        /* ヘッダー */
         th { background: #edf2f7; text-align: center; border-bottom: 3px solid black !important; }
 
-        /* 横線の太さ個別指定 */
-        tr.bb-3px td { border-bottom: 3px solid black !important; } /* 項目グループの区切り */
-        tr.bb-2px td { border-bottom: 2px solid black !important; } /* 実績と達成率の間 */
+        /* 項目列（1列目）：上下左右すべて太線 */
+        .cat-header { 
+            border: 3px solid black !important; 
+            background: #ebf8ff; 
+            font-weight: bold; 
+            width: 130px; 
+            text-align: center !important; 
+        }
 
-        /* セル・背景の設定 */
-        .cat-header { background: #ebf8ff; font-weight: bold; width: 130px; text-align: center !important; }
-        .type-col { width: 70px; text-align: center !important; }
-        .total-col { background: #fffaf0; font-weight: bold; }
-        
-        /* 数値配置 */
+        /* 縦の太線ライン（3px） */
+        .border-v-thick { 
+            border-left: 3px solid black !important; 
+            border-right: 3px solid black !important; 
+        }
+        .type-col { width: 70px; text-align: center !important; border-right: 3px solid black !important; }
+        .total-col { background: #fffaf0; font-weight: bold; border-left: 3px solid black !important; border-right: 3px solid black !important; }
+        .month-sep { border-right: 3px solid black !important; }
+
+        /* 横の太線ライン（2px/3px） */
+        tr.bb-3px td { border-bottom: 3px solid black !important; } /* グループ区切り */
+        tr.bb-2px td { border-bottom: 2px solid black !important; } /* 実績-達成率間 */
+
+        /* テキスト配置 */
         .text-right { text-align: right !important; padding-right: 8px !important; }
         .text-center { text-align: center !important; }
         
@@ -80,12 +90,12 @@
                     <th rowspan="2" class="cat-header">項目</th>
                     <th rowspan="2" class="type-col">区分</th>
                     <th colspan="6">上期実績</th><th class="total-col">上期計</th>
-                    <th colspan="6">下期実績・予想</th><th class="total-col">下期計</th>
+                    <th colspan="6" style="border-left:3px solid black !important;">下期実績・予想</th><th class="total-col">下期計</th>
                     <th class="total-col">年間計</th>
                 </tr>
                 <tr>
-                    <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th>11月</th><th class="total-col">計</th>
-                    <th>12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th>5月</th><th class="total-col">計</th>
+                    <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th class="month-sep">11月</th><th class="total-col">計</th>
+                    <th style="border-left:3px solid black !important;">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th class="month-sep">5月</th><th class="total-col">計</th>
                     <th class="total-col">合計</th>
                 </tr>
             </thead>
@@ -158,13 +168,8 @@
         items.forEach(item => {
             item.t.forEach((type, idx) => {
                 const tr = document.createElement('tr');
-                
-                // 横線のクラス分け
-                if (idx === item.t.length - 1) {
-                    tr.className = 'bb-3px'; 
-                } else if (target2px.includes(item.n) && type === '実績') {
-                    tr.className = 'bb-2px'; 
-                }
+                if (idx === item.t.length - 1) tr.className = 'bb-3px'; 
+                else if (target2px.includes(item.n) && type === '実績') tr.className = 'bb-2px';
 
                 let html = idx === 0 ? `<td rowspan="${item.t.length}" class="cat-header">${item.n}</td>` : '';
                 html += `<td class="type-col">${type}</td>`;
@@ -175,7 +180,11 @@
                 data.forEach((v, i) => {
                     const disp = formatVal(v, item.k, type);
                     const align = disp === '-' ? 'text-center' : 'text-right';
-                    html += `<td class="${align}">${disp}</td>`;
+                    const borderR = (i === 5 || i === 11) ? 'month-sep' : '';
+                    const borderL = (i === 6) ? 'style="border-left:3px solid black !important;"' : '';
+                    
+                    html += `<td class="${align} ${borderR}" ${borderL}>${disp}</td>`;
+                    
                     if (v !== null) {
                         if (i < 6) h1Sum = (h1Sum || 0) + v;
                         else h2Sum = (h2Sum || 0) + v;
@@ -189,7 +198,7 @@
                 const h2Disp = formatVal(h2Sum, item.k, type);
                 html += `<td class="total-col ${h2Disp === '-' ? 'text-center' : 'text-right'}">${h2Disp}</td>`;
                 const totVal = (h1Sum === null && h2Sum === null) ? null : (h1Sum || 0) + (h2Sum || 0);
-                const totDisp = formatVal(totalVal, item.k, type);
+                const totDisp = formatVal(totVal, item.k, type);
                 html += `<td class="total-col ${totDisp === '-' ? 'text-center' : 'text-right'}">${totDisp}</td>`;
 
                 tr.innerHTML = html;
