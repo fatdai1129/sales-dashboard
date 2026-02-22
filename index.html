@@ -11,7 +11,7 @@
         #main_content { display: none; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 枠線：固定 --- */
+        /* --- 枠線：固定（一切の変更禁止） --- */
         table { 
             width: 100%; 
             border-collapse: collapse; 
@@ -215,6 +215,24 @@
     }
 
     function getMonthlyValues(region, itemK, type) {
+        // --- 今回の追加：東日本のデータ補完 (東海 + 首都圏) ---
+        if (region === '東日本') {
+            const vTokai = getMonthlyValues('東海', itemK, type);
+            const vShuto = getMonthlyValues('首都圏', itemK, type);
+            return vTokai.map((v, i) => {
+                const val1 = v;
+                const val2 = vShuto[i];
+                if (val1 === null && val2 === null) return null;
+                const n1 = val1 || 0;
+                const n2 = val2 || 0;
+                // 率（達成率・待機率）の場合は平均値を算出
+                if (type === '達成率' || itemK === '待機率') {
+                    return (n1 + n2) / 2;
+                }
+                return n1 + n2;
+            });
+        }
+
         if (itemK === '稼働エンジニア数') {
             if (type === '予算') return getMonthlyValues(region, 'プロパー(稼働)', '予算');
             if (type === '実績') {
@@ -264,20 +282,17 @@
         const region = document.getElementById('region-select').value;
         const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
 
-        // 1. 売上推移
         renderChart('salesChart', '売上推移', [
             { label: '実績', data: getMonthlyValues(region, '売上', '実績'), type: 'bar', backgroundColor: '#3182ce' },
             { label: '予算', data: getMonthlyValues(region, '売上', '予算'), type: 'line', borderColor: '#e53e3e', tension: 0.1 }
         ]);
 
-        // 2. エンジニア内訳（中央）
         renderChart('engChart', 'エンジニア内訳', [
             { label: 'プロパー(稼働)', data: getMonthlyValues(region, 'プロパー(稼働)', '実績'), type: 'bar', backgroundColor: '#4299e1' },
             { label: 'BP', data: getMonthlyValues(region, 'BP', '実績'), type: 'bar', backgroundColor: '#ed64a6' },
             { label: 'プロパー(待機)', data: getMonthlyValues(region, 'プロパー(待機)', '実績'), type: 'bar', backgroundColor: '#a0aec0' }
         ], 'stacked');
 
-        // 3. 待機原価（右側）
         renderChart('waitCostChart', '待機原価推移', [
             { label: '待機原価実績', data: getMonthlyValues(region, '待機原価', '実績'), type: 'line', fill: true, backgroundColor: 'rgba(237, 137, 54, 0.2)', borderColor: '#ed8936', tension: 0.3 }
         ]);
@@ -304,7 +319,5 @@
 </script>
 </body>
 </html>
-
-
 
 
