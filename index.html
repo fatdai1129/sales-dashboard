@@ -10,7 +10,7 @@
         #main_content { display: none; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; }
         
-        /* --- 枠線設計：点線を出すための特別設定 --- */
+        /* --- 枠線設計：縦はすべて太線、実績・達成率間は点線 --- */
         table { 
             width: 100%; 
             border-collapse: collapse; 
@@ -19,7 +19,7 @@
             table-layout: fixed; 
         }
         
-        /* 基本：縦線は3px、横線は1px */
+        /* 基本：縦線はすべて3px太線、横線は1px */
         th, td { 
             border-top: 1px solid black;
             border-bottom: 1px solid black;
@@ -30,9 +30,9 @@
             word-break: break-all; 
         }
         
-        th { background: #edf2f7; border-bottom: 3px solid black !important; }
+        th { background: #edf2f7; text-align: center; border-bottom: 3px solid black !important; }
 
-        /* 項目列（1列目）：全方位3px */
+        /* 項目列（1列目）：全方位3px太線 */
         .cat-header { 
             border: 3px solid black !important; 
             background: #ebf8ff; 
@@ -41,16 +41,18 @@
             text-align: center !important; 
         }
 
-        /* 横線の太さ・種類の上書き */
-        tr.bb-3px td { border-bottom: 3px solid black !important; } 
+        /* 区分列と数値列の設定 */
+        .type-col { width: 70px; text-align: center !important; }
+        .total-col { background: #fffaf0; font-weight: bold; }
+
+        /* 特殊な横線の制御 */
+        tr.bb-3px td { border-bottom: 3px solid black !important; } /* 項目ごとの区切り */
         
-        /* 点線を出すための処理：実績行の下を点線に、達成率行の上を消す */
+        /* 点線の反映：上書きされないようborder-topも制御 */
         tr.row-actual-dotted td { border-bottom: 2px dotted black !important; }
         tr.row-achievement-dotted td { border-top: none !important; }
 
-        .type-col { width: 70px; text-align: center !important; border-right: 3px solid black !important; }
-        .total-col { background: #fffaf0; font-weight: bold; border-left: 3px solid black !important; border-right: 3px solid black !important; }
-        
+        /* テキスト配置 */
         .text-right { text-align: right !important; padding-right: 8px !important; }
         .text-center { text-align: center !important; }
         
@@ -167,7 +169,6 @@
             item.t.forEach((type, idx) => {
                 const tr = document.createElement('tr');
                 
-                // クラス付与：項目グループの最後は3px、実績行の下は点線
                 if (idx === item.t.length - 1) {
                     tr.className = 'bb-3px'; 
                 } else if (targetDotted.includes(item.n)) {
@@ -201,9 +202,9 @@
 
                 const h2Disp = formatVal(h2Sum, item.k, type);
                 html += `<td class="total-col ${h2Disp === '-' ? 'text-center' : 'text-right'}">${h2Disp}</td>`;
-                const totVal = (h1Sum === null && h2Sum === null) ? null : (h1Sum || 0) + (h2Sum || 0);
-                const totDisp = formatVal(totVal, item.k, type);
-                html += `<td class="total-col ${totDisp === '-' ? 'text-center' : 'text-right'}">${totDisp}</td>`;
+                const totalVal = (h1Sum === null && h2Sum === null) ? null : (h1Sum || 0) + (h2Sum || 0);
+                const totalDisp = formatVal(totalVal, item.k, type);
+                html += `<td class="total-col ${totalDisp === '-' ? 'text-center' : 'text-right'}">${totalDisp}</td>`;
 
                 tr.innerHTML = html;
                 tbody.appendChild(tr);
@@ -212,6 +213,7 @@
     }
 
     function getMonthlyValues(region, itemK, type) {
+        // --- カスタムロジック：稼働エンジニア数 ---
         if (itemK === '稼働エンジニア数') {
             if (type === '予算') return getMonthlyValues(region, 'プロパー(稼働)', '予算');
             if (type === '実績') {
@@ -220,12 +222,24 @@
                 return p.map((v, i) => (v === null && b[i] === null) ? null : (v || 0) + (b[i] || 0));
             }
         }
+
+        // --- カスタムロジック：エンジニア総数 (今回のご指示) ---
+        if (itemK === 'エンジニア総数') {
+            const working = getMonthlyValues(region, '稼働エンジニア数', type);
+            const waiting = getMonthlyValues(region, 'プロパー(待機)', type);
+            return working.map((v, i) => {
+                if (v === null && waiting[i] === null) return null;
+                return (v || 0) + (waiting[i] || 0);
+            });
+        }
+
         let res = new Array(12).fill(null);
         if (type === '達成率') {
             const bud = getMonthlyValues(region, itemK, '予算');
             const act = getMonthlyValues(region, itemK, '実績');
             return act.map((v, i) => (bud[i] === null || act[i] === null) ? null : (bud[i] === 0 ? 0 : (v / bud[i]) * 100));
         }
+
         rawRows.slice(1).forEach(r => {
             const rN = (r[0] || '').trim();
             const iN = (r[1] || '').trim();
