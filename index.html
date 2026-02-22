@@ -20,7 +20,7 @@
         .nav-select { background: #2d3748; color: white; border: 1px solid #4a5568; padding: 8px 15px; border-radius: 6px; font-size: 1rem; margin-right: 15px; cursor: pointer; }
         h2 { font-size: 1.4rem; margin: 0; color: #1a202c; border-left: 5px solid #3182ce; padding-left: 15px; text-align: left; }
         
-        /* 枠線設定の修正 */
+        /* 枠線と下太線の設定 */
         table { width: 100%; border-collapse: collapse; background: white; border: 2px solid black !important; table-layout: fixed; }
         th, td { border: 1px solid black !important; padding: 8px 6px; text-align: center; font-size: 0.85rem; word-break: break-all; }
         th { background: #edf2f7; color: #4a5568; border-bottom: 2px solid black !important; }
@@ -33,8 +33,8 @@
         .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .affiliation-header { background: #1a202c !important; color: white !important; text-align: left !important; padding: 10px 15px !important; font-size: 1rem !important; border-bottom: 2px solid black !important; }
         
-        /* 項目ごとの下太線 */
-        .item-bottom-bold td { border-bottom: 2px solid black !important; }
+        /* 下線を太線にする指定 */
+        .item-bottom-bold td { border-bottom: 3px solid black !important; }
         .row-border td:not(.cat-header) { border-bottom: 1px solid black !important; }
 
         .flex-stack-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
@@ -178,6 +178,7 @@
             const rows = parseCSV(csvText);
             document.getElementById('pw_screen').style.display = 'none';
             document.getElementById('main_content').style.display = 'block';
+            
             if (toolKey === 'sales') {
                 document.getElementById('dashboard-sales').style.display = 'block';
                 document.getElementById('dashboard-generic').style.display = 'none';
@@ -233,7 +234,9 @@
         const AffIndex = 2, NoIndex = 3, NameIndex = 4, SalaryIndex = 10, CostIndex = 11, DataStartCol = 12;
         let rawData = rows.slice(1).filter(r => r[NoIndex] && r[NoIndex].trim() !== "" && r[NoIndex] !== "技術者№");
         let data = (filterRegion === 'total') ? rawData : (filterRegion === '東日本' ? rawData.filter(r => getMatchRegion(r[AffIndex]) === '東海' || getMatchRegion(r[AffIndex]) === '首都圏') : rawData.filter(r => getMatchRegion(r[AffIndex]) === filterRegion));
+        
         let html = `<table><thead><tr><th rowspan="2" class="cat-header">技術者名<br><span style="font-size:0.7rem; font-weight:normal;">スキルシートNO</span></th><th rowspan="2" class="cat-header">給与<br>コスト</th><th rowspan="2" class="type-col">項目</th><th colspan="6">上期実績</th><th class="total-header">上期計</th><th colspan="6" class="second-half-start">下期実績・予想</th><th class="total-header">下期合計</th><th class="total-header">年間合計</th></tr><tr><th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th class="month-sep">11月</th><th class="total-header">計</th><th class="second-half-start">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th class="month-sep">5月</th><th class="total-header">計</th><th class="total-header">合計</th></tr></thead><tbody>`;
+
         const overall = { sales: Array(12).fill(0), profit: Array(12).fill(0), margin: Array(12).fill(0), opRate: Array(12).fill(0), counts: Array(12).fill(0), properCounts: Array(12).fill(0), bpCounts: Array(12).fill(0) };
         const techProcessed = data.map(m => {
             const isBP = (m[NoIndex] === 'BP 要員');
@@ -247,6 +250,7 @@
             sList.forEach((s, i) => { if(s > 0) { overall.sales[i] += s; overall.profit[i] += pList[i]; overall.margin[i] += mList[i]; overall.opRate[i] += oList[i]; overall.counts[i]++; if(isBP) overall.bpCounts[i]++; else overall.properCounts[i]++; } });
             return { name: m[NameIndex], no: m[NoIndex], aff: m[AffIndex], salVal, costVal, sList, pList, mList, oList };
         });
+
         html += `<tr><td colspan="18" class="affiliation-header">全体合計 (${filterRegion==='total'?'全社':filterRegion})</td></tr>`;
         ['売上','利益','利益率','運用率','稼働<br>プロパー','稼働BP','総稼働'].forEach((label, idx) => {
             html += `<tr class="${idx === 6 ? 'item-bottom-bold' : 'row-border'}">`;
@@ -285,27 +289,56 @@
         html += `</tbody></table>`; document.getElementById('generic-content').innerHTML = html;
     }
 
+    // --- 売込状況一覧（修正版：データ項目とグループ化を修正） ---
     function renderStatusTable(rows, filterRegion) {
         if (rows.length < 2) return;
-        const NameIndex = 1, AffIndex = 2, StatusIndex = 3, ReasonIndex = 5, DateIndex = 6, PeriodIndex = 7;
+        
+        // 元データ（image_e975fd.png）からの正しいインデックス指定
+        // Col B:1, Col C:2, Col D:3, Col E:4, Col F:5, Col G:6, Col H:7
+        const NameIndex = 0;    // Col B (従業員名)
+        const AffIndex = 1;     // Col C (所属)
+        const StatusIndex = 2;  // Col D (稼働状況/現状)
+        const ReasonIndex = 3;  // Col E (退場理由)
+        const DateIndex = 4;    // Col F (参画可能日)
+        const PeriodIndex = 6;  // Col H (未参画期間)
+
         let rawData = rows.slice(1);
         let data = (filterRegion === 'total') ? rawData : (filterRegion === '東日本' ? rawData.filter(r => getMatchRegion(r[AffIndex]) === '東海' || getMatchRegion(r[AffIndex]) === '首都圏') : rawData.filter(r => getMatchRegion(r[AffIndex]) === filterRegion));
+        
+        // 稼働状況でグループ化
         const statusPriority = { "稼働中": 1, "待機中": 2, "休業中": 3, "休職中": 4 };
         const groupedData = {};
-        data.forEach(r => { const st = r[StatusIndex] || "未設定"; if (!groupedData[st]) groupedData[st] = []; groupedData[st].push(r); });
+        data.forEach(r => { 
+            const st = r[StatusIndex] || "未設定"; 
+            if (!groupedData[st]) groupedData[st] = []; 
+            groupedData[st].push(r); 
+        });
+        
         const sortedStatuses = Object.keys(groupedData).sort((a, b) => (statusPriority[a] || 99) - (statusPriority[b] || 99));
+        
         let html = `<table><thead><tr><th class="col-name">従業員名<br><span style="font-size:0.7rem; font-weight:normal;">所属</span></th><th class="col-reason">退場理由<br><span style="font-size:0.7rem; font-weight:normal;">稼働状況</span></th><th class="col-date">参画可能日<br><span style="font-size:0.7rem; font-weight:normal;">未参画期間</span></th></tr></thead><tbody>`;
+        
         sortedStatuses.forEach(st => {
             const count = groupedData[st].length;
+            // ヘッダーに人数を表示
             html += `<tr><td colspan="3" class="affiliation-header">${st} (${count}名)</td></tr>`;
             groupedData[st].forEach(r => {
-                html += `<tr class="row-main"><td class="cell-main-text">${r[NameIndex] || '-'}</td><td class="cell-main-text" style="text-align:center;">${r[ReasonIndex] || '-'}</td><td class="cell-main-text">${r[DateIndex] || '-'}</td></tr><tr class="row-sub border-bottom-bold"><td class="cell-sub-text">${r[AffIndex] || '-'}</td><td class="cell-sub-text" style="text-align:center;">${r[StatusIndex] || '-'}</td><td class="cell-sub-text">${r[PeriodIndex] || '-'}</td></tr>`;
+                html += `<tr class="row-main">
+                    <td class="cell-main-text">${r[NameIndex] || '-'}</td>
+                    <td class="cell-main-text" style="text-align:center;">${r[ReasonIndex] || '-'}</td>
+                    <td class="cell-main-text">${r[DateIndex] || '-'}</td>
+                </tr>
+                <tr class="row-sub border-bottom-bold">
+                    <td class="cell-sub-text">${r[AffIndex] || '-'}</td>
+                    <td class="cell-sub-text" style="text-align:center;">${r[StatusIndex] || '-'}</td>
+                    <td class="cell-sub-text">${r[PeriodIndex] || '-'}</td>
+                </tr>`;
             });
         });
         html += `</tbody></table>`; document.getElementById('generic-content').innerHTML = html;
     }
 
-    // --- 営業実績・予算管理表（枠線修正版） ---
+    // --- 営業実績・予算管理表（枠線と下太線の修正） ---
     function renderSalesTable() {
         const rk = document.getElementById('region-select').value;
         const d = getRD(rk); const tb = document.getElementById('table-body'); tb.innerHTML = "";
@@ -383,9 +416,6 @@
 </script>
 </body>
 </html>
-
-
-
 
 
 
