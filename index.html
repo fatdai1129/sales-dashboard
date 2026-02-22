@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>実績管理ポータル（営業実績・集計版）</title>
+    <title>実績管理ポータル（東日本復活版）</title>
     <style>
         body { font-family: 'Hiragino Sans', sans-serif; background-color: #f0f4f8; padding: 20px; color: #333; }
         #pw_screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a202c; color: white; display: flex; justify-content: center; align-items: center; z-index: 10000; }
@@ -42,6 +42,7 @@
             <h2 style="margin:0; border-left:5px solid #3182ce; padding-left:15px;">営業実績・予算管理表</h2>
             <select id="region-select" style="padding:8px; border-radius:6px;" onchange="renderTable()">
                 <option value="全社">全社合計</option>
+                <option value="東日本">東日本（東海＋首都圏）</option>
                 <option value="西日本">西日本</option>
                 <option value="東海">東海</option>
                 <option value="首都圏">首都圏</option>
@@ -86,7 +87,7 @@
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('実績データ')}`;
         try {
             const response = await fetch(url);
-            const text = await response.text();
+            const text = await respText = await response.text();
             rawRows = parseCSV(text);
             renderTable();
         } catch (e) {
@@ -132,37 +133,32 @@
             
             itemConfig.types.forEach((type, idx) => {
                 const tr = document.createElement('tr');
-                // 項目の最後なら太線クラスを付与
                 if (idx === rowCount - 1) tr.className = 'item-bottom-bold';
 
-                // 項目名セル（最初の行だけ結合して表示）
                 let html = '';
                 if (idx === 0) {
                     html += `<td rowspan="${rowCount}" class="cat-header">${itemConfig.name}</td>`;
                 }
                 html += `<td class="type-col">${type}</td>`;
 
-                // 各月の数値を計算
                 const data = getAggregatedData(region, itemConfig.key, type);
                 let h1Sum = 0;
                 let h2Sum = 0;
 
-                // 6月(3)〜11月(8)
-                for (let i = 3; i <= 8; i++) {
-                    const val = data[i - 3];
-                    html += `<td class="${i === 8 ? 'month-sep' : ''}">${formatVal(val, itemConfig.key)}</td>`;
+                for (let i = 0; i < 6; i++) {
+                    const val = data[i];
+                    html += `<td class="${i === 5 ? 'month-sep' : ''}">${formatVal(val, itemConfig.key, type)}</td>`;
                     h1Sum += val;
                 }
-                html += `<td class="total-col">${formatVal(h1Sum, itemConfig.key)}</td>`;
+                html += `<td class="total-col">${formatVal(h1Sum, itemConfig.key, type)}</td>`;
 
-                // 12月(9)〜5月(14)
-                for (let i = 9; i <= 14; i++) {
-                    const val = data[i - 3];
-                    html += `<td style="${i === 9 ? 'border-left:2px solid black;' : ''}" class="${i === 14 ? 'month-sep' : ''}">${formatVal(val, itemConfig.key)}</td>`;
+                for (let i = 6; i < 12; i++) {
+                    const val = data[i];
+                    html += `<td style="${i === 6 ? 'border-left:2px solid black;' : ''}" class="${i === 11 ? 'month-sep' : ''}">${formatVal(val, itemConfig.key, type)}</td>`;
                     h2Sum += val;
                 }
-                html += `<td class="total-col">${formatVal(h2Sum, itemConfig.key)}</td>`;
-                html += `<td class="total-col">${formatVal(h1Sum + h2Sum, itemConfig.key)}</td>`;
+                html += `<td class="total-col">${formatVal(h2Sum, itemConfig.key, type)}</td>`;
+                html += `<td class="total-col">${formatVal(h1Sum + h2Sum, itemConfig.key, type)}</td>`;
 
                 tr.innerHTML = html;
                 tbody.appendChild(tr);
@@ -180,11 +176,16 @@
         }
 
         rawRows.slice(1).forEach(row => {
-            const rName = row[0] || '';
-            const iName = row[1] || '';
-            const tName = row[2] || '';
+            const rName = (row[0] || '').trim();
+            const iName = (row[1] || '').trim();
+            const tName = (row[2] || '').trim();
 
-            if ((region === '全社' || rName.includes(region)) && iName.includes(itemKey) && tName.includes(type)) {
+            let isMatch = false;
+            if (region === '全社') isMatch = true;
+            else if (region === '東日本') isMatch = (rName.includes('東海') || rName.includes('首都圏'));
+            else isMatch = rName.includes(region);
+
+            if (isMatch && iName.includes(itemKey) && tName.includes(type)) {
                 for (let i = 3; i <= 14; i++) {
                     results[i - 3] += parseNum(row[i]);
                 }
@@ -193,9 +194,9 @@
         return results;
     }
 
-    function formatVal(v, key) {
-        if (v === 0) return '-';
-        if (key === '待機率' || key === '達成率' || String(v).includes('.')) {
+    function formatVal(v, key, type) {
+        if (v === 0 && type !== '達成率') return '-';
+        if (key === '待機率' || type === '達成率') {
             return v.toFixed(1) + '%';
         }
         return Math.round(v).toLocaleString();
@@ -203,14 +204,12 @@
 
     function parseNum(v) {
         if (!v) return 0;
-        let n = parseFloat(String(v).replace(/,/g, '').replace(/%/g, ''));
+        let n = parseFloat(String(v).replace(/,/g, '').replace(/%/g, '').replace(/"/g, ''));
         return isNaN(n) ? 0 : n;
     }
 </script>
 </body>
 </html>
-
-
 
 
 
