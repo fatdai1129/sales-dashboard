@@ -10,7 +10,7 @@
         #main_content { display: none; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; }
         
-        /* --- 枠線設計 --- */
+        /* --- 枠線設計：点線を出すための特別設定 --- */
         table { 
             width: 100%; 
             border-collapse: collapse; 
@@ -19,7 +19,7 @@
             table-layout: fixed; 
         }
         
-        /* 基本：全て1pxの実線（縦線は常に3px） */
+        /* 基本：縦線は3px、横線は1px */
         th, td { 
             border-top: 1px solid black;
             border-bottom: 1px solid black;
@@ -30,9 +30,9 @@
             word-break: break-all; 
         }
         
-        th { background: #edf2f7; text-align: center; border-bottom: 3px solid black !important; }
+        th { background: #edf2f7; border-bottom: 3px solid black !important; }
 
-        /* 項目列（1列目）：上下左右すべて太線 */
+        /* 項目列（1列目）：全方位3px */
         .cat-header { 
             border: 3px solid black !important; 
             background: #ebf8ff; 
@@ -41,17 +41,16 @@
             text-align: center !important; 
         }
 
-        /* 縦・横の太線指定 */
+        /* 横線の太さ・種類の上書き */
+        tr.bb-3px td { border-bottom: 3px solid black !important; } 
+        
+        /* 点線を出すための処理：実績行の下を点線に、達成率行の上を消す */
+        tr.row-actual-dotted td { border-bottom: 2px dotted black !important; }
+        tr.row-achievement-dotted td { border-top: none !important; }
+
         .type-col { width: 70px; text-align: center !important; border-right: 3px solid black !important; }
         .total-col { background: #fffaf0; font-weight: bold; border-left: 3px solid black !important; border-right: 3px solid black !important; }
-        .month-sep { border-right: 3px solid black !important; }
-
-        tr.bb-3px td { border-bottom: 3px solid black !important; } /* グループ区切り */
         
-        /* 【今回の変更点】実績と達成率の間を「黒の点線」に設定 */
-        tr.bb-dotted td { border-bottom: 2px dotted black !important; }
-
-        /* 配置設定 */
         .text-right { text-align: right !important; padding-right: 8px !important; }
         .text-center { text-align: center !important; }
         
@@ -93,8 +92,8 @@
                     <th class="total-col">年間計</th>
                 </tr>
                 <tr>
-                    <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th class="month-sep">11月</th><th class="total-col">計</th>
-                    <th style="border-left:3px solid black !important;">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th class="month-sep">5月</th><th class="total-col">計</th>
+                    <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th style="border-right:3px solid black !important;">11月</th><th class="total-col">計</th>
+                    <th style="border-left:3px solid black !important;">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th style="border-right:3px solid black !important;">5月</th><th class="total-col">計</th>
                     <th class="total-col">合計</th>
                 </tr>
             </thead>
@@ -167,10 +166,13 @@
         items.forEach(item => {
             item.t.forEach((type, idx) => {
                 const tr = document.createElement('tr');
+                
+                // クラス付与：項目グループの最後は3px、実績行の下は点線
                 if (idx === item.t.length - 1) {
                     tr.className = 'bb-3px'; 
-                } else if (targetDotted.includes(item.n) && type === '実績') {
-                    tr.className = 'bb-dotted'; 
+                } else if (targetDotted.includes(item.n)) {
+                    if (type === '実績') tr.className = 'row-actual-dotted';
+                    if (type === '達成率') tr.className = 'row-achievement-dotted';
                 }
 
                 let html = idx === 0 ? `<td rowspan="${item.t.length}" class="cat-header">${item.n}</td>` : '';
@@ -182,10 +184,10 @@
                 data.forEach((v, i) => {
                     const disp = formatVal(v, item.k, type);
                     const align = disp === '-' ? 'text-center' : 'text-right';
-                    const borderR = (i === 5 || i === 11) ? 'month-sep' : '';
+                    const borderR = (i === 5 || i === 11) ? 'style="border-right:3px solid black !important;"' : '';
                     const borderL = (i === 6) ? 'style="border-left:3px solid black !important;"' : '';
                     
-                    html += `<td class="${align} ${borderR}" ${borderL}>${disp}</td>`;
+                    html += `<td class="${align}" ${borderR} ${borderL}>${disp}</td>`;
                     
                     if (v !== null) {
                         if (i < 6) h1Sum = (h1Sum || 0) + v;
@@ -199,9 +201,9 @@
 
                 const h2Disp = formatVal(h2Sum, item.k, type);
                 html += `<td class="total-col ${h2Disp === '-' ? 'text-center' : 'text-right'}">${h2Disp}</td>`;
-                const totalVal = (h1Sum === null && h2Sum === null) ? null : (h1Sum || 0) + (h2Sum || 0);
-                const totalDisp = formatVal(totalVal, item.k, type);
-                html += `<td class="total-col ${totalDisp === '-' ? 'text-center' : 'text-right'}">${totalDisp}</td>`;
+                const totVal = (h1Sum === null && h2Sum === null) ? null : (h1Sum || 0) + (h2Sum || 0);
+                const totDisp = formatVal(totVal, item.k, type);
+                html += `<td class="total-col ${totDisp === '-' ? 'text-center' : 'text-right'}">${totDisp}</td>`;
 
                 tr.innerHTML = html;
                 tbody.appendChild(tr);
@@ -250,7 +252,6 @@
 </script>
 </body>
 </html>
-
 
 
 
