@@ -20,7 +20,7 @@
         .nav-select { background: #2d3748; color: white; border: 1px solid #4a5568; padding: 8px 15px; border-radius: 6px; font-size: 1rem; margin-right: 15px; cursor: pointer; }
         h2 { font-size: 1.4rem; margin: 0; color: #1a202c; border-left: 5px solid #3182ce; padding-left: 15px; text-align: left; }
         
-        /* 表全体の枠線 */
+        /* 表全体の枠線と太下線の設定 */
         table { width: 100%; border-collapse: collapse; background: white; border: 2px solid black !important; table-layout: fixed; }
         th, td { border: 1px solid black !important; padding: 8px 6px; text-align: center; font-size: 0.85rem; word-break: break-all; }
         th { background: #edf2f7; color: #4a5568; border-bottom: 2px solid black !important; }
@@ -33,20 +33,18 @@
         .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .affiliation-header { background: #1a202c !important; color: white !important; text-align: left !important; padding: 10px 15px !important; font-size: 1rem !important; border-bottom: 2px solid black !important; }
         
-        /* 下太線（3px）の設定 */
+        /* 下線を太線(3px)にする */
         .item-bottom-bold td { border-bottom: 3px solid black !important; }
         .row-border td:not(.cat-header) { border-bottom: 1px solid black !important; }
 
-        /* 売込状況一覧レイアウト */
+        /* 売込状況一覧レイアウト設定 */
         .row-main { background: white; }
         .row-sub { background: #f9fafb; }
         .cell-main-text { font-weight: bold; font-size: 0.95rem; color: #1a202c; }
         .cell-sub-text { font-size: 0.75rem; color: #666; margin-top: 2px; }
         .border-bottom-bold { border-bottom: 2px solid black !important; }
         
-        .col-name { width: 300px; }
-        .col-status { width: 250px; }
-        .col-date { width: auto; }
+        .col-33 { width: 33.33%; }
 
         .chart-box { height: 400px; width: 100%; margin-bottom: 20px; position: relative; }
         #loading { font-weight: bold; color: #3182ce; margin-top: 10px; }
@@ -55,7 +53,7 @@
 <body class="notranslate">
 <div id="pw_screen">
     <div id="pw_box">
-        <div style="font-size: 1.2rem; font-weight: bold; color: #2d3748; margin-bottom: 10px;">実績管理ログイン</div>
+        <div style="font-size: 1.4rem; font-weight: bold; color: #2d3748; margin-bottom: 10px;">実績管理ログイン</div>
         <input type="password" id="pass_val" placeholder="パスワードを入力" onkeydown="if(event.keyCode==13)checkPW()">
         <br>
         <button class="login-btn" onclick="checkPW()">ログイン</button>
@@ -177,6 +175,7 @@
         const CSV_URL = `https://docs.google.com/spreadsheets/d/${tool.id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tool.sheet)}`;
         try {
             const response = await fetch(CSV_URL);
+            if (!response.ok) throw new Error();
             const csvText = await response.text();
             const rows = parseCSV(csvText);
             document.getElementById('pw_screen').style.display = 'none';
@@ -231,7 +230,7 @@
         return aff;
     }
 
-    // --- 営業推進管理表（変数重複エラーを完全に修正済） ---
+    // --- 営業推進管理表（変数重複・計算ロジックを完全修復済） ---
     function renderPromotionTable(rows, filterRegion) {
         if (rows.length < 2) return;
         const AffIdx = 2, NoIdx = 3, NameIdx = 4, SalIdx = 10, CostIdx = 11, DataStart = 12;
@@ -245,65 +244,65 @@
         const ov = { s: Array(12).fill(0), p: Array(12).fill(0), m: Array(12).fill(0), o: Array(12).fill(0), c: Array(12).fill(0), pc: Array(12).fill(0), bc: Array(12).fill(0) };
         const processed = data.map(m => {
             const isBP = (m[NoIdx] === 'BP 要員');
-            const salVal = parseNum(m[SalIdx]), costVal = parseNum(m[CostIdx]);
-            const calcBase = isBP ? costVal : salVal;
+            const calcBase = isBP ? parseNum(m[CostIdx]) : parseNum(m[SalIdx]);
             const sl = [], pl = [], ml = [], ol = [];
             for(let i=0; i<12; i++) {
-                let s = parseNum(m[DataStart + i*2]), c = parseNum(m[DataStart + i*2 + 1]);
-                sl.push(s); pl.push(s > 0 ? s - c : 0);
-                let marginVal = s > 0 ? ((s - c) / s * 100) : 0;
-                let opRateVal = (s > 0 && calcBase > 0) ? (s / calcBase) : 0;
+                let sVal = parseNum(m[DataStart + i*2]), cVal = parseNum(m[DataStart + i*2 + 1]);
+                sl.push(sVal); pl.push(sVal > 0 ? sVal - cVal : 0);
+                let marginVal = sVal > 0 ? ((sVal - cVal) / sVal * 100) : 0;
+                let opRateVal = (sVal > 0 && calcBase > 0) ? (sVal / calcBase) : 0;
                 ml.push(marginVal); ol.push(opRateVal);
-                if(s > 0) { ov.s[i]+=s; ov.p[i]+=(s-c); ov.m[i]+=marginVal; ov.o[i]+=opRateVal; ov.c[i]++; if(isBP) ov.bc[i]++; else ov.pc[i]++; }
+                if(sVal > 0) { ov.s[i]+=sVal; ov.p[i]+=(sVal-cVal); ov.m[i]+=marginVal; ov.o[i]+=opRateVal; ov.c[i]++; if(isBP) ov.bc[i]++; else ov.pc[i]++; }
             }
-            return { name: m[NameIdx], no: m[NoIdx], aff: m[AffIdx], sal: salVal, cost: costVal, sl, pl, ml, ol };
+            return { name: m[NameIdx], no: m[NoIdx], aff: m[AffIdx], sal: parseNum(m[SalIdx]), cost: parseNum(m[CostIdx]), sl, pl, ml, ol };
         });
 
         html += `<tr><td colspan="18" class="affiliation-header">全体合計 (${filterRegion==='total'?'全社':filterRegion})</td></tr>`;
-        ['売上','利益','利益率','運用率','稼働<br>プロパー','稼働BP','総稼働'].forEach((lbl, idx) => {
+        const totalLabels = ['売上','利益','利益率','運用率','稼働<br>プロパー','稼働BP','総稼働'];
+        totalLabels.forEach((lbl, idx) => {
             html += `<tr class="${idx === 6 ? 'item-bottom-bold' : 'row-border'}">`;
             if(idx === 0) html += `<td rowspan="7" colspan="2" class="cat-header" style="background:white; font-size:1rem;">全体合計</td>`;
             html += `<td class="metric-label">${lbl}</td>`;
             
-            let h1Sum=0, h1Cnt=0, h2Sum=0, h2Cnt=0; // Fix: No duplicate declarations
+            let h1S=0, h1C=0, h2S=0, h2C=0;
             for(let i=0; i<12; i++) {
-                let v = 0; 
-                if(idx===0) v=ov.s[i]; else if(idx===1) v=ov.p[i]; else if(idx===2) v=ov.c[i]?ov.m[i]/ov.c[i]:0; else if(idx===3) v=ov.c[i]?ov.o[i]/ov.c[i]:0; else if(idx===4) v=ov.pc[i]; else if(idx===5) v=ov.bc[i]; else v=ov.c[i];
+                let val = 0; 
+                if(idx===0) val=ov.s[i]; else if(idx===1) val=ov.p[i]; else if(idx===2) val=ov.c[i]?ov.m[i]/ov.c[i]:0; else if(idx===3) val=ov.c[i]?ov.o[i]/ov.c[i]:0; else if(idx===4) val=ov.pc[i]; else if(idx===5) val=ov.bc[i]; else val=ov.c[i];
                 let type = (idx < 2 || idx >= 4) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
-                html += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${fmtVal(v, type)}</td>`;
-                if(v !== 0) { if(i < 6) { h1Sum += v; h1Cnt++; } else { h2Sum += v; h2Cnt++; } }
-                if(i === 5) html += `<td class="total-col">${idx < 2 ? Math.round(h1Sum).toLocaleString() : (h1Cnt ? fmtVal(h1Sum / h1Cnt, type) : '-')}</td>`;
+                html += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${fmtVal(val, type)}</td>`;
+                if(val !== 0) { if(i < 6) { h1S += val; h1C++; } else { h2S += val; h2C++; } }
+                if(i === 5) html += `<td class="total-col">${idx < 2 ? Math.round(h1S).toLocaleString() : (h1C ? fmtVal(h1S / h1C, type) : '-')}</td>`;
             }
-            let sFinal = (idx < 2) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
-            html += `<td class="total-col">${idx < 2 ? Math.round(h2Sum).toLocaleString() : (h2Cnt ? fmtVal(h2Sum / h2Cnt, sFinal) : '-')}</td><td class="total-col">${idx < 2 ? Math.round(h1Sum + h2Sum).toLocaleString() : ((h1Cnt + h2Cnt) ? fmtVal((h1Sum + h2Sum) / (h1Cnt + h2Cnt), sFinal) : '-')}</td></tr>`;
+            let sFin = (idx < 2) ? 'num' : (idx === 2 ? 'pct' : 'ratio');
+            html += `<td class="total-col">${idx < 2 ? Math.round(h2S).toLocaleString() : (h2C ? fmtVal(h2S / h2C, sFin) : '-')}</td><td class="total-col">${idx < 2 ? Math.round(h1S + h2S).toLocaleString() : ((h1C + h2C) ? fmtVal((h1S + h2S) / (h1C + h2C), sFin) : '-')}</td></tr>`;
         });
         const affs = [...new Set(processed.map(t => t.aff))];
-        affs.forEach(aff => {
-            html += `<tr><td colspan="18" class="affiliation-header">${aff}</td></tr>`;
-            processed.filter(t => t.aff === aff).forEach(t => {
+        affs.forEach(af => {
+            html += `<tr><td colspan="18" class="affiliation-header">${af}</td></tr>`;
+            processed.filter(t => t.aff === af).forEach(t => {
                 const metrics = [{n:'売上',d:t.sl,t:'num'},{n:'利益',d:t.pl,t:'num'},{n:'利益率',d:t.ml,t:'pct'},{n:'運用率',d:t.ol,t:'ratio'}];
                 metrics.forEach((m, i) => {
                     html += `<tr class="${i === 3 ? 'item-bottom-bold' : 'row-border'}">`;
                     if(i === 0) html += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="cell-main-text">${t.name}</div><div class="cell-sub-text">${t.no}</div></td><td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;">${t.sal.toLocaleString()}<br>${t.cost.toLocaleString()}</td>`;
                     html += `<td class="metric-label">${m.n}</td>`;
-                    let sh1=0, ch1=0, sh2=0, ch2=0;
+                    let sum1=0, cnt1=0, sum2=0, cnt2=0;
                     m.d.forEach((v, mi) => {
                         html += `<td class="${mi===5||mi===11?'month-sep':''} ${mi===6?'second-half-start':''}">${fmtVal(v, m.t)}</td>`;
-                        if(v !== 0) { if(mi < 6) { sh1 += v; ch1++; } else { sh2 += v; ch2++; } }
-                        if(mi === 5) html += `<td class="total-col">${m.t === 'num' ? Math.round(sh1).toLocaleString() : (ch1 ? fmtVal(sh1 / ch1, m.t) : '-')}</td>`;
+                        if(v !== 0) { if(mi < 6) { sum1 += v; cnt1++; } else { sum2 += v; cnt2++; } }
+                        if(mi === 5) html += `<td class="total-col">${m.t === 'num' ? Math.round(sum1).toLocaleString() : (cnt1 ? fmtVal(sum1 / cnt1, m.t) : '-')}</td>`;
                     });
-                    html += `<td class="total-col">${m.t === 'num' ? Math.round(sh2).toLocaleString() : (ch2 ? fmtVal(sh2 / ch2, m.t) : '-')}</td><td class="total-col">${m.t === 'num' ? Math.round(sh1 + sh2).toLocaleString() : ((ch1 + ch2) ? fmtVal((sh1 + sh2) / (ch1 + ch2), m.t) : '-')}</td></tr>`;
+                    html += `<td class="total-col">${m.t === 'num' ? Math.round(sum2).toLocaleString() : (cnt2 ? fmtVal(sum2 / cnt2, m.t) : '-')}</td><td class="total-col">${m.t === 'num' ? Math.round(sum1 + sum2).toLocaleString() : ((cnt1 + cnt2) ? fmtVal((sum1 + sum2) / (cnt1 + cnt2), m.t) : '-')}</td></tr>`;
                 });
             });
         });
         html += `</tbody></table>`; document.getElementById('generic-content').innerHTML = html;
     }
 
-    // --- 売込状況一覧（画像・指示通りの3列2段構成） ---
+    // --- 売込状況一覧（画像 image_ea5ef5.png 通りの3列2段レイアウト） ---
     function renderStatusTable(rows, filterRegion) {
         if (rows.length < 2) return;
         const NameIdx=1, AffIdx=2, StatusIdx=3, ReasonIdx=4, DateIdx=5, PeriodIdx=7;
-        let data = rows.slice(1);
+        let data = rows.slice(1).filter(r => r[NameIdx] && r[NameIdx].trim() !== "");
         if (filterRegion !== 'total') {
             data = (filterRegion === '東日本' ? data.filter(r => getMatchRegion(r[AffIdx]) === '東海' || getMatchRegion(r[AffIdx]) === '首都圏') : data.filter(r => getMatchRegion(r[AffIdx]) === filterRegion));
         }
@@ -312,25 +311,24 @@
         data.forEach(r => { const st = r[StatusIdx] || "未設定"; if (!grouped[st]) grouped[st] = []; grouped[st].push(r); });
         const sorted = Object.keys(grouped).sort((a, b) => (priority[a] || 99) - (priority[b] || 99));
         
-        let html = `<table><thead><tr><th class="col-name">従業員名<br><span style="font-size:0.7rem; font-weight:normal;">所属</span></th><th class="col-status">稼働状況<br><span style="font-size:0.7rem; font-weight:normal;">退場理由</span></th><th class="col-date">参画可能日<br><span style="font-size:0.7rem; font-weight:normal;">未参画期間</span></th></tr></thead><tbody>`;
+        let html = `<table><thead><tr><th class="col-33">従業員名<br><span style="font-size:0.7rem; font-weight:normal;">所属</span></th><th class="col-33">稼働状況<br><span style="font-size:0.7rem; font-weight:normal;">退場理由</span></th><th class="col-33">参画可能日<br><span style="font-size:0.7rem; font-weight:normal;">未参画期間</span></th></tr></thead><tbody>`;
         sorted.forEach(st => {
             html += `<tr><td colspan="3" class="affiliation-header">${st} (${grouped[st].length}名)</td></tr>`;
             grouped[st].forEach(r => {
-                //指示通り: 左(従業員名/所属)、中(退場理由/稼働状況)、右(参画可能日/未参画期間)
-                html += `<tr class="row-main"><td class="cell-main-text">${r[NameIdx]||'-'}</td><td class="cell-main-text">${r[ReasonIdx]||'-'}</td><td class="cell-main-text">${r[DateIdx]||'-'}</td></tr><tr class="row-sub border-bottom-bold"><td class="cell-sub-text">${r[AffIdx]||'-'}</td><td class="cell-sub-text">${r[StatusIdx]||'-'}</td><td class="cell-sub-text">${r[PeriodIdx]||'-'}</td></tr>`;
+                html += `<tr class="row-main"><td class="cell-main-text">${r[NameIdx]||'-'}</td><td class="cell-main-text">${r[StatusIdx]||'-'}</td><td class="cell-main-text">${r[DateIdx]||'-'}</td></tr><tr class="row-sub border-bottom-bold"><td class="cell-sub-text">${r[AffIdx]||'-'}</td><td class="cell-sub-text">${r[ReasonIdx]||'-'}</td><td class="cell-sub-text">${r[PeriodIdx]||'-'}</td></tr>`;
             });
         });
         html += `</tbody></table>`; document.getElementById('generic-content').innerHTML = html;
     }
 
-    // --- 営業実績・予算管理表（太線修正版） ---
+    // --- 営業実績・予算管理表（太線・エンジニア総数位置修正版） ---
     function renderSalesTable() {
         const rk = document.getElementById('region-select').value;
         const d = getRD(rk); const tb = document.getElementById('table-body'); tb.innerHTML = "";
         const labels = [{l:'売上',c:'sales',r:['B','A','R']},{l:'稼働原価',c:'kCost',r:['B','A','R']},{l:'A利益',c:'aProfit',r:['B','A','R']},{l:'待機原価',c:'waitCost',r:['A']},{l:'プロパー(稼働)',c:'propK',r:['B','A','R']},{l:'BP',c:'bpK',r:['A']},{l:'稼働エンジニア数',c:'workEngTotal',r:['B','A']},{l:'プロパー(待機)',c:'propW',r:['B','A']},{l:'待機率',c:'waitRate',r:['A']},{l:'エンジニア総数',c:'totalEng',r:['B','A','R']}];
         labels.forEach(item => {
             const hasB=item.r.includes('B'), hasA=item.r.includes('A'), hasR=item.r.includes('R'), rCnt=item.r.length;
-            let rowsHtml = "";
+            let h = "";
             if(hasB) {
                 let row = `<tr class="${(!hasA && !hasR) ? 'item-bottom-bold' : 'row-border'}"><td rowspan="${rCnt}" class="cat-header">${item.l}</td><td class="type-col">予算</td>`;
                 let b1=0, b2=0;
@@ -339,7 +337,7 @@
                     row += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${v?Math.round(v).toLocaleString():'-'}</td>`;
                     if(i===5) row += `<td class="total-col">${Math.round(b1).toLocaleString()}</td>`;
                 }
-                rowsHtml += row + `<td class="total-col">${Math.round(b2).toLocaleString()}</td><td class="total-col">${Math.round(b1+b2).toLocaleString()}</td></tr>`;
+                h += row + `<td class="total-col">${Math.round(b2).toLocaleString()}</td><td class="total-col">${Math.round(b1+b2).toLocaleString()}</td></tr>`;
             }
             if(hasA) {
                 let row = `<tr class="${!hasR ? 'item-bottom-bold' : 'row-border'}">${!hasB ? `<td rowspan="${rCnt}" class="cat-header">${item.l}</td>` : ''}<td class="type-col">実績</td>`;
@@ -349,20 +347,19 @@
                     row += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${d.actual[item.c]?.[i]!==null?(item.c==='waitRate'?d.actual[item.c][i].toFixed(1)+'%':Math.round(d.actual[item.c][i]).toLocaleString()):'-'}</td>`;
                     if(i===5) row += `<td class="total-col">${Math.round(a1).toLocaleString()}</td>`;
                 }
-                rowsHtml += row + `<td class="total-col">${Math.round(a2).toLocaleString()}</td><td class="total-col">${Math.round(a1+a2).toLocaleString()}</td></tr>`;
+                h += row + `<td class="total-col">${Math.round(a2).toLocaleString()}</td><td class="total-col">${Math.round(a1+a2).toLocaleString()}</td></tr>`;
             }
             if(hasR) {
                 let row = `<tr class="item-bottom-bold"><td class="type-col">達成率</td>`;
-                let rb1=0, ra1=0, rb2=0, ra2=0;
+                let b1=0, a1=0, b2=0, a2=0;
                 for(let i=0; i<12; i++){
-                    let bv=d.budget[item.c]?.[i]||0, av=d.actual[item.c]?.[i]||0;
-                    if(i<6){rb1+=bv; ra1+=av;} else {rb2+=bv; ra2+=av;}
+                    let bv=d.budget[item.c]?.[i]||0, av=d.actual[item.c]?.[i]||0; if(i<6){b1+=bv; a1+=av;} else {b2+=bv; a2+=av;}
                     row += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${(d.actual[item.c]?.[i]!==null&&bv)?(d.actual[item.c][i]/bv*100).toFixed(1)+'%':'-'}</td>`;
-                    if(i===5) row += `<td class="total-col">${rb1?(ra1/rb1*100).toFixed(1)+'%':'-'}</td>`;
+                    if(i===5) row += `<td class="total-col">${b1?(a1/b1*100).toFixed(1)+'%':'-'}</td>`;
                 }
-                rowsHtml += row + `<td class="total-col">${rb2?(ra2/rb2*100).toFixed(1)+'%':'-'}</td><td class="total-col">${(rb1+rb2)?((ra1+ra2)/(rb1+rb2)*100).toFixed(1)+'%':'-'}</td></tr>`;
+                h += row + `<td class="total-col">${b2?(a2/b2*100).toFixed(1)+'%':'-'}</td><td class="total-col">${(b1+b2)?((a1+a2)/(b1+b2)*100).toFixed(1)+'%':'-'}</td></tr>`;
             }
-            tb.innerHTML += rowsHtml;
+            tb.innerHTML += h;
         });
         drawSalesCharts(d);
     }
@@ -396,8 +393,6 @@
 </script>
 </body>
 </html>
-
-
 
 
 
