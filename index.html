@@ -19,9 +19,12 @@
         .top-nav { background: #1a202c; padding: 15px 20px; color: white; display: flex; align-items: center; margin-bottom: 20px; border-radius: 0 0 12px 12px; }
         .nav-select { background: #2d3748; color: white; border: 1px solid #4a5568; padding: 8px 15px; border-radius: 6px; font-size: 1rem; margin-right: 15px; cursor: pointer; }
         h2 { font-size: 1.4rem; margin: 0; color: #1a202c; border-left: 5px solid #3182ce; padding-left: 15px; text-align: left; }
+        
+        /* 表全体の枠線設定 */
         table { width: 100%; border-collapse: collapse; background: white; border: 2px solid black !important; table-layout: fixed; }
         th, td { border: 1px solid black !important; padding: 8px 6px; text-align: center; font-size: 0.85rem; word-break: break-all; }
         th { background: #edf2f7; color: #4a5568; border-bottom: 2px solid black !important; }
+        
         .cat-header { background: #ebf8ff; font-weight: bold; text-align: center; color: #2c5282; border-right: 2px solid black !important; width: 130px; }
         .type-col { text-align: center; border-right: 2px solid black !important; width: 75px; }
         .month-sep { border-right: 2px solid black !important; }
@@ -29,9 +32,11 @@
         .total-header { background: #edf2f7; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .affiliation-header { background: #1a202c !important; color: white !important; text-align: left !important; padding: 10px 15px !important; font-size: 1rem !important; border-bottom: 2px solid black !important; }
-        /* 下線3px太線設定 */
+        
+        /* 項目ごとの太下線（3px）の設定 */
         .item-bottom-bold td { border-bottom: 3px solid black !important; }
         .row-border td:not(.cat-header) { border-bottom: 1px solid black !important; }
+
         .row-main { background: white; }
         .row-sub { background: #f9fafb; }
         .cell-main-text { font-weight: bold; font-size: 0.95rem; color: #1a202c; }
@@ -167,22 +172,22 @@
             h += `<tr class="${idx === 6 ? 'item-bottom-bold' : 'row-border'}">`;
             if(idx === 0) h += `<td rowspan="7" colspan="2" class="cat-header" style="background:white; font-size:1rem;">全体合計</td>`;
             h += `<td class="metric-label">${lbl}</td>`;
-            let r_h1Sum=0, r_h1Cnt=0, r_h2Sum=0, r_h2Cnt=0;
+            let r_h1S=0, r_h1C=0, r_h2S=0, r_h2C=0;
             for(let i=0; i<12; i++) {
                 let v = (idx===0)?ov.s[i]:(idx===1)?ov.p[i]:(idx===2)?(ov.c[i]?ov.m[i]/ov.c[i]:0):(idx===3)?(ov.c[i]?ov.o[i]/ov.c[i]:0):(idx===4)?ov.pc[i]:(idx===5)?ov.bc[i]:ov.c[i];
                 let ty = (idx<2 || idx>=4)?'num':(idx===2)?'pct':'ratio';
                 h += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${fmt(v, ty)}</td>`;
-                if(v!==0){if(i<6){r_h1Sum+=v; r_h1Cnt++;}else{r_h2Sum+=v; r_h2Cnt++;}}
-                if(i===5) h += `<td class="total-col">${idx<2?Math.round(r_h1Sum).toLocaleString():(r_h1Cnt?fmt(r_h1Sum/r_h1Cnt, ty):'-')}</td>`;
+                if(v!==0){if(i<6){r_h1S+=v; r_h1C++;}else{r_h2S+=v; r_h2C++;}}
+                if(i===5) h += `<td class="total-col">${idx<2?Math.round(r_h1S).toLocaleString():(r_h1C?fmt(r_h1S/r_h1C, ty):'-')}</td>`;
             }
-            h += `<td class="total-col">${idx<2?Math.round(r_h2Sum).toLocaleString():(r_h2Cnt?fmt(r_h2Sum/r_h2Cnt, (idx===2?'pct':'ratio')):'-')}</td><td class="total-col">${idx<2?Math.round(r_h1Sum+r_h2Sum).toLocaleString():((r_h1Cnt+r_h2Cnt)?fmt((r_h1Sum+r_h2Sum)/(r_h1Cnt+r_h2Cnt), (idx===2?'pct':'ratio')):'-')}</td></tr>`;
+            h += `<td class="total-col">${idx<2?Math.round(r_h2S).toLocaleString():(r_h2C?fmt(r_h2S/r_h2C, (idx===2?'pct':'ratio')):'-')}</td><td class="total-col">${idx<2?Math.round(r_h1S+r_h2S).toLocaleString():((r_h1C+r_h2C)?fmt((r_h1S+r_h2S)/(r_h1C+r_h2C), (idx===2?'pct':'ratio')):'-')}</td></tr>`;
         });
         const afs = [...new Set(proc.map(t => t.aff))];
         afs.forEach(af => {
             h += `<tr><td colspan="18" class="affiliation-header">${af}</td></tr>`;
             proc.filter(t => t.aff === af).forEach(t => {
-                const metricsList = [{n:'売上',d:t.sl,t:'num'},{n:'利益',d:t.pl,t:'num'},{n:'利益率',d:t.ml,t:'pct'},{n:'運用率',d:t.ol,t:'ratio'}];
-                metricsList.forEach((m, i) => {
+                const ms = [{n:'売上',d:t.sl,t:'num'},{n:'利益',d:t.pl,t:'num'},{n:'利益率',d:t.ml,t:'pct'},{n:'運用率',d:t.ol,t:'ratio'}];
+                ms.forEach((m, i) => {
                     h += `<tr class="${i === 3 ? 'item-bottom-bold' : 'row-border'}">`;
                     if(i === 0) h += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="cell-main-text">${t.name}</div><div class="cell-sub-text">${t.no}</div></td><td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;">${t.sal.toLocaleString()}<br>${t.cost.toLocaleString()}</td>`;
                     h += `<td class="metric-label">${m.n}</td>`;
@@ -206,11 +211,11 @@
         if (reg !== 'total') data = (reg === '東日本' ? data.filter(r => getMatchRegion(r[AffI]) === '東海' || getMatchRegion(r[AffI]) === '首都圏') : data.filter(r => getMatchRegion(r[AffI]) === reg));
         const grp = {}; data.forEach(r => { const st = r[StatusI] || "未設定"; if (!grp[st]) grp[st] = []; grp[st].push(r); });
         const sorted = Object.keys(grp).sort((a,b) => ({"稼働中":1,"待機中":2,"休業中":3,"休職中":4}[a]||99)-({"稼働中":1,"待機中":2,"休業中":3,"休職中":4}[b]||99));
-        let h = `<table><thead><tr><th class="col-33">従業員名<br><span style="font-size:0.7rem; font-weight:normal;">所属</span></th><th class="col-33">稼働状況<br><span style="font-size:0.7rem; font-weight:normal;">退場理由</span></th><th class="col-33">参画可能日<br><span style="font-size:0.7rem; font-weight:normal;">未参画期間</span></th></tr></thead><tbody>`;
+        let h = `<table><thead><tr><th class="col-33">従業員名<br><span style="font-size:0.7rem; font-weight:normal;">所属</span></th><th class="col-33">退場理由<br><span style="font-size:0.7rem; font-weight:normal;">稼働状況</span></th><th class="col-33">参画可能日<br><span style="font-size:0.7rem; font-weight:normal;">未参画期間</span></th></tr></thead><tbody>`;
         sorted.forEach(st => {
             h += `<tr><td colspan="3" class="affiliation-header">${st} (${grp[st].length}名)</td></tr>`;
             grp[st].forEach(r => {
-                h += `<tr class="row-main"><td class="cell-main-text">${r[NameI]||'-'}</td><td class="cell-main-text">${r[StatusI]||'-'}</td><td class="cell-main-text">${r[DateI]||'-'}</td></tr><tr class="row-sub border-bottom-bold"><td class="cell-sub-text">${r[AffI]||'-'}</td><td class="cell-sub-text">${r[ReasonI]||'-'}</td><td class="cell-sub-text">${r[PeriodI]||'-'}</td></tr>`;
+                h += `<tr class="row-main"><td class="cell-main-text">${r[NameI]||'-'}</td><td class="cell-main-text">${r[ReasonI]||'-'}</td><td class="cell-main-text">${r[DateI]||'-'}</td></tr><tr class="row-sub border-bottom-bold"><td class="cell-sub-text">${r[AffI]||'-'}</td><td class="cell-sub-text">${r[StatusI]||'-'}</td><td class="cell-sub-text">${r[PeriodI]||'-'}</td></tr>`;
             });
         });
         document.getElementById('generic-content').innerHTML = h + `</tbody></table>`;
@@ -250,11 +255,17 @@
         dataSet = {west:{budget:{},actual:{}}, tokai:{budget:{},actual:{}}, tokyo:{budget:{},actual:{}}};
         const rm = {'西日本':'west','東海':'tokai','首都圏':'tokyo'}, lm = {'売上':'sales','稼働原価':'kCost','A利益':'aProfit','待機原価':'waitCost','プロパー(稼働)':'propK','BP':'bpK','稼働エンジニア数':'workEngTotal','エンジニア総数':'totalEng','プロパー(待機)':'propW','待機率':'waitRate'};
         rows.slice(1).forEach(row => { 
-            const rK=rm[String(row[0]).trim()], lK=lm[String(row[1]).trim()], type=String(row[2]).trim()==='予算'?'budget':'actual'; 
-            if(rK && lK){ 
-                if(!dataSet[rK][type][lK]) dataSet[rK][type][lK]=Array(12).fill(null); 
-                for(let i=3; i<15; i++){ let v=row[i]?String(row[i]).replace(/,/g,'').replace('%',''):null; dataSet[rK][type][lK][i-3]=(v===null||v===""||isNaN(v))?null:parseFloat(v); } 
-            } 
+            if(!row || row.length < 3) return;
+            const rowRegion = String(row[0]).trim();
+            const rowLabel = String(row[1]).trim();
+            let rK = null;
+            if(rowRegion.includes('西日本')) rK='west'; else if(rowRegion.includes('東海')) rK='tokai'; else if(rowRegion.includes('首都圏')) rK='tokyo';
+            let lK = lm[rowLabel];
+            const type = String(row[2]).trim()==='予算'?'budget':'actual';
+            if(rK && lK){
+                if(!dataSet[rK][type][lK]) dataSet[rK][type][lK]=Array(12).fill(null);
+                for(let i=3; i<15; i++){ let v=row[i]?String(row[i]).replace(/,/g,'').replace('%',''):null; dataSet[rK][type][lK][i-3]=(v===null||v===""||isNaN(v))?null:parseFloat(v); }
+            }
         });
     }
     function getRD(k) {
@@ -266,5 +277,6 @@
 </script>
 </body>
 </html>
+
 
 
