@@ -20,6 +20,7 @@
         .nav-select { background: #2d3748; color: white; border: 1px solid #4a5568; padding: 8px 15px; border-radius: 6px; font-size: 1rem; margin-right: 15px; cursor: pointer; }
         h2 { font-size: 1.4rem; margin: 0; color: #1a202c; border-left: 5px solid #3182ce; padding-left: 15px; text-align: left; }
         
+        /* 枠線設定 */
         table { width: 100%; border-collapse: collapse; background: white; border: 2px solid black !important; table-layout: fixed; }
         th, td { border: 1px solid black !important; padding: 8px 6px; text-align: center; font-size: 0.85rem; word-break: break-all; }
         th { background: #edf2f7; color: #4a5568; border-bottom: 2px solid black !important; }
@@ -32,7 +33,7 @@
         .total-col { background: #fffaf0; font-weight: bold; border-left: 2px solid black !important; border-right: 2px solid black !important; }
         .affiliation-header { background: #1a202c !important; color: white !important; text-align: left !important; padding: 10px 15px !important; font-size: 1rem !important; border-bottom: 2px solid black !important; }
         
-        /* 項目ごとの太下線 3px */
+        /* 各項目の下線を3pxの太線にする */
         .item-bottom-bold td { border-bottom: 3px solid black !important; }
         .row-border td:not(.cat-header) { border-bottom: 1px solid black !important; }
 
@@ -102,7 +103,8 @@
 </div>
 <script>
     Chart.register(ChartDataLabels);
-    const YEAR_CONFIG = {'2025年6月期': '1LRVwKu-YXWJvRgSophqF0VlORS5_dcjztSvfz95Qe_E'};
+    const SHEET_ID = '1LRVwKu-YXWJvRgSophqF0VlORS5_dcjztSvfz95Qe_E';
+    const YEAR_CONFIG = { '2025年6月期': SHEET_ID };
     let dataSet = {west:{budget:{},actual:{}}, tokai:{budget:{},actual:{}}, tokyo:{budget:{},actual:{}}}, currentDataRows = [];
     let salesChart, waitingChart, engineerChart;
     const months = ["6月","7月","8月","9月","10月","11月","12月","1月","2月","3月","4月","5月"];
@@ -115,11 +117,11 @@
     function parseNum(v) { if (!v) return 0; let s = String(v).replace(/,/g, '').replace(/[^-0-9.]/g, ''); let n = parseFloat(s); return isNaN(n) ? 0 : Math.round(n); }
     async function initApp() { await switchTool(); }
     async function switchTool() {
-        const yr = document.getElementById('year-select').value, tk = document.getElementById('tool-select').value, sid = YEAR_CONFIG[yr];
+        const tk = document.getElementById('tool-select').value;
         const sheetMap = {sales: '実績データ', promotion: '営業推進管理表', status: '売込状況一覧'};
         document.getElementById('loading').style.display = 'block';
         try {
-            const resp = await fetch(`https://docs.google.com/spreadsheets/d/${sid}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetMap[tk])}`);
+            const resp = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetMap[tk])}`);
             if (!resp.ok) throw new Error();
             const text = await resp.text(); const rows = parseCSV(text);
             document.getElementById('pw_screen').style.display = 'none'; document.getElementById('main_content').style.display = 'block';
@@ -154,40 +156,38 @@
         const AffI=2, NoI=3, NameI=4, SalI=10, CostI=11, Start=12;
         let data = rows.slice(1).filter(r => r[NoI] && r[NoI] !== "技術者№");
         if (reg !== 'total') data = (reg === '東日本' ? data.filter(r => getMatchRegion(r[AffI]) === '東海' || getMatchRegion(r[AffI]) === '首都圏') : data.filter(r => getMatchRegion(r[AffI]) === reg));
-        
         let h = `<table><thead><tr><th rowspan="2" class="cat-header">技術者名<br><span style="font-size:0.7rem; font-weight:normal;">スキルシートNO</span></th><th rowspan="2" class="cat-header">給与<br>コスト</th><th rowspan="2" class="type-col">項目</th><th colspan="6">上期実績</th><th class="total-header">上期計</th><th colspan="6" class="second-half-start">下期実績・予想</th><th class="total-header">下期合計</th><th class="total-header">年間合計</th></tr><tr><th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th class="month-sep">11月</th><th class="total-header">計</th><th class="second-half-start">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th class="month-sep">5月</th><th class="total-header">計</th><th class="total-header">合計</th></tr></thead><tbody>`;
-        const ov = { s: Array(12).fill(0), p: Array(12).fill(0), m: Array(12).fill(0), o: Array(12).fill(0), c: Array(12).fill(0), pc: Array(12).fill(0), bc: Array(12).fill(0) };
+        const ov = {s:Array(12).fill(0), p:Array(12).fill(0), m:Array(12).fill(0), o:Array(12).fill(0), c:Array(12).fill(0), pc:Array(12).fill(0), bc:Array(12).fill(0)};
         const proc = data.map(m => {
             const isBP = (m[NoI] === 'BP 要員'), base = isBP ? parseNum(m[CostI]) : parseNum(m[SalI]), sl=[], pl=[], ml=[], ol=[];
             for(let i=0; i<12; i++) {
-                let sVal=parseNum(m[Start+i*2]), cVal=parseNum(m[Start+i*2+1]); sl.push(sVal); pl.push(sVal>0?sVal-cVal:0);
-                let mVal=sVal>0?((sVal-cVal)/sVal*100):0, oVal=(sVal>0&&base>0)?(sVal/base):0; ml.push(mVal); ol.push(oVal);
-                if(sVal>0){ov.s[i]+=sVal; ov.p[i]+=(sVal-cVal); ov.m[i]+=mVal; ov.o[i]+=oVal; ov.c[i]++; if(isBP) ov.bc[i]++; else ov.pc[i]++;}
+                let sv=parseNum(m[Start+i*2]), cv=parseNum(m[Start+i*2+1]); sl.push(sv); pl.push(sv>0?sv-cv:0);
+                let mv=sv>0?((sv-cv)/sv*100):0, ovr=(sv>0&&base>0)?(sv/base):0; ml.push(mv); ol.push(ovr);
+                if(sv>0){ov.s[i]+=sv; ov.p[i]+=(sv-cv); ov.m[i]+=mv; ov.o[i]+=ovr; ov.c[i]++; if(isBP) ov.bc[i]++; else ov.pc[i]++;}
             }
             return {name:m[NameI]||'', no:m[NoI]||'', aff:m[AffI]||'', sal:parseNum(m[SalI]), cost:parseNum(m[CostI]), sl, pl, ml, ol};
         });
-
         h += `<tr><td colspan="18" class="affiliation-header">全体合計 (${reg==='total'?'全社':reg})</td></tr>`;
-        ['売上','利益','利益率','運用率','稼働<br>プロパー','稼働BP','総稼働'].forEach((label, idx) => {
+        ['売上','利益','利益率','運用率','稼働<br>プロパー','稼働BP','総稼働'].forEach((lbl, idx) => {
             h += `<tr class="${idx === 6 ? 'item-bottom-bold' : 'row-border'}">`;
             if(idx === 0) h += `<td rowspan="7" colspan="2" class="cat-header" style="background:white; font-size:1rem;">全体合計</td>`;
-            h += `<td class="metric-label">${label}</td>`;
-            let h1S=0, h1C=0, h2S=0, h2C=0;
+            h += `<td class="metric-label">${lbl}</td>`;
+            let hs1=0, hc1=0, hs2=0, hc2=0;
             for(let i=0; i<12; i++) {
                 let v = (idx===0)?ov.s[i]:(idx===1)?ov.p[i]:(idx===2)?(ov.c[i]?ov.m[i]/ov.c[i]:0):(idx===3)?(ov.c[i]?ov.o[i]/ov.c[i]:0):(idx===4)?ov.pc[i]:(idx===5)?ov.bc[i]:ov.c[i];
                 let ty = (idx<2 || idx>=4)?'num':(idx===2)?'pct':'ratio';
                 h += `<td class="${i===5||i===11?'month-sep':''} ${i===6?'second-half-start':''}">${fmt(v, ty)}</td>`;
-                if(v!==0){if(i<6){h1S+=v; h1C++;}else{h2S+=v; h2C++;}}
-                if(i===5) h += `<td class="total-col">${idx<2?Math.round(h1S).toLocaleString():(h1C?fmt(h1S/h1C, ty):'-')}</td>`;
+                if(v!==0){if(i<6){hs1+=v; hc1++;}else{hs2+=v; hc2++;}}
+                if(i===5) h += `<td class="total-col">${idx<2?Math.round(hs1).toLocaleString():(hc1?fmt(hs1/hc1, ty):'-')}</td>`;
             }
-            h += `<td class="total-col">${idx<2?Math.round(h2S).toLocaleString():(h2C?fmt(h2S/h2C, (idx===2?'pct':'ratio')):'-')}</td><td class="total-col">${idx<2?Math.round(h1S+h2S).toLocaleString():((h1C+h2C)?fmt((h1S+h2S)/(h1C+h2C), (idx===2?'pct':'ratio')):'-')}</td></tr>`;
+            h += `<td class="total-col">${idx<2?Math.round(hs2).toLocaleString():(hc2?fmt(hs2/hc2, (idx===2?'pct':'ratio')):'-')}</td><td class="total-col">${idx<2?Math.round(hs1+hs2).toLocaleString():((hc1+hc2)?fmt((hs1+hs2)/(hc1+hc2), (idx===2?'pct':'ratio')):'-')}</td></tr>`;
         });
         const afs = [...new Set(proc.map(t => t.aff))];
         afs.forEach(af => {
             h += `<tr><td colspan="18" class="affiliation-header">${af}</td></tr>`;
             proc.filter(t => t.aff === af).forEach(t => {
-                const ms = [{n:'売上',d:t.sl,t:'num'},{n:'利益',d:t.pl,t:'num'},{n:'利益率',d:t.ml,t:'pct'},{n:'運用率',d:t.ol,t:'ratio'}];
-                ms.forEach((m, i) => {
+                const metricsList = [{n:'売上',d:t.sl,t:'num'},{n:'利益',d:t.pl,t:'num'},{n:'利益率',d:t.ml,t:'pct'},{n:'運用率',d:t.ol,t:'ratio'}];
+                metricsList.forEach((m, i) => {
                     h += `<tr class="${i === 3 ? 'item-bottom-bold' : 'row-border'}">`;
                     if(i === 0) h += `<td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;"><div class="cell-main-text">${t.name}</div><div class="cell-sub-text">${t.no}</div></td><td rowspan="4" class="cat-header" style="background:white; vertical-align:middle;">${t.sal.toLocaleString()}<br>${t.cost.toLocaleString()}</td>`;
                     h += `<td class="metric-label">${m.n}</td>`;
@@ -211,11 +211,11 @@
         if (reg !== 'total') data = (reg === '東日本' ? data.filter(r => getMatchRegion(r[AffI]) === '東海' || getMatchRegion(r[AffI]) === '首都圏') : data.filter(r => getMatchRegion(r[AffI]) === reg));
         const grp = {}; data.forEach(r => { const st = r[StatusI] || "未設定"; if (!grp[st]) grp[st] = []; grp[st].push(r); });
         const sorted = Object.keys(grp).sort((a,b) => ({"稼働中":1,"待機中":2,"休業中":3,"休職中":4}[a]||99)-({"稼働中":1,"待機中":2,"休業中":3,"休職中":4}[b]||99));
-        let h = `<table><thead><tr><th class="col-33">従業員名<br><span style="font-size:0.7rem; font-weight:normal;">所属</span></th><th class="col-33">退場理由<br><span style="font-size:0.7rem; font-weight:normal;">稼働状況</span></th><th class="col-33">参画可能日<br><span style="font-size:0.7rem; font-weight:normal;">未参画期間</span></th></tr></thead><tbody>`;
+        let h = `<table><thead><tr><th class="col-33">従業員名<br><span style="font-size:0.7rem; font-weight:normal;">所属</span></th><th class="col-33">稼働状況<br><span style="font-size:0.7rem; font-weight:normal;">退場理由</span></th><th class="col-33">参画可能日<br><span style="font-size:0.7rem; font-weight:normal;">未参画期間</span></th></tr></thead><tbody>`;
         sorted.forEach(st => {
             h += `<tr><td colspan="3" class="affiliation-header">${st} (${grp[st].length}名)</td></tr>`;
             grp[st].forEach(r => {
-                h += `<tr class="row-main"><td class="cell-main-text">${r[NameI]||'-'}</td><td class="cell-main-text">${r[ReasonI]||'-'}</td><td class="cell-main-text">${r[DateI]||'-'}</td></tr><tr class="row-sub border-bottom-bold"><td class="cell-sub-text">${r[AffI]||'-'}</td><td class="cell-sub-text">${r[StatusI]||'-'}</td><td class="cell-sub-text">${r[PeriodI]||'-'}</td></tr>`;
+                h += `<tr class="row-main"><td class="cell-main-text">${r[NameI]||'-'}</td><td class="cell-main-text">${r[StatusI]||'-'}</td><td class="cell-main-text">${r[DateI]||'-'}</td></tr><tr class="row-sub border-bottom-bold"><td class="cell-sub-text">${r[AffI]||'-'}</td><td class="cell-sub-text">${r[ReasonI]||'-'}</td><td class="cell-sub-text">${r[PeriodI]||'-'}</td></tr>`;
             });
         });
         document.getElementById('generic-content').innerHTML = h + `</tbody></table>`;
@@ -265,7 +265,6 @@
 </script>
 </body>
 </html>
-
 
 
 
