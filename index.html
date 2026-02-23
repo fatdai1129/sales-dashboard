@@ -131,7 +131,9 @@
             <div class="card">
                 <div style="display:flex; align-items:center; margin-bottom:20px;">
                     <h2 style="margin:0; border-left:5px solid #ed8936; padding-left:15px; margin-right: 25px;">売込状況一覧</h2>
-                    <input type="text" id="status-search" placeholder="名前・所属などで検索..." style="padding:10px; width:300px; border-radius:6px; border:1px solid #cbd5e0;" oninput="renderStatus()">
+                    <select id="status-region-select" style="padding:10px 20px; border-radius:6px; font-size:1.1rem; cursor:pointer;" onchange="renderStatus()">
+                        <option value="全国合計">全国合計</option><option value="東海">東海</option><option value="首都圏">首都圏</option><option value="東日本">東日本</option><option value="西日本">西日本</option>
+                    </select>
                 </div>
                 <div style="overflow-x: auto;">
                     <table class="status-table">
@@ -286,7 +288,7 @@
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
-        const searchKeyword = document.getElementById('sales-search').value.toLowerCase(); // 検索ボックスの値を取得
+        const searchKeyword = document.getElementById('sales-search').value.toLowerCase(); 
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
         
@@ -317,10 +319,7 @@
                 if (!isRegionMatch && !isBpPersonnelMatch) return false;
             }
             
-            // 既存の必須条件
             if (!(row[2] && !row[2].includes("売上") && !row[2].includes("原価") && row[4])) return false;
-            
-            // 検索キーワードでの絞り込み
             if (searchKeyword && !row.join('').toLowerCase().includes(searchKeyword)) return false;
 
             return true;
@@ -424,19 +423,27 @@
     }
 
     /* =========================================
-       3. 売込状況一覧
+       3. 売込状況一覧 (拠点プルダウン対応版)
     ========================================= */
     function renderStatus() {
         const tbody = document.getElementById('status-body');
-        const search = document.getElementById('status-search').value.toLowerCase();
+        const region = document.getElementById('status-region-select').value;
         tbody.innerHTML = '';
         if (!statusRows || statusRows.length < 2) return;
 
         statusRows.slice(1).forEach(row => {
             if (!row[0] && !row[1]) return; 
             
-            const textString = row.join('').toLowerCase();
-            if (search && !textString.includes(search)) return;
+            // 拠点フィルター
+            if (region === "東日本") {
+                const isTokai = (row[0] === '東海') || (row[0] === 'BP東海');
+                const isShitoken = (row[0] === '首都圏') || (row[0] === 'BP首都圏');
+                if (!isTokai && !isShitoken) return;
+            } else if (region !== "全国合計") {
+                const isRegionMatch = (row[0] === region);
+                const isBpMatch = (row[0] === 'BP' + region);
+                if (!isRegionMatch && !isBpMatch) return;
+            }
 
             const tr = document.createElement('tr');
             let statusClass = (row[2] === "待機中") ? "status-wait" : "";
@@ -474,7 +481,6 @@
 </script>
 </body>
 </html>
-
 
 
 
