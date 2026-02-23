@@ -18,7 +18,7 @@
         
         /* --- 実績管理セクション：一切の変更を禁止（完全固定） --- */
         table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: max-content; table-layout: fixed; }
-        th, td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
+        th, td { border: 4px solid black !important; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
         th { background: #edf2f7; }
         
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
@@ -43,7 +43,7 @@
         .sticky-left-2 { position: sticky; left: 180px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
 
         /* 営業推進管理表用：列幅バランス調整 */
-        .sales-raw-table th, .sales-raw-table td { width: 110px; } /* デフォルト幅 */
+        .sales-raw-table th, .sales-raw-table td { width: 110px; }
         .col-sales-aff { width: 130px !important; }
         .col-sales-name { width: 180px !important; }
         .col-sales-info { width: 130px !important; }
@@ -216,7 +216,7 @@
         updateCharts(region);
     }
 
-    /* --- 営業推進管理表：境界線・サイズバランス調整版 --- */
+    /* --- 営業推進管理表：総合計結合セル変更対応 --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
@@ -280,8 +280,11 @@
 
         let bHtml = "";
 
-        // 総合計行
-        bHtml += "<tr><td colspan='3' rowspan='2' class='text-center' style='font-weight:bold;'>総合計</td>";
+        /* --- 総合計行：指示に基づき結合を赤枠の2セル（colspan="2"）に変更 --- */
+        bHtml += "<tr><td colspan='2' rowspan='2' class='text-center col-sales-aff' style='font-weight:bold;'>総合計</td>";
+        // 給料/コスト列用の空セル（rowspan="2"）を追加
+        bHtml += "<td rowspan='2' class='col-sales-info'></td>";
+        
         let gH1S = 0, gH1P = 0, gH2S = 0, gH2P = 0;
         monthlyTotals.forEach((t, idx) => {
             bHtml += `<td class="text-right" style="font-weight:bold; ${border2pxTop}">${t.sales.toLocaleString()}</td>`;
@@ -356,6 +359,7 @@
 </script>
 </body>
 </html>
+
 
 
 
