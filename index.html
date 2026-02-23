@@ -16,21 +16,21 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 幅を固定（全国合計の幅を基準にロック） --- */
-        table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 0.85rem; width: 1550px; table-layout: fixed; }
-        th, td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 8px 4px; overflow: hidden; }
+        /* --- サイズを「全国合計」の最大幅で完全に固定 --- */
+        table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 0.95rem; width: 1800px; table-layout: fixed; }
+        th, td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 10px 4px; overflow: hidden; }
         th { background: #edf2f7; border-bottom: 4px solid black !important; }
         
-        /* 各列の幅指定 */
-        .col-item { width: 130px; }
-        .col-type { width: 70px; }
-        .col-month { width: 85px; }
-        .col-total { width: 95px; background: #fffaf0 !important; font-weight: bold; }
+        /* 列ごとの幅設定（大きく固定） */
+        .col-item { width: 160px; }
+        .col-type { width: 80px; }
+        .col-month { width: 100px; }
+        .col-total { width: 120px; background: #fffaf0 !important; font-weight: bold; }
 
         .cat-header { background: #ebf8ff !important; font-weight: bold; text-align: center; border-bottom: 4px solid black !important; }
         tr.bb-4px td { border-bottom: 4px solid black !important; }
         tr.bb-3px td { border-bottom: 3px solid black !important; }
-        .text-right { text-align: right !important; }
+        .text-right { text-align: right !important; padding-right: 8px !important; }
         .text-center { text-align: center !important; }
         
         .sticky-left { position: sticky; left: 0; background: white !important; z-index: 30; }
@@ -210,6 +210,7 @@
 </script>
 </body>
 </html>
+
 
 
 
