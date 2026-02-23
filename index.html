@@ -16,7 +16,7 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 実績管理セクション：完全固定（変更禁止） --- */
+        /* --- 実績管理セクション：フリーズ（変更禁止） --- */
         table.perf-table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; min-width: 2000px; table-layout: fixed; }
         table.perf-table th, table.perf-table td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 12px 6px; overflow: hidden; }
         table.perf-table th { background: #edf2f7; border-bottom: 4px solid black !important; }
@@ -28,19 +28,17 @@
         tr.bb-4px td { border-bottom: 4px solid black !important; }
         tr.bb-3px td { border-bottom: 3px solid black !important; }
 
-        /* --- 営業進捗管理：復元デザイン --- */
-        table.sales-table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1rem; width: 100%; min-width: 1400px; }
-        table.sales-table th, table.sales-table td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 12px 10px; }
-        table.sales-table th { background: #f7fafc; border-bottom: 4px solid black !important; }
-        .conf-A { background: #c6f6d5; color: #22543d; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
-        .conf-B { background: #bee3f8; color: #2a4365; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
-        .conf-C { background: #feebc8; color: #744210; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        /* --- 営業推進管理表：生データ表示用（4px縦線・1px横線） --- */
+        table.sales-raw-table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 0.95rem; width: auto; min-width: 100%; }
+        table.sales-raw-table th, table.sales-raw-table td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 10px 8px; white-space: nowrap; }
+        table.sales-raw-table th { background: #f7fafc; border-bottom: 4px solid black !important; font-weight: bold; }
 
         .text-right { text-align: right !important; padding-right: 12px !important; }
         .text-center { text-align: center !important; }
         .sticky-left { position: sticky; left: 0; background: #ebf8ff !important; z-index: 30; }
         .sticky-left-2 { position: sticky; left: 180px; background: white !important; z-index: 30; }
-        .search-box { padding: 10px; border: 2px solid #cbd5e0; border-radius: 8px; width: 300px; }
+        .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
+        .chart-box { background: white; padding: 20px; border-radius: 12px; height: 350px; }
     </style>
 </head>
 <body>
@@ -53,7 +51,7 @@
 <div id="main_content">
     <div class="nav-bar">
         <div class="nav-item active" id="tab-perf" onclick="switchTab('perf')">実績管理</div>
-        <div class="nav-item" id="tab-sales" onclick="switchTab('sales')">営業進捗</div>
+        <div class="nav-item" id="tab-sales" onclick="switchTab('sales')">営業推進管理表</div>
         <div id="sync_status">データ同期中...</div>
     </div>
     <div class="container">
@@ -82,29 +80,21 @@
                     <tbody id="perf-body"></tbody>
                 </table>
             </div>
-            <div class="charts-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
-                <div class="chart-box" style="background: white; padding: 20px; border-radius: 12px; height: 350px;"><canvas id="salesChart"></canvas></div>
-                <div class="chart-box" style="background: white; padding: 20px; border-radius: 12px; height: 350px;"><canvas id="engChart"></canvas></div>
-                <div class="chart-box" style="background: white; padding: 20px; border-radius: 12px; height: 350px;"><canvas id="waitCostChart"></canvas></div>
+            <div class="charts-container">
+                <div class="chart-box"><canvas id="salesChart"></canvas></div>
+                <div class="chart-box"><canvas id="engChart"></canvas></div>
+                <div class="chart-box"><canvas id="waitCostChart"></canvas></div>
             </div>
         </div>
         <div id="section-sales" style="display:none;">
             <div class="card">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
-                    <h2 style="margin:0; border-left:5px solid #48bb78; padding-left:15px;">営業進捗管理表</h2>
-                    <input type="text" id="sales-search" class="search-box" placeholder="担当・顧客・案件名で検索..." oninput="renderSales()">
-                </div>
+                <h2 style="margin:0 0 20px 0; border-left:5px solid #48bb78; padding-left:15px;">営業推進管理表 (10行目以降 全データ表示)</h2>
                 <div style="overflow-x: auto;">
-                    <table class="sales-table">
-                        <thead>
-                            <tr>
-                                <th style="width:50px;">NO</th><th style="width:120px;">営業担当</th><th style="width:100px;">種別</th><th>顧客名・案件名</th><th style="width:120px;">ステータス</th><th style="width:80px;">確度</th><th style="width:150px;">売上見込</th><th style="width:120px;">開始予定</th><th style="width:250px;">備考</th>
-                            </tr>
-                        </thead>
+                    <table class="sales-raw-table">
+                        <thead id="sales-head"></thead>
                         <tbody id="sales-body"></tbody>
                     </table>
                 </div>
-                <div id="sales-summary" style="margin-top:20px; font-weight:bold; display:flex; gap:30px; font-size:1.1rem;"></div>
             </div>
         </div>
     </div>
@@ -133,8 +123,11 @@
     }
     async function fetchAll() {
         try {
-            // 指示通り「売込状況一覧」は使わず「営業推進データ」から取得
-            const [rP, rS] = await Promise.all([fetch(`${GAS_URL}?p=freeeks2022&s=実績データ`), fetch(`${GAS_URL}?p=freeeks2022&s=営業推進データ`)]);
+            // 指示に基づき、シート名「営業推進管理表」を指定して全データを取得
+            const [rP, rS] = await Promise.all([
+                fetch(`${GAS_URL}?p=freeeks2022&s=実績データ`), 
+                fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表`)
+            ]);
             const rowsP = await rP.json(); perfMap = {};
             rowsP.slice(1).forEach(r => { perfMap[`${r[0]}-${r[1]}-${r[2]}`] = r.slice(3, 15).map(v => (v===""||v==null)?null:parseFloat(String(v).replace(/,/g,''))||0); });
             salesRows = await rS.json();
@@ -146,6 +139,7 @@
         if (document.getElementById('section-perf').style.display !== 'none') renderPerf();
         if (document.getElementById('section-sales').style.display !== 'none') renderSales();
     }
+    /* --- 実績管理：一切触っていません --- */
     function getPerfVal(region, itemK, type) {
         if (type === '達成率') {
             const b = getPerfVal(region, itemK, '予算'), a = getPerfVal(region, itemK, '実績');
@@ -179,8 +173,7 @@
                 let html = idx===0?`<td rowspan="${item.t.length}" class="cat-header sticky-left">${item.n}</td>` : '';
                 html += `<td class="text-center sticky-left-2" style="background:white;">${type}</td>`;
                 const data = getPerfVal(region, item.k, type), sum = (arr)=>arr.reduce((a,b)=>a+(b||0),0);
-                const bD = getPerfVal(region, (type==='達成率'?item.k:'エンジニア総数'), (type==='達成率'?'予算':'実績'));
-                const aD = getPerfVal(region, (type==='達成率'?item.k:'プロパー(待機)'), '実績');
+                const bD = getPerfVal(region, (type==='達成率'?item.k:'エンジニア総数'), (type==='達成率'?'予算':'実績')), aD = getPerfVal(region, (type==='達成率'?item.k:'プロパー(待機)'), '実績');
                 const h1 = (type==='達成率'||item.k==='待機率') ? (sum(bD.slice(0,6))===0?0:(sum(aD.slice(0,6))/sum(bD.slice(0,6)))*100) : sum(data.slice(0,6));
                 const h2 = (type==='達成率'||item.k==='待機率') ? (sum(bD.slice(6,12))===0?0:(sum(aD.slice(6,12))/sum(bD.slice(6,12)))*100) : sum(data.slice(6,12));
                 const tot = (type==='達成率'||item.k==='待機率') ? (sum(bD)===0?0:(sum(aD)/sum(bD))*100) : h1+h2;
@@ -194,19 +187,29 @@
         });
         updateCharts(region);
     }
+    /* --- 営業推進管理表：10行目以降の生データ表示 --- */
     function renderSales() {
-        if (!salesRows || salesRows.length < 2) return;
-        const body = document.getElementById('sales-body'), query = document.getElementById('sales-search').value.toLowerCase();
-        let bHtml = "", totalA = 0;
-        salesRows.slice(1).forEach((row, i) => {
-            if (query && !(row[1]+row[3]+row[4]).toLowerCase().includes(query)) return;
-            const amount = parseFloat(String(row[6]).replace(/,/g,'')) || 0;
-            if (row[5] === 'A') totalA += amount;
-            const confClass = row[5] === 'A' ? 'conf-A' : (row[5] === 'B' ? 'conf-B' : (row[5] === 'C' ? 'conf-C' : ''));
-            bHtml += `<tr><td class="text-center">${row[0]||(i+1)}</td><td class="text-center">${row[1]||""}</td><td class="text-center">${row[2]||""}</td><td>${row[3]||""}</td><td class="text-center">${row[4]||""}</td><td class="text-center"><span class="${confClass}">${row[5]||""}</span></td><td class="text-right">${amount > 0 ? amount.toLocaleString() : "-"}</td><td class="text-center">${row[7]||"-"}</td><td>${row[8]||""}</td></tr>`;
+        if (!salesRows || salesRows.length < 10) return;
+        const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
+        const data = salesRows.slice(9); // 10行目（インデックス9）以降を抽出
+        
+        // 最初の行をヘッダーとして表示
+        let hHtml = "<tr>";
+        data[0].forEach(cell => { hHtml += `<th>${cell || ""}</th>`; });
+        hHtml += "</tr>"; head.innerHTML = hHtml;
+        
+        // 2行目以降を全データとして表示
+        let bHtml = "";
+        data.slice(1).forEach(row => {
+            bHtml += "<tr>";
+            row.forEach((cell, idx) => {
+                const val = (typeof cell === 'number') ? cell.toLocaleString() : (cell || "");
+                const align = (typeof cell === 'number') ? 'text-right' : 'text-center';
+                bHtml += `<td class="${align}">${val}</td>`;
+            });
+            bHtml += "</tr>";
         });
         body.innerHTML = bHtml;
-        document.getElementById('sales-summary').innerHTML = `<span>【確度A】合計見込金額: ${totalA.toLocaleString()}円</span>`;
     }
     function formatVal(v, k, t) { if (v === null || (v === 0 && k !== '待機率' && t !== '達成率')) return '-'; if (k === '待機率' || t === '達成率') return v.toFixed(1) + '%'; return Math.round(v).toLocaleString(); }
     function updateCharts(region) {
@@ -218,6 +221,7 @@
 </script>
 </body>
 </html>
+
 
 
 
