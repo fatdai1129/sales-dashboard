@@ -210,7 +210,7 @@
         updateCharts(region);
     }
 
-    /* --- 営業推進管理表：総合計行の算出と表示 --- */
+    /* --- 営業推進管理表：上期計、下期計、年間計の追加 --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
@@ -221,71 +221,90 @@
         hHtml += `<th rowspan="2">${headers[1] || ""}</th>`;
         hHtml += `<th rowspan="2">${headers[4] || ""}<br>${headers[3] || ""}</th>`;
         hHtml += `<th rowspan="2">給料<br>コスト</th>`;
-        for (let i = 12; i < headers.length; i += 2) {
+        
+        // ヘッダー生成
+        for (let i = 12; i < 36; i += 2) {
             hHtml += `<th>${headers[i] || ""}</th>`;
+            if (i === 22) hHtml += `<th rowspan="2" style="background:#fffaf0;">上期計</th>`;
+            if (i === 34) {
+                hHtml += `<th rowspan="2" style="background:#fffaf0;">下期計</th>`;
+                hHtml += `<th rowspan="2" style="background:#fffaf0;">年間計</th>`;
+            }
         }
         hHtml += "</tr><tr>";
-        for (let i = 12; i < headers.length; i += 2) {
+        for (let i = 12; i < 36; i += 2) {
             hHtml += `<th>売上<br>利益</th>`;
         }
-        hHtml += "</tr>";
-        head.innerHTML = hHtml;
+        hHtml += "</tr>"; head.innerHTML = hHtml;
         
-        // データの集計用
         let filteredRows = rawData.filter(row => {
             if (region !== "全国合計" && row[1] !== region) return false;
-            if (!row[2] || row[2].includes("売上") || row[2].includes("原価")) return false;
-            return true;
+            return row[2] && !row[2].includes("売上") && !row[2].includes("原価");
         });
 
-        // 月次合計の算出
+        // データ計算用関数
+        const calcTotal = (row, start, end) => {
+            let sSum = 0, pSum = 0;
+            for (let i = start; i <= end; i += 2) {
+                const sVal = row[i], cVal = row[i+1];
+                if (typeof sVal === 'number') sSum += sVal;
+                if (typeof sVal === 'number' && typeof cVal === 'number') pSum += Math.floor(sVal - cVal);
+            }
+            return { sales: sSum, profit: pSum };
+        };
+
+        // 総合計行の算出
         let monthlyTotals = [];
         for (let i = 12; i < 36; i += 2) {
             let sSum = 0, pSum = 0;
             filteredRows.forEach(row => {
-                const sVal = row[i];
-                const cVal = row[i+1];
+                const sVal = row[i], cVal = row[i+1];
                 if (typeof sVal === 'number') sSum += sVal;
-                if (typeof sVal === 'number' && typeof cVal === 'number') {
-                    pSum += Math.floor(sVal - cVal);
-                }
+                if (typeof sVal === 'number' && typeof cVal === 'number') pSum += Math.floor(sVal - cVal);
             });
             monthlyTotals.push({ sales: sSum, profit: pSum });
         }
 
-        let bHtml = "";
-
-        // 【修正点】総合計行の作成
-        bHtml += "<tr>";
-        bHtml += "<td colspan='3' class='text-center' style='font-weight:bold;'>総合計</td>"; // 丸の箇所
-        monthlyTotals.forEach(total => {
-            // 各月の合計：上段売上、下段利益
-            bHtml += `<td class="text-right" style="font-weight:bold;">${total.sales.toLocaleString()}<br>${total.profit.toLocaleString()}</td>`;
+        let bHtml = "<tr><td colspan='3' class='text-center' style='font-weight:bold;'>総合計</td>";
+        let gH1S = 0, gH1P = 0, gH2S = 0, gH2P = 0;
+        monthlyTotals.forEach((t, idx) => {
+            bHtml += `<td class="text-right" style="font-weight:bold;">${t.sales.toLocaleString()}<br>${t.profit.toLocaleString()}</td>`;
+            if (idx < 6) { gH1S += t.sales; gH1P += t.profit; }
+            else { gH2S += t.sales; gH2P += t.profit; }
+            if (idx === 5) bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0;">${gH1S.toLocaleString()}<br>${gH1P.toLocaleString()}</td>`;
+            if (idx === 11) {
+                bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0;">${gH2S.toLocaleString()}<br>${gH2P.toLocaleString()}</td>`;
+                bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0;">${(gH1S+gH2S).toLocaleString()}<br>${(gH1P+gH2P).toLocaleString()}</td>`;
+            }
         });
         bHtml += "</tr>";
 
-        // 各個人のデータ行
+        // 個人データ行
         filteredRows.forEach(row => {
             bHtml += "<tr>";
             bHtml += `<td class="text-center">${row[1] || ""}</td>`;
             bHtml += `<td class="text-center">${row[4] || ""}<br>${row[3] || ""}</td>`;
-            const salary = (typeof row[10] === 'number') ? row[10].toLocaleString() : (row[10] || "-");
-            const cost = (typeof row[11] === 'number') ? Math.floor(row[11]).toLocaleString() : (row[11] || "-");
-            bHtml += `<td class="text-right">${salary}<br>${cost}</td>`;
-            for (let i = 12; i < row.length; i += 2) {
-                const sVal = row[i];
-                const cVal = row[i+1];
-                const sales = (typeof sVal === 'number') ? sVal.toLocaleString() : (sVal || "-");
-                let profit = "-";
-                if (typeof sVal === 'number' && typeof cVal === 'number') {
-                    profit = Math.floor(sVal - cVal).toLocaleString();
+            const sal = (typeof row[10] === 'number') ? row[10].toLocaleString() : (row[10] || "-");
+            const cos = (typeof row[11] === 'number') ? Math.floor(row[11]).toLocaleString() : (row[11] || "-");
+            bHtml += `<td class="text-right">${sal}<br>${cos}</td>`;
+            
+            const h1 = calcTotal(row, 12, 22), h2 = calcTotal(row, 24, 34);
+            for (let i = 12; i < 36; i += 2) {
+                const s = (typeof row[i] === 'number') ? row[i].toLocaleString() : "-";
+                let p = "-";
+                if (typeof row[i] === 'number' && typeof row[i+1] === 'number') p = Math.floor(row[i] - row[i+1]).toLocaleString();
+                bHtml += `<td class="text-right">${s}<br>${p}</td>`;
+                if (i === 22) bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0;">${h1.sales.toLocaleString()}<br>${h1.profit.toLocaleString()}</td>`;
+                if (i === 34) {
+                    bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0;">${h2.sales.toLocaleString()}<br>${h2.profit.toLocaleString()}</td>`;
+                    bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0;">${(h1.sales+h2.sales).toLocaleString()}<br>${(h1.profit+h2.profit).toLocaleString()}</td>`;
                 }
-                bHtml += `<td class="text-right">${sales}<br>${profit}</td>`;
             }
             bHtml += "</tr>";
         });
         body.innerHTML = bHtml;
     }
+
     function formatVal(v, k, t) { if (v === null || (v === 0 && k !== '待機率' && t !== '達成率')) return '-'; if (k === '待機率' || t === '達成率') return v.toFixed(1) + '%'; return Math.round(v).toLocaleString(); }
     function updateCharts(region) {
         const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
