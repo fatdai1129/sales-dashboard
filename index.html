@@ -16,7 +16,7 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 実績管理セクション：フリーズ（変更禁止） --- */
+        /* --- 実績管理セクション：フリーズ（一切変更なし） --- */
         table.perf-table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; min-width: 2000px; table-layout: fixed; }
         table.perf-table th, table.perf-table td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 12px 6px; overflow: hidden; }
         table.perf-table th { background: #edf2f7; border-bottom: 4px solid black !important; }
@@ -28,10 +28,10 @@
         tr.bb-4px td { border-bottom: 4px solid black !important; }
         tr.bb-3px td { border-bottom: 3px solid black !important; }
 
-        /* --- 営業推進管理表：生データ表示用（4px縦線・1px横線） --- */
-        table.sales-raw-table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 0.95rem; width: auto; min-width: 100%; }
-        table.sales-raw-table th, table.sales-raw-table td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 10px 8px; white-space: nowrap; }
-        table.sales-raw-table th { background: #f7fafc; border-bottom: 4px solid black !important; font-weight: bold; }
+        /* --- 営業推進管理表：デザイン統一（縦4px、横1px） --- */
+        table.sales-raw-table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: auto; min-width: 100%; }
+        table.sales-raw-table th, table.sales-raw-table td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 12px 10px; white-space: nowrap; }
+        table.sales-raw-table th { background: #edf2f7; border-bottom: 4px solid black !important; font-weight: bold; }
 
         .text-right { text-align: right !important; padding-right: 12px !important; }
         .text-center { text-align: center !important; }
@@ -88,7 +88,16 @@
         </div>
         <div id="section-sales" style="display:none;">
             <div class="card">
-                <h2 style="margin:0 0 20px 0; border-left:5px solid #48bb78; padding-left:15px;">営業推進管理表 (10行目以降 全データ表示)</h2>
+                <div style="display:flex; align-items:center; margin-bottom:20px;">
+                    <h2 style="margin:0; border-left:5px solid #48bb78; padding-left:15px; margin-right: 25px;">営業推進管理表</h2>
+                    <select id="sales-region-select" style="padding:10px 20px; border-radius:6px; font-size:1.1rem; cursor:pointer;" onchange="renderSales()">
+                        <option value="全国合計">全国合計</option>
+                        <option value="東海">東海</option>
+                        <option value="首都圏">首都圏</option>
+                        <option value="東日本">東日本</option>
+                        <option value="西日本">西日本</option>
+                    </select>
+                </div>
                 <div style="overflow-x: auto;">
                     <table class="sales-raw-table">
                         <thead id="sales-head"></thead>
@@ -138,6 +147,7 @@
         if (document.getElementById('section-perf').style.display !== 'none') renderPerf();
         if (document.getElementById('section-sales').style.display !== 'none') renderSales();
     }
+    /* --- 実績管理（フリーズ・一切触れていません） --- */
     function getPerfVal(region, itemK, type) {
         if (type === '達成率') {
             const b = getPerfVal(region, itemK, '予算'), a = getPerfVal(region, itemK, '実績');
@@ -185,25 +195,48 @@
         });
         updateCharts(region);
     }
+
+    /* --- 営業推進管理表：拠点選択・項目削除フィルタ --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
+        const region = document.getElementById('sales-region-select').value;
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
-        const data = salesRows.slice(9);
+        
+        // 10行目がヘッダー（index 9）
+        const allData = salesRows.slice(9);
+        const headers = allData[0];
+        const rawData = allData.slice(1);
+        
+        // 削除する項目：年齢(5), 取引先(6), 現場内容(7), 契約状況(8) ※0開始インデックス
+        const exclude = [5, 6, 7, 8];
+
+        // ヘッダー描画
         let hHtml = "<tr>";
-        data[0].forEach(cell => { hHtml += `<th>${cell || ""}</th>`; });
-        hHtml += "</tr>"; head.innerHTML = hHtml;
+        headers.forEach((cell, idx) => {
+            if (!exclude.includes(idx)) hHtml += `<th>${cell || ""}</th>`;
+        });
+        hHtml += "</tr>";
+        head.innerHTML = hHtml;
+
+        // ボディ描画（拠点フィルタ適用）
         let bHtml = "";
-        data.slice(1).forEach(row => {
+        rawData.forEach(row => {
+            // 所属列（index 1）でフィルタリング
+            if (region !== "全国合計" && row[1] !== region) return;
+
             bHtml += "<tr>";
             row.forEach((cell, idx) => {
-                const val = (typeof cell === 'number') ? cell.toLocaleString() : (cell || "");
-                const align = (typeof cell === 'number') ? 'text-right' : 'text-center';
-                bHtml += `<td class="${align}">${val}</td>`;
+                if (!exclude.includes(idx)) {
+                    const val = (typeof cell === 'number') ? cell.toLocaleString() : (cell || "");
+                    const align = (typeof cell === 'number') ? 'text-right' : 'text-center';
+                    bHtml += `<td class="${align}">${val}</td>`;
+                }
             });
             bHtml += "</tr>";
         });
         body.innerHTML = bHtml;
     }
+
     function formatVal(v, k, t) { if (v === null || (v === 0 && k !== '待機率' && t !== '達成率')) return '-'; if (k === '待機率' || t === '達成率') return v.toFixed(1) + '%'; return Math.round(v).toLocaleString(); }
     function updateCharts(region) {
         const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
@@ -214,6 +247,7 @@
 </script>
 </body>
 </html>
+
 
 
 
