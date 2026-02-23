@@ -210,7 +210,7 @@
         updateCharts(region);
     }
 
-    /* --- 営業推進管理表：赤枠のセル結合対応 --- */
+    /* --- 営業推進管理表：総合計行の算出と表示 --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
@@ -231,18 +231,41 @@
         hHtml += "</tr>";
         head.innerHTML = hHtml;
         
+        // データの集計用
+        let filteredRows = rawData.filter(row => {
+            if (region !== "全国合計" && row[1] !== region) return false;
+            if (!row[2] || row[2].includes("売上") || row[2].includes("原価")) return false;
+            return true;
+        });
+
+        // 月次合計の算出
+        let monthlyTotals = [];
+        for (let i = 12; i < 36; i += 2) {
+            let sSum = 0, pSum = 0;
+            filteredRows.forEach(row => {
+                const sVal = row[i];
+                const cVal = row[i+1];
+                if (typeof sVal === 'number') sSum += sVal;
+                if (typeof sVal === 'number' && typeof cVal === 'number') {
+                    pSum += Math.floor(sVal - cVal);
+                }
+            });
+            monthlyTotals.push({ sales: sSum, profit: pSum });
+        }
+
         let bHtml = "";
 
-        // 【修正点】赤枠の箇所のセル（所属、技術者名/№、給料/コストの下に相当する列）を結合
+        // 【修正点】総合計行の作成
         bHtml += "<tr>";
-        bHtml += "<td colspan='3'><br></td>"; // 所属、技術者名/№、給料/コストの3列を結合
-        for (let k = 3; k < 15; k++) { bHtml += "<td><br></td>"; } // 残り月次12列
+        bHtml += "<td colspan='3' class='text-center' style='font-weight:bold;'>総合計</td>"; // 丸の箇所
+        monthlyTotals.forEach(total => {
+            // 各月の合計：上段売上、下段利益
+            bHtml += `<td class="text-right" style="font-weight:bold;">${total.sales.toLocaleString()}<br>${total.profit.toLocaleString()}</td>`;
+        });
         bHtml += "</tr>";
 
-        rawData.forEach(row => {
-            if (region !== "全国合計" && row[1] !== region) return;
-            if (!row[2] || row[2].includes("売上") || row[2].includes("原価")) return;
-            
+        // 各個人のデータ行
+        filteredRows.forEach(row => {
             bHtml += "<tr>";
             bHtml += `<td class="text-center">${row[1] || ""}</td>`;
             bHtml += `<td class="text-center">${row[4] || ""}<br>${row[3] || ""}</td>`;
@@ -273,6 +296,7 @@
 </script>
 </body>
 </html>
+
 
 
 
