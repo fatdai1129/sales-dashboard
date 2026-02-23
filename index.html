@@ -9,75 +9,49 @@
         #pw_screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a202c; display: flex; justify-content: center; align-items: center; z-index: 10000; }
         #pw_box { background: white; padding: 40px; border-radius: 12px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         #main_content { display: none; }
-        
-        /* ナビゲーション */
-        .nav-bar { background: #2d3748; padding: 0 20px; display: flex; align-items: center; position: sticky; top: 0; z-index: 1000; height: 60px; }
-        .nav-item { padding: 0 25px; height: 60px; line-height: 60px; color: #a0aec0; cursor: pointer; font-weight: bold; border-bottom: 3px solid transparent; transition: 0.3s; }
-        .nav-item:hover { color: white; background: rgba(255,255,255,0.1); }
+        .nav-bar { background: #2d3748; display: flex; align-items: center; position: sticky; top: 0; z-index: 1000; height: 60px; }
+        .nav-item { padding: 0 25px; height: 60px; line-height: 60px; color: #a0aec0; cursor: pointer; font-weight: bold; border-bottom: 3px solid transparent; }
         .nav-item.active { color: white; border-bottom: 3px solid #3182ce; background: rgba(255,255,255,0.05); }
-        #sync_status { font-size: 12px; color: #cbd5e0; margin-left: auto; }
-        
+        #sync_status { font-size: 12px; color: #cbd5e0; margin-left: auto; padding-right: 20px; }
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
-        
-        /* 共通枠線デザイン */
         table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 0.85rem; width: 100%; }
         th, td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 8px 4px; }
-        th { background: #edf2f7; text-align: center; border-bottom: 4px solid black !important; }
-        
-        /* 固定列用 */
-        .sticky-left { position: sticky; left: 0; background: white !important; z-index: 30; border-right: 4px solid black !important; }
-        .sticky-left-2 { position: sticky; left: 60px; background: white !important; z-index: 30; border-right: 4px solid black !important; }
-
+        th { background: #edf2f7; border-bottom: 4px solid black !important; }
+        .total-col { background: #fffaf0 !important; font-weight: bold; }
         tr.bb-4px td { border-bottom: 4px solid black !important; }
         tr.bb-3px td { border-bottom: 3px solid black !important; }
         .text-right { text-align: right !important; }
         .text-center { text-align: center !important; }
-        .total-col { background: #fffaf0; font-weight: bold; }
+        .sticky-left { position: sticky; left: 0; background: white !important; z-index: 30; border-right: 4px solid black !important; }
+        .sticky-left-2 { position: sticky; left: 60px; background: white !important; z-index: 30; border-right: 4px solid black !important; }
         .profit-low { color: red; font-weight: bold; }
-        .search-box { padding: 10px; border: 2px solid #cbd5e0; border-radius: 8px; width: 300px; font-size: 1rem; }
-        
+        .search-box { padding: 10px; border: 2px solid #cbd5e0; border-radius: 8px; width: 300px; }
         .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
         .chart-box { background: white; padding: 20px; border-radius: 12px; height: 350px; }
     </style>
 </head>
 <body>
-
-<div id="pw_screen">
-    <div id="pw_box">
-        <h2 style="margin:0 0 20px 0;">Freeeks 営業実績管理システム</h2>
-        <input type="password" id="pass_val" style="padding:12px; font-size:18px; width:220px;" onkeydown="if(event.keyCode==13)checkPW()">
-        <br><br>
-        <button onclick="checkPW()" style="padding:12px 35px; background:#3182ce; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">ログイン</button>
-        <p id="err_msg" style="color:red; display:none; margin-top:10px;">パスワードが違います</p>
-    </div>
-</div>
-
+<div id="pw_screen"><div id="pw_box"><h2>Freeeks 営業実績管理システム</h2><input type="password" id="pass_val" style="padding:12px; width:220px;" onkeydown="if(event.keyCode==13)checkPW()"><br><br><button onclick="checkPW()" style="padding:12px 35px; background:#3182ce; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">ログイン</button><p id="err_msg" style="color:red; display:none;">パスワードが違います</p></div></div>
 <div id="main_content">
     <div class="nav-bar">
         <div class="nav-item active" id="tab-perf" onclick="switchTab('perf')">実績管理</div>
         <div class="nav-item" id="tab-sales" onclick="switchTab('sales')">営業推進</div>
         <div id="sync_status">データ同期中...</div>
     </div>
-
     <div class="container">
         <div id="section-perf">
             <div class="card">
                 <div style="display:flex; align-items:center; margin-bottom:20px;">
                     <h2 style="margin:0; border-left:5px solid #3182ce; padding-left:15px; margin-right: 25px;">拠点別実績・予算</h2>
-                    <select id="region-select" style="padding:8px 15px; border-radius:6px; font-size:1rem;" onchange="renderPerf()">
-                        <option value="全体合計">全体合計</option>
-                        <option value="東海">東海</option>
-                        <option value="首都圏">首都圏</option>
-                        <option value="東日本">東日本</option>
-                        <option value="西日本">西日本</option>
+                    <select id="region-select" style="padding:8px 15px; border-radius:6px;" onchange="renderPerf()">
+                        <option value="全体合計">全体合計</option><option value="東海">東海</option><option value="首都圏">首都圏</option><option value="東日本">東日本</option><option value="西日本">西日本</option>
                     </select>
                 </div>
-                <table id="perf-table">
+                <table>
                     <thead>
                         <tr>
-                            <th rowspan="2" style="width:130px; background:#ebf8ff;">項目</th>
-                            <th rowspan="2" style="width:70px;">区分</th>
+                            <th rowspan="2" style="width:130px; background:#ebf8ff;">項目</th><th rowspan="2" style="width:70px;">区分</th>
                             <th colspan="6">上期実績</th><th class="total-col">上期計</th>
                             <th colspan="6" style="border-left:4px solid black !important;">下期実績</th><th class="total-col">下期計</th>
                             <th class="total-col">年間計</th>
@@ -97,36 +71,27 @@
                 <div class="chart-box"><canvas id="waitCostChart"></canvas></div>
             </div>
         </div>
-
         <div id="section-sales" style="display:none;">
             <div class="card">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
                     <h2 style="margin:0; border-left:5px solid #48bb78; padding-left:15px;">営業推進管理表 (粗利自動計算)</h2>
-                    <input type="text" id="sales-search" class="search-box" placeholder="技術者名・企業名で検索..." oninput="renderSales()">
+                    <input type="text" id="sales-search" class="search-box" placeholder="検索..." oninput="renderSales()">
                 </div>
                 <div style="overflow-x: auto; max-height: 700px;">
-                    <table id="sales-table" style="width: auto; min-width: 100%;">
-                        <thead id="sales-head"></thead>
-                        <tbody id="sales-body"></tbody>
-                    </table>
+                    <table style="width: auto; min-width: 100%;"><thead id="sales-head"></thead><tbody id="sales-body"></tbody></table>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
 <script>
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbzLPhdnyAo1D7SH-T3uv0EOb5aWekcfnFRtReGhsnkQ5_sLbi36fTc6o5eVYukeliVJIA/exec';
-    let perfMap = {};
-    let salesRows = [];
-    let charts = {};
-
+    let perfMap = {}, salesRows = [], charts = {};
     window.onload = () => {
         const cP = localStorage.getItem('f_perf'), cS = localStorage.getItem('f_sales');
         if(cP) perfMap = JSON.parse(cP); if(cS) salesRows = JSON.parse(cS);
         fetchAll();
     };
-
     function checkPW() {
         if (document.getElementById('pass_val').value === "freeeks2022") {
             document.getElementById('pw_screen').style.display = 'none';
@@ -134,7 +99,6 @@
             renderAll();
         } else { document.getElementById('err_msg').style.display = 'block'; }
     }
-
     function switchTab(tab) {
         document.getElementById('section-perf').style.display = tab === 'perf' ? 'block' : 'none';
         document.getElementById('section-sales').style.display = tab === 'sales' ? 'block' : 'none';
@@ -142,32 +106,20 @@
         document.getElementById('tab-sales').className = 'nav-item' + (tab === 'sales' ? ' active' : '');
         renderAll();
     }
-
     async function fetchAll() {
         try {
-            const [rP, rS] = await Promise.all([
-                fetch(`${GAS_URL}?p=freeeks2022&s=実績データ`),
-                fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表`)
-            ]);
-            const rowsP = await rP.json();
-            perfMap = {};
-            rowsP.slice(1).forEach(r => {
-                perfMap[`${r[0]}-${r[1]}-${r[2]}`] = r.slice(3, 15).map(v => (v===""||v==null)?null:parseFloat(String(v).replace(/,/g,''))||0);
-            });
+            const [rP, rS] = await Promise.all([fetch(`${GAS_URL}?p=freeeks2022&s=実績データ`), fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表`)]);
+            const rowsP = await rP.json(); perfMap = {};
+            rowsP.slice(1).forEach(r => { perfMap[`${r[0]}-${r[1]}-${r[2]}`] = r.slice(3, 15).map(v => (v===""||v==null)?null:parseFloat(String(v).replace(/,/g,''))||0); });
             salesRows = await rS.json();
-            localStorage.setItem('f_perf', JSON.stringify(perfMap));
-            localStorage.setItem('f_sales', JSON.stringify(salesRows));
-            document.getElementById('sync_status').innerText = '最新データ同期完了';
-            renderAll();
+            localStorage.setItem('f_perf', JSON.stringify(perfMap)); localStorage.setItem('f_sales', JSON.stringify(salesRows));
+            document.getElementById('sync_status').innerText = '最新データ同期完了'; renderAll();
         } catch (e) { document.getElementById('sync_status').innerText = '同期失敗'; }
     }
-
     function renderAll() {
         if (document.getElementById('section-perf').style.display !== 'none') renderPerf();
         if (document.getElementById('section-sales').style.display !== 'none') renderSales();
     }
-
-    /* --- 実績管理（完全復旧ロジック） --- */
     function getPerfVal(region, itemK, type) {
         if (type === '達成率') {
             const b = getPerfVal(region, itemK, '予算'), a = getPerfVal(region, itemK, '実績');
@@ -179,9 +131,7 @@
         }
         if (region === '全体合計') {
             let sum = new Array(12).fill(null);
-            ['東海','首都圏','西日本'].forEach(reg => {
-                getPerfVal(reg, itemK, type).forEach((v,i) => { if(v!==null) sum[i]=(sum[i]||0)+v; });
-            });
+            ['東海','首都圏','西日本'].forEach(reg => { getPerfVal(reg, itemK, type).forEach((v,i) => { if(v!==null) sum[i]=(sum[i]||0)+v; }); });
             return sum;
         }
         if (itemK === '稼働エンジニア数') {
@@ -194,64 +144,40 @@
         }
         return perfMap[`${region}-${itemK}-${type}`] || new Array(12).fill(null);
     }
-
     function renderPerf() {
-        const region = document.getElementById('region-select').value;
-        const tbody = document.getElementById('perf-body');
-        tbody.innerHTML = '';
+        const region = document.getElementById('region-select').value, tbody = document.getElementById('perf-body'); tbody.innerHTML = '';
         const items = [
-            {n:'売上',k:'売上',t:['予算','実績','達成率']},
-            {n:'稼働原価',k:'稼働原価',t:['予算','実績','達成率']},
-            {n:'A利益',k:'A利益',t:['予算','実績','達成率']},
-            {n:'待機原価',k:'待機原価',t:['実績']},
-            {n:'プロパー(稼働)',k:'プロパー(稼働)',t:['予算','実績','達成率']},
-            {n:'BP',k:'BP',t:['実績']},
-            {n:'稼働エンジニア数',k:'稼働エンジニア数',t:['予算','実績']},
-            {n:'プロパー(待機)',k:'プロパー(待機)',t:['予算','実績']},
-            {n:'待機率',k:'待機率',t:['実績']},
-            {n:'エンジニア総数',k:'エンジニア総数',t:['予算','実績','達成率']}
+            {n:'売上',k:'売上',t:['予算','実績','達成率']},{n:'稼働原価',k:'稼働原価',t:['予算','実績','達成率']},{n:'A利益',k:'A利益',t:['予算','実績','達成率']},{n:'待機原価',k:'待機原価',t:['実績']},{n:'プロパー(稼働)',k:'プロパー(稼働)',t:['予算','実績','達成率']},{n:'BP',k:'BP',t:['実績']},{n:'稼働エンジニア数',k:'稼働エンジニア数',t:['予算','実績']},{n:'プロパー(待機)',k:'プロパー(待機)',t:['予算','実績']},{n:'待機率',k:'待機率',t:['実績']},{n:'エンジニア総数',k:'エンジニア総数',t:['予算','実績','達成率']}
         ];
         items.forEach(item => {
             item.t.forEach((type, idx) => {
-                const tr = document.createElement('tr');
-                if(idx===item.t.length-1) tr.className='bb-4px';
-                else if(['売上','稼働原価','A利益','プロパー(稼働)','エンジニア総数'].includes(item.n)&&type==='実績') tr.className='bb-3px';
+                const tr = document.createElement('tr'); if(idx===item.t.length-1) tr.className='bb-4px'; else if(['売上','稼働原価','A利益','プロパー(稼働)','エンジニア総数'].includes(item.n)&&type==='実績') tr.className='bb-3px';
                 let html = idx===0?`<td rowspan="${item.t.length}" class="text-center" style="background:#ebf8ff; font-weight:bold;">${item.n}</td>` : '';
                 html += `<td class="text-center">${type}</td>`;
-                const data = getPerfVal(region, item.k, type);
-                data.forEach((v, i) => html += `<td class="text-right" ${(i===5||i===11)?'style="border-right:4px solid black !important;"':''}>${formatVal(v,item.k,type)}</td>`);
-                // 合計計算
-                const sum=(arr)=>arr.reduce((a,b)=>a+(b||0),0);
-                let h1, h2, tot;
-                if(type==='達成率'||item.k==='待機率'){
-                    const bK=type==='達成率'?item.k:'エンジニア総数', aK=type==='達成率'?item.k:'プロパー(待機)';
-                    const bd=getPerfVal(region,bK,(type==='達成率'?'予算':'実績')), ad=getPerfVal(region,aK,'実績');
-                    const b1=sum(bd.slice(0,6)), a1=sum(ad.slice(0,6)), b2=sum(bd.slice(6,12)), a2=sum(ad.slice(6,12));
-                    h1=b1===0?0:(a1/b1)*100; h2=b2===0?0:(a2/b2)*100; tot=(b1+b2)===0?0:((a1+a2)/(b1+b2))*100;
-                } else { h1=sum(data.slice(0,6)); h2=sum(data.slice(6,12)); tot=h1+h2; }
-                [h1,h2,tot].forEach(v => html+=`<td class="total-col text-right">${formatVal(v,item.k,type)}</td>`);
+                const data = getPerfVal(region, item.k, type), sum = (arr)=>arr.reduce((a,b)=>a+(b||0),0);
+                const h1 = (type==='達成率'||item.k==='待機率') ? (sum(getPerfVal(region,(type==='達成率'?item.k:'エンジニア総数'),(type==='達成率'?'予算':'実績')).slice(0,6))===0?0:(sum(getPerfVal(region,(type==='達成率'?item.k:'プロパー(待機)'),'実績').slice(0,6))/sum(getPerfVal(region,(type==='達成率'?item.k:'エンジニア総数'),(type==='達成率'?'予算':'実績')).slice(0,6)))*100) : sum(data.slice(0,6));
+                const h2 = (type==='達成率'||item.k==='待機率') ? (sum(getPerfVal(region,(type==='達成率'?item.k:'エンジニア総数'),(type==='達成率'?'予算':'実績')).slice(6,12))===0?0:(sum(getPerfVal(region,(type==='達成率'?item.k:'プロパー(待機)'),'実績').slice(6,12))/sum(getPerfVal(region,(type==='達成率'?item.k:'エンジニア総数'),(type==='達成率'?'予算':'実績')).slice(6,12)))*100) : sum(data.slice(6,12));
+                const tot = (type==='達成率'||item.k==='待機率') ? (sum(getPerfVal(region,(type==='達成率'?item.k:'エンジニア総数'),(type==='達成率'?'予算':'実績')))===0?0:(sum(getPerfVal(region,(type==='達成率'?item.k:'プロパー(待機)'),'実績'))/sum(getPerfVal(region,(type==='達成率'?item.k:'エンジニア総数'),(type==='達成率'?'予算':'実績'))))*100) : h1+h2;
+                for(let i=0;i<6;i++) html += `<td class="text-right" ${i===5?'style="border-right:4px solid black !important;"':''}>${formatVal(data[i],item.k,type)}</td>`;
+                html += `<td class="total-col text-right">${formatVal(h1,item.k,type)}</td>`;
+                for(let i=6;i<12;i++) html += `<td class="text-right" style="${i===6?'border-left:4px solid black !important;':''}${i===11?'border-right:4px solid black !important;':''}">${formatVal(data[i],item.k,type)}</td>`;
+                html += `<td class="total-col text-right">${formatVal(h2,item.k,type)}</td>`;
+                html += `<td class="total-col text-right">${formatVal(tot,item.k,type)}</td>`;
                 tr.innerHTML = html; tbody.appendChild(tr);
             });
         });
         updateCharts(region);
     }
-
-    /* --- 営業推進（フル加工ロジック） --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 2) return;
-        const head = document.getElementById('sales-head');
-        const body = document.getElementById('sales-body');
-        const query = document.getElementById('sales-search').value.toLowerCase();
-        
+        const head = document.getElementById('sales-head'), body = document.getElementById('sales-body'), query = document.getElementById('sales-search').value.toLowerCase();
         let hHtml = `<tr><th rowspan="2" class="sticky-left" style="width:40px;">NO</th><th rowspan="2" class="sticky-left-2" style="width:120px;">所属 / 技術者</th><th rowspan="2">取引先</th><th rowspan="2">更新状況</th>`;
         for (let i=5; i<salesRows[0].length; i+=2) hHtml += `<th colspan="4">${salesRows[0][i]}</th>`;
         hHtml += `</tr><tr>`;
         for (let i=5; i<salesRows[0].length; i+=2) hHtml += `<th>売上</th><th>原価</th><th style="background:#fefcbf;">粗利</th><th style="background:#fefcbf;">%</th>`;
-        hHtml += `</tr>`;
-        head.innerHTML = hHtml;
-
+        hHtml += `</tr>`; head.innerHTML = hHtml;
         let bHtml = "";
-        salesRows.slice(2).forEach((row, rIdx) => {
+        salesRows.slice(2).forEach(row => {
             if (query && !(row[1]+row[2]+row[3]).toLowerCase().includes(query)) return;
             bHtml += `<tr><td class="text-center sticky-left">${row[0]||""}</td><td class="sticky-left-2"><b>${row[1]||""}</b><br>${row[2]||""}</td><td>${row[3]||"-"}</td><td class="text-center">${row[4]||"-"}</td>`;
             for (let i=5; i<row.length; i+=2) {
@@ -262,35 +188,12 @@
         });
         body.innerHTML = bHtml;
     }
-
-    function formatVal(v, k, t) {
-        if (v === null || (v === 0 && k !== '待機率' && t !== '達成率')) return '-';
-        if (k === '待機率' || t === '達成率') return v.toFixed(1) + '%';
-        return Math.round(v).toLocaleString();
-    }
-
+    function formatVal(v, k, t) { if (v === null || (v === 0 && k !== '待機率' && t !== '達成率')) return '-'; if (k === '待機率' || t === '達成率') return v.toFixed(1) + '%'; return Math.round(v).toLocaleString(); }
     function updateCharts(region) {
         const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
-        if (charts.s) charts.s.destroy();
-        charts.s = new Chart(document.getElementById('salesChart').getContext('2d'), {
-            type: 'bar', data: { labels, datasets: [
-                { label: '実績', data: getPerfVal(region, '売上', '実績'), backgroundColor: '#3182ce' },
-                { label: '予算', data: getPerfVal(region, '売上', '予算'), type: 'line', borderColor: '#e53e3e' }
-            ]}, options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: '売上推移' } } }
-        });
-        if (charts.e) charts.e.destroy();
-        charts.e = new Chart(document.getElementById('engChart').getContext('2d'), {
-            type: 'bar', data: { labels, datasets: [
-                { label: 'プロパー(稼働)', data: getPerfVal(region, 'プロパー(稼働)', '実績'), backgroundColor: '#4299e1' },
-                { label: 'BP', data: getPerfVal(region, 'BP', '実績'), backgroundColor: '#ed64a6' },
-                { label: 'プロパー(待機)', data: getPerfVal(region, 'プロパー(待機)', '実績'), backgroundColor: '#a0aec0' }
-            ]}, options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } }, plugins: { title: { display: true, text: 'エンジニア内訳' } } }
-        });
-        if (charts.w) charts.w.destroy();
-        charts.w = new Chart(document.getElementById('waitCostChart').getContext('2d'), {
-            type: 'line', data: { labels, datasets: [{ label: '実績', data: getPerfVal(region, '待機原価', '実績'), borderColor: '#ed8936', fill: true, backgroundColor: 'rgba(237,137,54,0.1)' }]},
-            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: '待機原価推移' } } }
-        });
+        if (charts.s) charts.s.destroy(); charts.s = new Chart(document.getElementById('salesChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ label: '実績', data: getPerfVal(region, '売上', '実績'), backgroundColor: '#3182ce' },{ label: '予算', data: getPerfVal(region, '売上', '予算'), type: 'line', borderColor: '#e53e3e' }]}, options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: '売上推移' } } } });
+        if (charts.e) charts.e.destroy(); charts.e = new Chart(document.getElementById('engChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ label: 'プロパー(稼働)', data: getPerfVal(region, 'プロパー(稼働)', '実績'), backgroundColor: '#4299e1' },{ label: 'BP', data: getPerfVal(region, 'BP', '実績'), backgroundColor: '#ed64a6' },{ label: 'プロパー(待機)', data: getPerfVal(region, 'プロパー(待機)', '実績'), backgroundColor: '#a0aec0' }]}, options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } }, plugins: { title: { display: true, text: 'エンジニア内訳' } } } });
+        if (charts.w) charts.w.destroy(); charts.w = new Chart(document.getElementById('waitCostChart').getContext('2d'), { type: 'line', data: { labels, datasets: [{ label: '実績', data: getPerfVal(region, '待機原価', '実績'), borderColor: '#ed8936', fill: true, backgroundColor: 'rgba(237,137,54,0.1)' }]}, options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: '待機原価推移' } } } });
     }
 </script>
 </body>
