@@ -210,7 +210,7 @@
         updateCharts(region);
     }
 
-    /* --- 営業推進管理表：上期計、下期計、年間計の追加 --- */
+    /* --- 営業推進管理表：空行の削除 --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
@@ -221,8 +221,6 @@
         hHtml += `<th rowspan="2">${headers[1] || ""}</th>`;
         hHtml += `<th rowspan="2">${headers[4] || ""}<br>${headers[3] || ""}</th>`;
         hHtml += `<th rowspan="2">給料<br>コスト</th>`;
-        
-        // ヘッダー生成
         for (let i = 12; i < 36; i += 2) {
             hHtml += `<th>${headers[i] || ""}</th>`;
             if (i === 22) hHtml += `<th rowspan="2" style="background:#fffaf0;">上期計</th>`;
@@ -237,12 +235,12 @@
         }
         hHtml += "</tr>"; head.innerHTML = hHtml;
         
+        // 【修正点】「売上＆原価用」ラベルの除去に加え、技術者名(row[4])が空の行（なにもない行）を削除
         let filteredRows = rawData.filter(row => {
             if (region !== "全国合計" && row[1] !== region) return false;
-            return row[2] && !row[2].includes("売上") && !row[2].includes("原価");
+            return row[2] && !row[2].includes("売上") && !row[2].includes("原価") && row[4];
         });
 
-        // データ計算用関数
         const calcTotal = (row, start, end) => {
             let sSum = 0, pSum = 0;
             for (let i = start; i <= end; i += 2) {
@@ -253,7 +251,6 @@
             return { sales: sSum, profit: pSum };
         };
 
-        // 総合計行の算出
         let monthlyTotals = [];
         for (let i = 12; i < 36; i += 2) {
             let sSum = 0, pSum = 0;
@@ -279,7 +276,6 @@
         });
         bHtml += "</tr>";
 
-        // 個人データ行
         filteredRows.forEach(row => {
             bHtml += "<tr>";
             bHtml += `<td class="text-center">${row[1] || ""}</td>`;
@@ -287,7 +283,6 @@
             const sal = (typeof row[10] === 'number') ? row[10].toLocaleString() : (row[10] || "-");
             const cos = (typeof row[11] === 'number') ? Math.floor(row[11]).toLocaleString() : (row[11] || "-");
             bHtml += `<td class="text-right">${sal}<br>${cos}</td>`;
-            
             const h1 = calcTotal(row, 12, 22), h2 = calcTotal(row, 24, 34);
             for (let i = 12; i < 36; i += 2) {
                 const s = (typeof row[i] === 'number') ? row[i].toLocaleString() : "-";
@@ -315,6 +310,7 @@
 </script>
 </body>
 </html>
+
 
 
 
