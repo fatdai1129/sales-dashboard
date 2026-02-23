@@ -51,19 +51,20 @@
         .col-sales-info { width: 150px !important; }
         .col-sales-total { width: 160px !important; background: #fffaf0 !important; font-weight: bold; }
 
-        /* 売込状況一覧（パーセンテージで均等バランス化） */
+        /* 売込状況一覧 */
         .status-table { width: 100%; min-width: 1400px; table-layout: fixed; font-size: 1.25rem; }
         .status-table th, .status-table td { padding: 18px 12px; }
-        .col-status-aff { width: 13%; }
-        .col-status-name { width: 16%; }
-        .col-status-salary { width: 11%; } 
-        .col-status-cond { width: 12%; }
-        .col-status-reason { width: 22%; }
-        .col-status-date { width: 14%; }
-        .col-status-period { width: 12%; }
+        .col-status-aff { width: 160px; }
+        .col-status-name { width: 220px; }
+        .col-status-salary { width: 140px; } 
+        .col-status-cond { width: 180px; }
+        .col-status-reason { width: auto; }
+        .col-status-date { width: 200px; }
+        .col-status-period { width: 180px; }
         
+        /* 稼働状況に応じた行の塗りつぶし色設定 */
         .status-wait { color: #c53030; font-weight: bold; background-color: #fff5f5 !important; }
-        .status-active { color: #2b6cb0; font-weight: bold; }
+        .status-active { color: #2b6cb0; font-weight: bold; background-color: #ffffe0 !important; } /* 薄い黄色を追加 */
 
         .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
         .chart-box { background: white; padding: 20px; border-radius: 12px; height: 350px; }
@@ -459,6 +460,7 @@
 
         let filteredRows = statusRows.slice(1).filter(row => {
             if (!row || row.length < 2) return false;
+            
             const searchTargetText = String(row[0] || "") + " " + String(row[1] || "");
 
             if (region === "全国合計") {
@@ -489,6 +491,7 @@
                 tr.classList.add('status-wait');
             } else if (st === "稼働中") {
                 statusClass = "status-active";
+                tr.classList.add('status-active'); // 稼働中の行全体を薄い黄色で塗りつぶす
             }
 
             let period = row[5];
@@ -513,8 +516,7 @@
             tr.innerHTML = `
                 <td class="text-center">${aff}</td>
                 <td class="text-center" style="font-weight:bold;">${name}</td>
-                <td class="text-right">${salary}</td>
-                <td class="text-center ${statusClass}">${row[2] || ""}</td>
+                <td class="text-center">${salary}</td> <td class="text-center ${statusClass}">${row[2] || ""}</td>
                 <td>${row[3] || ""}</td>
                 <td class="text-center">${formatStatusDate(row[4])}</td>
                 <td class="text-center">${period}</td>
@@ -525,12 +527,14 @@
 
     function formatStatusDate(val) {
         if (!val || val === "-") return "-";
+        
         let date;
         if (typeof val === 'number') {
             date = new Date((val - 25569) * 86400 * 1000);
         } else {
             date = new Date(val);
         }
+
         if (!isNaN(date.getTime())) {
             const y = date.getFullYear();
             const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -551,6 +555,7 @@
 </script>
 </body>
 </html>
+
 
 
 
