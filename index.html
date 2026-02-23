@@ -116,7 +116,6 @@
     }
 
     function getMonthlyValues(region, itemK, type) {
-        // --- A. 率（%）の計算ロジック（最優先：常に合計の実績/合計の予算で算出） ---
         if (type === '達成率') {
             const bud = getMonthlyValues(region, itemK, '予算');
             const act = getMonthlyValues(region, itemK, '実績');
@@ -127,10 +126,8 @@
             const total = getMonthlyValues(region, 'エンジニア総数', '実績');
             return waiting.map((v, i) => (total[i] == null || v == null) ? null : (total[i] === 0 ? 0 : (v / total[i]) * 100));
         }
-
-        // --- B. 全体合計の合算ロジック（数値のみを足す） ---
         if (region === '全体合計') {
-            const targets = ['東海', '首都圏', '西日本']; // 拠点を合算
+            const targets = ['東海', '首都圏', '西日本'];
             let sum = new Array(12).fill(null);
             targets.forEach(t => {
                 const vals = getMonthlyValues(t, itemK, type);
@@ -138,8 +135,6 @@
             });
             return sum;
         }
-
-        // --- C. 特殊項目の計算（実績・予算のみ） ---
         if (itemK === '稼働エンジニア数') {
             const p = getMonthlyValues(region, 'プロパー(稼働)', type);
             const b = getMonthlyValues(region, 'BP', '実績');
@@ -151,8 +146,6 @@
             const waiting = getMonthlyValues(region, 'プロパー(待機)', type);
             return working.map((v, i) => (v === null && waiting[i] === null) ? null : (v || 0) + (waiting[i] || 0));
         }
-
-        // --- D. 生データの取得 ---
         return dataMap[`${region}-${itemK}-${type}`] || new Array(12).fill(null);
     }
 
@@ -184,25 +177,47 @@
                 html += `<td class="type-col">${type}</td>`;
 
                 const data = getMonthlyValues(region, item.k, type);
-                let h1Sum = null, h2Sum = null;
-
+                
+                // 月次データの表示
                 data.forEach((v, i) => {
                     const disp = formatVal(v, item.k, type);
                     const borderR = (i === 5 || i === 11) ? 'style="border-right:4px solid black !important;"' : '';
                     const borderL = (i === 6) ? 'style="border-left:4px solid black !important;"' : '';
                     html += `<td class="${disp === '-' ? 'text-center' : 'text-right'}" ${borderR} ${borderL}>${disp}</td>`;
-                    if (v !== null) { i < 6 ? h1Sum = (h1Sum || 0) + v : h2Sum = (h2Sum || 0) + v; }
-                    if (i === 5) {
-                        const h1Disp = formatVal(h1Sum, item.k, type);
-                        html += `<td class="total-col ${h1Disp === '-' ? 'text-center' : 'text-right'}">${h1Disp}</td>`;
-                    }
                 });
 
-                const h2Disp = formatVal(h2Sum, item.k, type);
-                const totalVal = (h1Sum || 0) + (h2Sum || 0);
-                const totalDisp = formatVal(totalVal, item.k, type);
-                html += `<td class="total-col ${h2Disp === '-' ? 'text-center' : 'text-right'}">${h2Disp}</td>`;
-                html += `<td class="total-col ${totalDisp === '-' ? 'text-center' : 'text-right'}">${totalDisp}</td>`;
+                // --- 合計列の算出ロジック（修正：率は再計算） ---
+                let h1Val, h2Val, totalVal;
+                
+                if (type === '達成率' || item.k === '待機率') {
+                    // 率の合計は (実績計 / 予算計) で出す
+                    const budK = (type === '達成率') ? item.k : 'エンジニア総数';
+                    const actK = (type === '達成率') ? item.k : 'プロパー(待機)';
+                    const budT = (type === '達成率') ? '予算' : '実績';
+                    const actT = '実績';
+
+                    const budData = getMonthlyValues(region, budK, budT);
+                    const actData = getMonthlyValues(region, actK, actT);
+
+                    const sum = (arr) => arr.reduce((a, b) => a + (b || 0), 0);
+                    const b1 = sum(budData.slice(0, 6)), a1 = sum(actData.slice(0, 6));
+                    const b2 = sum(budData.slice(6, 12)), a2 = sum(actData.slice(6, 12));
+
+                    h1Val = b1 === 0 ? 0 : (a1 / b1) * 100;
+                    h2Val = b2 === 0 ? 0 : (a2 / b2) * 100;
+                    totalVal = (b1 + b2) === 0 ? 0 : ((a1 + a2) / (b1 + b2)) * 100;
+                } else {
+                    // 通常の数値は単純足し算
+                    const sum = (arr) => arr.reduce((a, b) => a + (b || 0), 0);
+                    h1Val = sum(data.slice(0, 6));
+                    h2Val = sum(data.slice(6, 12));
+                    totalVal = h1Val + h2Val;
+                }
+
+                html += `<td class="total-col ${formatVal(h1Val, item.k, type) === '-' ? 'text-center' : 'text-right'}">${formatVal(h1Val, item.k, type)}</td>`;
+                html += `<td class="total-col ${formatVal(h2Val, item.k, type) === '-' ? 'text-center' : 'text-right'}">${formatVal(h2Val, item.k, type)}</td>`;
+                html += `<td class="total-col ${formatVal(totalVal, item.k, type) === '-' ? 'text-center' : 'text-right'}">${formatVal(totalVal, item.k, type)}</td>`;
+                
                 tr.innerHTML = html; tbody.appendChild(tr);
             });
         });
