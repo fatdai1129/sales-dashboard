@@ -467,6 +467,8 @@
                 return true; 
             } else if (region === "東日本") {
                 return searchTargetText.includes('東海') || searchTargetText.includes('首都圏');
+            } else if (region === "西日本") {
+                return searchTargetText.includes('西日本') || searchTargetText.includes('大阪オフィス');
             } else {
                 return searchTargetText.includes(region);
             }
@@ -506,7 +508,7 @@
             const c0 = String(row[0] || "").trim();
             const c1 = String(row[1] || "").trim();
             let aff = c1, name = c0;
-            const knownAffs = ['東海', 'BP東海', '首都圏', 'BP首都圏', '西日本', 'BP西日本'];
+            const knownAffs = ['東海', 'BP東海', '首都圏', 'BP首都圏', '西日本', 'BP西日本', '大阪オフィス', 'BP大阪オフィス'];
             if (knownAffs.includes(c0)) { aff = c0; name = c1; }
             else if (knownAffs.includes(c1)) { aff = c1; name = c0; }
 
