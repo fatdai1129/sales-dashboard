@@ -213,7 +213,7 @@
     }
 
     /* =========================================
-       1. 拠点別実績・予算 ロジック（完全復元）
+       1. 拠点別実績・予算 ロジック
     ========================================= */
     function getPerfVal(region, itemK, type) {
         if (type === '達成率') {
@@ -355,7 +355,7 @@
 
         let bHtml = "";
 
-        // 総合計行の構築（一切省略なし）
+        // 総合計行の構築
         bHtml += "<tr><td colspan='2' rowspan='2' class='text-center col-sales-aff' style='font-weight:bold;'>総合計</td>";
         bHtml += `<td class="text-right col-sales-info" style="font-weight:bold; ${border2pxTop}">${totalSal.toLocaleString()}</td>`;
         let gH1S = 0, gH1P = 0, gH2S = 0, gH2P = 0;
@@ -381,7 +381,7 @@
         });
         bHtml += "</tr>";
 
-        // 個人データ行の構築（一切省略なし）
+        // 個人データ行の構築
         filteredRows.forEach(row => {
             const h1 = calcTotal(row, 12, 22), h2 = calcTotal(row, 24, 34);
             let affDisplay = row[1] || "";
@@ -421,7 +421,7 @@
     }
 
     /* =========================================
-       3. 売込状況一覧 ロジック
+       3. 売込状況一覧 ロジック（修正版）
     ========================================= */
     function renderStatus() {
         const tbody = document.getElementById('status-body');
@@ -432,14 +432,14 @@
         statusRows.slice(1).forEach(row => {
             if (!row[0] && !row[1]) return; 
             
-            // 拠点フィルター
+            // 拠点フィルター（東日本は東海+首都圏。スプレッドシートB列=row[1]が所属列）
             if (region === "東日本") {
-                const isTokai = (row[0] === '東海') || (row[0] === 'BP東海');
-                const isShitoken = (row[0] === '首都圏') || (row[0] === 'BP首都圏');
+                const isTokai = (row[1] === '東海') || (row[1] === 'BP東海');
+                const isShitoken = (row[1] === '首都圏') || (row[1] === 'BP首都圏');
                 if (!isTokai && !isShitoken) return;
             } else if (region !== "全国合計") {
-                const isRegionMatch = (row[0] === region);
-                const isBpMatch = (row[0] === 'BP' + region);
+                const isRegionMatch = (row[1] === region);
+                const isBpMatch = (row[1] === 'BP' + region);
                 if (!isRegionMatch && !isBpMatch) return;
             }
 
@@ -464,9 +464,10 @@
                 period = "-";
             }
 
+            // 所属(row[1])、従業員名(row[0])の順に出力
             tr.innerHTML = `
-                <td class="text-center">${row[0] || ""}</td>
-                <td class="text-center" style="font-weight:bold;">${row[1] || ""}</td>
+                <td class="text-center">${row[1] || ""}</td>
+                <td class="text-center" style="font-weight:bold;">${row[0] || ""}</td>
                 <td class="text-center ${statusClass}">${row[2] || ""}</td>
                 <td>${row[3] || ""}</td>
                 <td class="text-center">${formatStatusDate(row[4])}</td>
@@ -483,7 +484,7 @@
             const y = date.getFullYear();
             const m = String(date.getMonth() + 1).padStart(2, '0');
             const d = String(date.getDate()).padStart(2, '0');
-            return `${y}/${m}/${d}`;
+            return `${y}/${m}/${d}`; 
         }
         return val;
     }
