@@ -210,24 +210,23 @@
         updateCharts(region);
     }
 
-    /* --- 営業推進管理表：二段表示対応 --- */
+    /* --- 営業推進管理表：二段表示（上段：技術者名 / 下段：技術者№） --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
         
-        // ヘッダー作成（技術者名と№を結合）
+        // ヘッダー（上段：技術者名 / 下段：技術者№）
         let hHtml = "<tr>";
         hHtml += `<th>${headers[1] || ""}</th>`; // 所属
-        hHtml += `<th>${headers[3] || ""}<br>${headers[4] || ""}</th>`; // 技術者名・№
-        // 10列目以降を表示
+        hHtml += `<th>${headers[4] || ""}<br>${headers[3] || ""}</th>`; // 上：名 / 下：№
         for (let i = 10; i < headers.length; i++) {
             hHtml += `<th>${headers[i] || ""}</th>`;
         }
         hHtml += "</tr>"; head.innerHTML = hHtml;
         
-        // ボディ作成
+        // ボディ
         let bHtml = "";
         rawData.forEach(row => {
             if (region !== "全国合計" && row[1] !== region) return;
@@ -235,8 +234,7 @@
             
             bHtml += "<tr>";
             bHtml += `<td class="text-center">${row[1] || ""}</td>`; // 所属
-            bHtml += `<td class="text-center">${row[3] || ""}<br>${row[4] || ""}</td>`; // 上段：名 / 下段：№
-            // 10列目以降
+            bHtml += `<td class="text-center">${row[4] || ""}<br>${row[3] || ""}</td>`; // 上段：名 / 下段：№
             for (let i = 10; i < row.length; i++) {
                 const val = (typeof row[i] === 'number') ? row[i].toLocaleString() : (row[i] || "");
                 const align = (typeof row[i] === 'number') ? 'text-right' : 'text-center';
