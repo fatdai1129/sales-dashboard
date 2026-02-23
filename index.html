@@ -16,23 +16,23 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 全ての枠線を4pxに固定 --- */
+        /* --- 枠線：縦は全て4px、横は項目区切りのみ4px --- */
         table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 0.85rem; width: 100%; }
-        th, td { border: 4px solid black !important; padding: 8px 4px; }
-        th { background: #edf2f7; }
+        th, td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 8px 4px; }
+        th { background: #edf2f7; border-bottom: 4px solid black !important; }
         
-        .total-col { background: #fffaf0 !important; font-weight: bold; }
-        .cat-header { background: #ebf8ff !important; font-weight: bold; text-align: center; width: 130px; }
+        .cat-header { background: #ebf8ff !important; font-weight: bold; text-align: center; width: 130px; border-bottom: 4px solid black !important; }
         .type-col { text-align: center; width: 70px; }
+        .total-col { background: #fffaf0 !important; font-weight: bold; }
         
+        /* 項目の最後（区切り）だけ太くする */
         tr.bb-4px td { border-bottom: 4px solid black !important; }
+        tr.bb-3px td { border-bottom: 3px solid black !important; }
+        
         .text-right { text-align: right !important; }
         .text-center { text-align: center !important; }
-        
-        /* 営業推進：固定列用 */
         .sticky-left { position: sticky; left: 0; background: white !important; z-index: 30; }
         .sticky-left-2 { position: sticky; left: 60px; background: white !important; z-index: 30; }
-        
         .profit-low { color: red; font-weight: bold; }
         .search-box { padding: 10px; border: 2px solid #cbd5e0; border-radius: 8px; width: 300px; }
         .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
@@ -61,12 +61,12 @@
                         <tr>
                             <th rowspan="2" class="cat-header">項目</th><th rowspan="2" class="type-col">区分</th>
                             <th colspan="6">上期実績</th><th class="total-col">上期計</th>
-                            <th colspan="6">下期実績</th><th class="total-col">下期計</th>
+                            <th colspan="6" style="border-left:4px solid black !important;">下期実績</th><th class="total-col">下期計</th>
                             <th class="total-col">年間計</th>
                         </tr>
                         <tr>
-                            <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th>11月</th><th class="total-col">計</th>
-                            <th>12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th>5月</th><th class="total-col">計</th>
+                            <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th style="border-right:4px solid black !important;">11月</th><th class="total-col">計</th>
+                            <th style="border-left:4px solid black !important;">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th style="border-right:4px solid black !important;">5月</th><th class="total-col">計</th>
                             <th class="total-col">合計</th>
                         </tr>
                     </thead>
@@ -159,7 +159,7 @@
         ];
         items.forEach(item => {
             item.t.forEach((type, idx) => {
-                const tr = document.createElement('tr'); if(idx===item.t.length-1) tr.className='bb-4px';
+                const tr = document.createElement('tr'); if(idx===item.t.length-1) tr.className='bb-4px'; else if(['売上','稼働原価','A利益','プロパー(稼働)','エンジニア総数'].includes(item.n)&&type==='実績') tr.className='bb-3px';
                 let html = idx===0?`<td rowspan="${item.t.length}" class="cat-header">${item.n}</td>` : '';
                 html += `<td class="type-col">${type}</td>`;
                 const data = getPerfVal(region, item.k, type), sum = (arr)=>arr.reduce((a,b)=>a+(b||0),0);
@@ -170,7 +170,7 @@
                 const tot = (type==='達成率'||item.k==='待機率') ? (sum(bD)===0?0:(sum(aD)/sum(bD))*100) : h1+h2;
                 for(let i=0;i<6;i++) html += `<td class="text-right">${formatVal(data[i],item.k,type)}</td>`;
                 html += `<td class="total-col text-right">${formatVal(h1,item.k,type)}</td>`;
-                for(let i=6;i<12;i++) html += `<td class="text-right">${formatVal(data[i],item.k,type)}</td>`;
+                for(let i=6;i<12;i++) html += `<td class="text-right" style="${i===6?'border-left:4px solid black !important;':''}${i===11?'border-right:4px solid black !important;':''}">${formatVal(data[i],item.k,type)}</td>`;
                 html += `<td class="total-col text-right">${formatVal(h2,item.k,type)}</td>`;
                 html += `<td class="total-col text-right">${formatVal(tot,item.k,type)}</td>`;
                 tr.innerHTML = html; tbody.appendChild(tr);
@@ -182,9 +182,9 @@
         if (!salesRows || salesRows.length < 2) return;
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body'), query = document.getElementById('sales-search').value.toLowerCase();
         let hHtml = `<tr><th rowspan="2" class="sticky-left" style="width:40px;">NO</th><th rowspan="2" class="sticky-left-2" style="width:120px;">所属 / 技術者</th><th rowspan="2">取引先</th><th rowspan="2">更新状況</th>`;
-        for (let i=5; i<salesRows[0].length; i+=2) hHtml += `<th colspan="4">${salesRows[0][i]}</th>`;
+        for (let i=5; i<salesRows[0].length; i+=2) hHtml += `<th colspan="4" style="border-left:4px solid black !important;">${salesRows[0][i]}</th>`;
         hHtml += `</tr><tr>`;
-        for (let i=5; i<salesRows[0].length; i+=2) hHtml += `<th>売上</th><th>原価</th><th style="background:#fefcbf;">粗利</th><th style="background:#fefcbf;">%</th>`;
+        for (let i=5; i<salesRows[0].length; i+=2) hHtml += `<th style="border-left:4px solid black !important;">売上</th><th>原価</th><th style="background:#fefcbf;">粗利</th><th style="background:#fefcbf;">%</th>`;
         hHtml += `</tr>`; head.innerHTML = hHtml;
         let bHtml = "";
         salesRows.slice(2).forEach(row => {
@@ -192,7 +192,7 @@
             bHtml += `<tr><td class="text-center sticky-left">${row[0]||""}</td><td class="sticky-left-2"><b>${row[1]||""}</b><br>${row[2]||""}</td><td>${row[3]||"-"}</td><td class="text-center">${row[4]||"-"}</td>`;
             for (let i=5; i<row.length; i+=2) {
                 const s=parseFloat(row[i])||0, c=parseFloat(row[i+1])||0, p=s-c, m=s>0?(p/s)*100:0;
-                bHtml += `<td class="text-right">${s>0?s.toLocaleString():"-"}</td><td class="text-right">${c>0?c.toLocaleString():"-"}</td><td class="text-right" style="background:#fefcbf; font-weight:bold;">${p!==0?p.toLocaleString():"-"}</td><td class="text-right ${m<20&&s>0?'profit-low':''}" style="background:#fefcbf;">${s>0?m.toFixed(1)+'%':"-"}</td>`;
+                bHtml += `<td class="text-right" style="border-left:4px solid black !important;">${s>0?s.toLocaleString():"-"}</td><td class="text-right">${c>0?c.toLocaleString():"-"}</td><td class="text-right" style="background:#fefcbf; font-weight:bold;">${p!==0?p.toLocaleString():"-"}</td><td class="text-right ${m<20&&s>0?'profit-low':''}" style="background:#fefcbf;">${s>0?m.toFixed(1)+'%':"-"}</td>`;
             }
             bHtml += `</tr>`;
         });
