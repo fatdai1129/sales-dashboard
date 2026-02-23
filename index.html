@@ -20,15 +20,15 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* 太枠デザインの完全復元 */
-        table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; }
+        /* テーブル太枠設定の復元 */
+        table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: 100%; }
         th, td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
         th { background: #edf2f7; font-weight: bold; }
         .text-right { text-align: right !important; padding-right: 12px !important; }
         .text-center { text-align: center !important; }
 
-        /* 実績表の特殊枠線 */
-        .perf-table { width: 100%; min-width: 1800px; table-layout: fixed; }
+        /* 実績表：強弱のある枠線 */
+        .perf-table { min-width: 1800px; table-layout: fixed; }
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
         tr.bb-3px td:not(.cat-header) { border-bottom: 3px solid black !important; }
@@ -43,14 +43,14 @@
         .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; border-right: 4px solid black !important; }
         .sticky-left-2 { position: sticky; left: 220px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
 
-        /* 営業推進管理表 */
-        .sales-raw-table { width: 100%; min-width: 2000px; table-layout: fixed; }
+        /* 推進表 */
+        .sales-raw-table { min-width: 2000px; table-layout: fixed; }
         .col-sales-aff { width: 150px !important; }
         .col-sales-name { width: 220px !important; }
         .col-sales-info { width: 150px !important; }
 
-        /* 売込状況一覧 */
-        .status-table { width: 100%; min-width: 1400px; table-layout: fixed; font-size: 1.25rem; }
+        /* 売込一覧 */
+        .status-table { min-width: 1400px; table-layout: fixed; font-size: 1.25rem; }
         .status-table th, .status-table td { padding: 18px 12px; }
         .col-status-aff { width: 160px; }
         .col-status-name { width: 220px; }
@@ -64,11 +64,12 @@
         .status-active { color: #2b6cb0 !important; font-weight: bold; background-color: #ffffe0 !important; }
 
         .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
-        .chart-box { background: white; padding: 20px; border-radius: 12px; height: 350px; }
+        .chart-box { background: white; padding: 20px; border-radius: 12px; height: 400px; }
 
         @media (max-width: 768px) {
             .nav-bar { flex-wrap: wrap; height: auto; }
             .nav-item { padding: 12px 5px; flex: 1; text-align: center; font-size: 0.85rem; height: auto; line-height: 1.2; }
+            .container { padding: 10px; }
             .card > div:first-child { flex-direction: column; align-items: flex-start !important; }
             select, input[type="text"] { width: 100% !important; margin: 10px 0 !important; }
             .sticky-left, .sticky-left-2 { position: static !important; }
@@ -95,29 +96,31 @@
     <div class="container">
         <div id="section-perf">
             <div class="card">
-                <div style="font-size: 1.4rem; font-weight: bold; color: #2d3748; margin-bottom: 15px;">2025年6月期</div>
+                <div style="font-size: 1.6rem; font-weight: bold; color: #1a202c; margin-bottom: 15px;">2025年6月期</div>
                 <div style="display:flex; align-items:center; margin-bottom:20px;">
                     <h2 style="margin:0; border-left:5px solid #3182ce; padding-left:15px; margin-right: 25px;">拠点別実績・予算</h2>
                     <select id="region-select" style="padding:10px 20px; border-radius:6px; font-size:1.1rem; cursor:pointer;" onchange="renderPerf()">
                         <option value="全国">全国</option><option value="東海">東海</option><option value="首都圏">首都圏</option><option value="東日本">東日本</option><option value="西日本">西日本</option>
                     </select>
                 </div>
-                <table class="perf-table">
-                    <thead>
-                        <tr>
-                            <th rowspan="2" class="col-item sticky-left">項目</th><th rowspan="2" class="col-type sticky-left-2">区分</th>
-                            <th colspan="6">上期実績</th><th class="col-total">上期計</th>
-                            <th colspan="6">下期実績</th><th class="col-total">下期計</th>
-                            <th class="col-total">年間計</th>
-                        </tr>
-                        <tr>
-                            <th class="br-3px text-center">6月</th><th class="bl-3px br-3px text-center">7月</th><th class="bl-3px br-3px text-center">8月</th><th class="bl-3px br-3px text-center">9月</th><th class="bl-3px br-3px text-center">10月</th><th class="bl-3px text-center">11月</th><th class="col-total text-center">計</th>
-                            <th class="br-3px text-center">12月</th><th class="bl-3px br-3px text-center">1月</th><th class="bl-3px br-3px text-center">2月</th><th class="bl-3px br-3px text-center">3月</th><th class="bl-3px br-3px text-center">4月</th><th class="bl-3px text-center">5月</th><th class="col-total text-center">計</th>
-                            <th class="col-total text-center">合計</th>
-                        </tr>
-                    </thead>
-                    <tbody id="perf-body"></tbody>
-                </table>
+                <div style="overflow-x: auto;">
+                    <table class="perf-table">
+                        <thead>
+                            <tr>
+                                <th rowspan="2" class="col-item sticky-left">項目</th><th rowspan="2" class="col-type sticky-left-2">区分</th>
+                                <th colspan="6">上期実績</th><th class="col-total">上期計</th>
+                                <th colspan="6">下期実績</th><th class="col-total">下期計</th>
+                                <th class="col-total">年間計</th>
+                            </tr>
+                            <tr>
+                                <th class="br-3px text-center">6月</th><th class="bl-3px br-3px text-center">7月</th><th class="bl-3px br-3px text-center">8月</th><th class="bl-3px br-3px text-center">9月</th><th class="bl-3px br-3px text-center">10月</th><th class="bl-3px text-center">11月</th><th class="col-total text-center">計</th>
+                                <th class="br-3px text-center">12月</th><th class="bl-3px br-3px text-center">1月</th><th class="bl-3px br-3px text-center">2月</th><th class="bl-3px br-3px text-center">3月</th><th class="bl-3px br-3px text-center">4月</th><th class="bl-3px text-center">5月</th><th class="col-total text-center">計</th>
+                                <th class="col-total text-center">合計</th>
+                            </tr>
+                        </thead>
+                        <tbody id="perf-body"></tbody>
+                    </table>
+                </div>
             </div>
             <div class="charts-container">
                 <div class="chart-box"><canvas id="salesChart"></canvas></div>
@@ -198,7 +201,7 @@
                 fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表`)
             ]);
             
-            // 安全なシート名判別
+            // 安全なシート名判別ロジックの復元
             let rSt = await fetch(`${GAS_URL}?p=freeeks2022&s=売込状況一覧`);
             let stData = await rSt.json();
             if (!stData || stData.length <= 1 || stData.error) {
@@ -227,6 +230,9 @@
         if (document.getElementById('section-status').style.display !== 'none') renderStatus();
     }
 
+    /* =========================================
+       1. 実績管理
+    ========================================= */
     function getPerfVal(region, itemK, type) {
         if (type === '達成率') {
             const b = getPerfVal(region, itemK, '予算'), a = getPerfVal(region, itemK, '実績');
@@ -244,8 +250,7 @@
             const wk = getPerfVal(region, '稼働エンジニア数', type), wt = getPerfVal(region, 'プロパー(待機)', type);
             return wk.map((v,i)=>(v===null&&wt[i]===null)?null:(v||0)+(wt[i]||0));
         }
-        let key = `${region}-${itemK}-${type}`;
-        let val = perfMap[key];
+        let val = perfMap[`${region}-${itemK}-${type}`];
         if (!val && region === '全国') val = perfMap[`全国合計-${itemK}-${type}`];
         return val || new Array(12).fill(null);
     }
@@ -302,6 +307,9 @@
         return Math.round(v).toLocaleString(); 
     }
 
+    /* =========================================
+       2. 営業推進管理表
+    ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value, kw = document.getElementById('sales-search').value.toLowerCase();
@@ -313,7 +321,13 @@
         for (let i=12;i<36;i+=2) head.innerHTML += `<th>売上/利</th>`;
 
         let bHtml = "";
-        raw.filter(r => (region==='全国'||r[1]===region) && r[4] && r.join('').toLowerCase().includes(kw)).forEach(r => {
+        raw.filter(r => {
+            const search = (String(r[0]||"") + String(r[1]||"")).trim();
+            if (region === "全国") return true;
+            const map = { "東海": ["東海", "静岡"], "首都圏": ["首都圏", "東京本社", "本店"], "東日本": ["東海", "静岡", "首都圏", "東京本社", "本店"], "西日本": ["西日本", "大阪"] };
+            const targets = map[region] || [region];
+            return targets.some(t => search.includes(t)) && r[4] && r.join('').toLowerCase().includes(kw);
+        }).forEach(r => {
             bHtml += `<tr><td rowspan="2" class="text-center">${r[1]}</td><td rowspan="2" class="text-center">${r[4]}</td><td class="text-right">${(r[10]||0).toLocaleString()}</td>`;
             let s1=0, p1=0, s2=0, p2=0;
             for(let i=12;i<36;i+=2){
@@ -335,6 +349,9 @@
         body.innerHTML = bHtml;
     }
 
+    /* =========================================
+       3. 売込状況一覧
+    ========================================= */
     function renderStatus() {
         const tbody = document.getElementById('status-body'), reg = document.getElementById('status-region-select').value;
         tbody.innerHTML = '';
@@ -375,6 +392,9 @@
         return val;
     }
 
+    /* =========================================
+       グラフ：タイトル設定
+    ========================================= */
     function updateCharts(region) {
         const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
         const opt = (title) => ({ responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: title, font: { size: 18, weight: 'bold' }, color: '#2d3748', padding: { bottom: 10 } } } });
@@ -386,7 +406,6 @@
 </script>
 </body>
 </html>
-
 
 
 
