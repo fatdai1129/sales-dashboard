@@ -116,16 +116,21 @@
     }
 
     function getMonthlyValues(region, itemK, type) {
-        // --- 1. 達成率の計算（常に 実績 / 予算） ---
+        // --- A. 率（%）の計算ロジック（最優先：常に合計の実績/合計の予算で算出） ---
         if (type === '達成率') {
             const bud = getMonthlyValues(region, itemK, '予算');
             const act = getMonthlyValues(region, itemK, '実績');
             return act.map((v, i) => (bud[i] == null || v == null) ? null : (bud[i] === 0 ? 0 : (v / bud[i]) * 100));
         }
+        if (itemK === '待機率') {
+            const waiting = getMonthlyValues(region, 'プロパー(待機)', '実績');
+            const total = getMonthlyValues(region, 'エンジニア総数', '実績');
+            return waiting.map((v, i) => (total[i] == null || v == null) ? null : (total[i] === 0 ? 0 : (v / total[i]) * 100));
+        }
 
-        // --- 2. 全体合計の計算（東海＋首都圏＋西日本） ---
+        // --- B. 全体合計の合算ロジック（数値のみを足す） ---
         if (region === '全体合計') {
-            const targets = ['東海', '首都圏', '西日本'];
+            const targets = ['東海', '首都圏', '西日本']; // 拠点を合算
             let sum = new Array(12).fill(null);
             targets.forEach(t => {
                 const vals = getMonthlyValues(t, itemK, type);
@@ -134,10 +139,10 @@
             return sum;
         }
 
-        // --- 3. エンジニア数系の特殊計算（実績・予算のみ） ---
+        // --- C. 特殊項目の計算（実績・予算のみ） ---
         if (itemK === '稼働エンジニア数') {
             const p = getMonthlyValues(region, 'プロパー(稼働)', type);
-            const b = getMonthlyValues(region, 'BP', '実績'); // BPは実績のみ
+            const b = getMonthlyValues(region, 'BP', '実績');
             if (type === '予算') return p;
             return p.map((v, i) => (v === null && b[i] === null) ? null : (v || 0) + (b[i] || 0));
         }
@@ -147,7 +152,7 @@
             return working.map((v, i) => (v === null && waiting[i] === null) ? null : (v || 0) + (waiting[i] || 0));
         }
 
-        // --- 4. 通常のデータ取得 ---
+        // --- D. 生データの取得 ---
         return dataMap[`${region}-${itemK}-${type}`] || new Array(12).fill(null);
     }
 
@@ -194,7 +199,8 @@
                 });
 
                 const h2Disp = formatVal(h2Sum, item.k, type);
-                const totalDisp = formatVal((h1Sum || 0) + (h2Sum || 0), item.k, type);
+                const totalVal = (h1Sum || 0) + (h2Sum || 0);
+                const totalDisp = formatVal(totalVal, item.k, type);
                 html += `<td class="total-col ${h2Disp === '-' ? 'text-center' : 'text-right'}">${h2Disp}</td>`;
                 html += `<td class="total-col ${totalDisp === '-' ? 'text-center' : 'text-right'}">${totalDisp}</td>`;
                 tr.innerHTML = html; tbody.appendChild(tr);
@@ -237,6 +243,7 @@
 </script>
 </body>
 </html>
+
 
 
 
