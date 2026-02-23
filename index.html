@@ -210,7 +210,7 @@
         updateCharts(region);
     }
 
-    /* --- 営業推進管理表：挿入行の高さをデータ行と一致させる --- */
+    /* --- 営業推進管理表：赤枠のセル結合対応 --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
@@ -233,9 +233,10 @@
         
         let bHtml = "";
 
-        // 【修正点】挿入した空行に改行コードを入れて、データ行（二段表示）と高さを合わせる
+        // 【修正点】赤枠の箇所のセル（所属、技術者名/№、給料/コストの下に相当する列）を結合
         bHtml += "<tr>";
-        for (let k = 0; k < 15; k++) { bHtml += "<td><br></td>"; }
+        bHtml += "<td colspan='3'><br></td>"; // 所属、技術者名/№、給料/コストの3列を結合
+        for (let k = 3; k < 15; k++) { bHtml += "<td><br></td>"; } // 残り月次12列
         bHtml += "</tr>";
 
         rawData.forEach(row => {
