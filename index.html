@@ -38,14 +38,16 @@
         .text-right { text-align: right !important; padding-right: 12px !important; }
         .text-center { text-align: center !important; }
 
-        /* 固定列：枠線の視認性を確保するための設定 */
+        /* 固定列設定 */
         .sticky-left { 
             position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; 
             box-shadow: inset -4px 0 0 0 black; /* 項目の右側境界 */
         }
         .sticky-left-2 { 
             position: sticky; left: 180px; z-index: 30; background: white !important; 
-            box-shadow: inset 4px 0 0 0 black, inset -4px 0 0 0 black; /* 区分の左右境界 */
+            /* box-shadowを削除し、明示的なボーダー設定に変更 */
+            border-left: 4px solid black !important;
+            border-right: 4px solid black !important;
         }
 
         /* 営業推進管理表用 */
@@ -247,9 +249,6 @@
 </script>
 </body>
 </html>
-
-
-
 
 
 
