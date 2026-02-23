@@ -15,16 +15,24 @@
         #sync_status { font-size: 12px; color: #cbd5e0; margin-left: auto; padding-right: 20px; }
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
+        
+        /* --- 全ての枠線を4pxに固定 --- */
         table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 0.85rem; width: 100%; }
-        th, td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 8px 4px; }
-        th { background: #edf2f7; border-bottom: 4px solid black !important; }
+        th, td { border: 4px solid black !important; padding: 8px 4px; }
+        th { background: #edf2f7; }
+        
         .total-col { background: #fffaf0 !important; font-weight: bold; }
+        .cat-header { background: #ebf8ff !important; font-weight: bold; text-align: center; width: 130px; }
+        .type-col { text-align: center; width: 70px; }
+        
         tr.bb-4px td { border-bottom: 4px solid black !important; }
-        tr.bb-3px td { border-bottom: 3px solid black !important; }
         .text-right { text-align: right !important; }
         .text-center { text-align: center !important; }
-        .sticky-left { position: sticky; left: 0; background: white !important; z-index: 30; border-right: 4px solid black !important; }
-        .sticky-left-2 { position: sticky; left: 60px; background: white !important; z-index: 30; border-right: 4px solid black !important; }
+        
+        /* 営業推進：固定列用 */
+        .sticky-left { position: sticky; left: 0; background: white !important; z-index: 30; }
+        .sticky-left-2 { position: sticky; left: 60px; background: white !important; z-index: 30; }
+        
         .profit-low { color: red; font-weight: bold; }
         .search-box { padding: 10px; border: 2px solid #cbd5e0; border-radius: 8px; width: 300px; }
         .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
@@ -51,14 +59,14 @@
                 <table>
                     <thead>
                         <tr>
-                            <th rowspan="2" style="width:130px; background:#ebf8ff;">項目</th><th rowspan="2" style="width:70px;">区分</th>
+                            <th rowspan="2" class="cat-header">項目</th><th rowspan="2" class="type-col">区分</th>
                             <th colspan="6">上期実績</th><th class="total-col">上期計</th>
-                            <th colspan="6" style="border-left:4px solid black !important;">下期実績</th><th class="total-col">下期計</th>
+                            <th colspan="6">下期実績</th><th class="total-col">下期計</th>
                             <th class="total-col">年間計</th>
                         </tr>
                         <tr>
-                            <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th style="border-right:4px solid black !important;">11月</th><th class="total-col">計</th>
-                            <th style="border-left:4px solid black !important;">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th style="border-right:4px solid black !important;">5月</th><th class="total-col">計</th>
+                            <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th>11月</th><th class="total-col">計</th>
+                            <th>12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th>5月</th><th class="total-col">計</th>
                             <th class="total-col">合計</th>
                         </tr>
                     </thead>
@@ -151,16 +159,18 @@
         ];
         items.forEach(item => {
             item.t.forEach((type, idx) => {
-                const tr = document.createElement('tr'); if(idx===item.t.length-1) tr.className='bb-4px'; else if(['売上','稼働原価','A利益','プロパー(稼働)','エンジニア総数'].includes(item.n)&&type==='実績') tr.className='bb-3px';
-                let html = idx===0?`<td rowspan="${item.t.length}" class="text-center" style="background:#ebf8ff; font-weight:bold;">${item.n}</td>` : '';
-                html += `<td class="text-center">${type}</td>`;
+                const tr = document.createElement('tr'); if(idx===item.t.length-1) tr.className='bb-4px';
+                let html = idx===0?`<td rowspan="${item.t.length}" class="cat-header">${item.n}</td>` : '';
+                html += `<td class="type-col">${type}</td>`;
                 const data = getPerfVal(region, item.k, type), sum = (arr)=>arr.reduce((a,b)=>a+(b||0),0);
-                const h1 = (type==='達成率'||item.k==='待機率') ? (sum(getPerfVal(region,(type==='達成率'?item.k:'エンジニア総数'),(type==='達成率'?'予算':'実績')).slice(0,6))===0?0:(sum(getPerfVal(region,(type==='達成率'?item.k:'プロパー(待機)'),'実績').slice(0,6))/sum(getPerfVal(region,(type==='達成率'?item.k:'エンジニア総数'),(type==='達成率'?'予算':'実績')).slice(0,6)))*100) : sum(data.slice(0,6));
-                const h2 = (type==='達成率'||item.k==='待機率') ? (sum(getPerfVal(region,(type==='達成率'?item.k:'エンジニア総数'),(type==='達成率'?'予算':'実績')).slice(6,12))===0?0:(sum(getPerfVal(region,(type==='達成率'?item.k:'プロパー(待機)'),'実績').slice(6,12))/sum(getPerfVal(region,(type==='達成率'?item.k:'エンジニア総数'),(type==='達成率'?'予算':'実績')).slice(6,12)))*100) : sum(data.slice(6,12));
-                const tot = (type==='達成率'||item.k==='待機率') ? (sum(getPerfVal(region,(type==='達成率'?item.k:'エンジニア総数'),(type==='達成率'?'予算':'実績')))===0?0:(sum(getPerfVal(region,(type==='達成率'?item.k:'プロパー(待機)'),'実績'))/sum(getPerfVal(region,(type==='達成率'?item.k:'エンジニア総数'),(type==='達成率'?'予算':'実績'))))*100) : h1+h2;
-                for(let i=0;i<6;i++) html += `<td class="text-right" ${i===5?'style="border-right:4px solid black !important;"':''}>${formatVal(data[i],item.k,type)}</td>`;
+                const bD = getPerfVal(region, (type==='達成率'?item.k:'エンジニア総数'), (type==='達成率'?'予算':'実績'));
+                const aD = getPerfVal(region, (type==='達成率'?item.k:'プロパー(待機)'), '実績');
+                const h1 = (type==='達成率'||item.k==='待機率') ? (sum(bD.slice(0,6))===0?0:(sum(aD.slice(0,6))/sum(bD.slice(0,6)))*100) : sum(data.slice(0,6));
+                const h2 = (type==='達成率'||item.k==='待機率') ? (sum(bD.slice(6,12))===0?0:(sum(aD.slice(6,12))/sum(bD.slice(6,12)))*100) : sum(data.slice(6,12));
+                const tot = (type==='達成率'||item.k==='待機率') ? (sum(bD)===0?0:(sum(aD)/sum(bD))*100) : h1+h2;
+                for(let i=0;i<6;i++) html += `<td class="text-right">${formatVal(data[i],item.k,type)}</td>`;
                 html += `<td class="total-col text-right">${formatVal(h1,item.k,type)}</td>`;
-                for(let i=6;i<12;i++) html += `<td class="text-right" style="${i===6?'border-left:4px solid black !important;':''}${i===11?'border-right:4px solid black !important;':''}">${formatVal(data[i],item.k,type)}</td>`;
+                for(let i=6;i<12;i++) html += `<td class="text-right">${formatVal(data[i],item.k,type)}</td>`;
                 html += `<td class="total-col text-right">${formatVal(h2,item.k,type)}</td>`;
                 html += `<td class="total-col text-right">${formatVal(tot,item.k,type)}</td>`;
                 tr.innerHTML = html; tbody.appendChild(tr);
@@ -198,6 +208,7 @@
 </script>
 </body>
 </html>
+
 
 
 
