@@ -235,8 +235,13 @@
         }
         hHtml += "</tr>"; head.innerHTML = hHtml;
         
+        // 【修正点】フィルター条件を更新：「BP東海」かつ「BP 要員」の人も表示対象に含める
         let filteredRows = rawData.filter(row => {
-            if (region !== "全国合計" && row[1] !== region) return false;
+            if (region !== "全国合計") {
+                const isRegionMatch = (row[1] === region);
+                const isBpPersonnelMatch = (row[1] === 'BP' + region && row[3] === 'BP 要員');
+                if (!isRegionMatch && !isBpPersonnelMatch) return false;
+            }
             return row[2] && !row[2].includes("売上") && !row[2].includes("原価") && row[4];
         });
 
@@ -297,9 +302,15 @@
         filteredRows.forEach(row => {
             const h1 = calcTotal(row, 12, 22), h2 = calcTotal(row, 24, 34);
             
+            // 所属の表記変更：東海・首都圏のBP対応
+            let affDisplay = row[1] || "";
+            if ((affDisplay === '東海' || affDisplay === '首都圏') && row[2] === 'BP') {
+                affDisplay = 'BP' + affDisplay;
+            }
+
             // 上段行
             bHtml += "<tr>";
-            bHtml += `<td rowspan="2" class="text-center">${row[1] || ""}</td>`;
+            bHtml += `<td rowspan="2" class="text-center">${affDisplay}</td>`;
             bHtml += `<td class="text-center" style="${border2pxTop}">${row[4] || ""}</td>`;
             const sal = (typeof row[10] === 'number') ? row[10].toLocaleString() : (row[10] || "-");
             bHtml += `<td class="text-right" style="${border2pxTop}">${sal}</td>`;
@@ -344,6 +355,7 @@
 </script>
 </body>
 </html>
+
 
 
 
