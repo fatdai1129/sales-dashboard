@@ -16,23 +16,20 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- テーブル基本設定：全枠線4px黒線 --- */
+        /* --- 実績管理セクション：一切の変更を禁止 --- */
         table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: max-content; table-layout: fixed; }
         th, td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
         th { background: #edf2f7; }
         
-        /* 予算/実績間 (2px), 実績/達成率間 (3px), 項目区切り (4px) */
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
         tr.bb-3px td:not(.cat-header) { border-bottom: 3px solid black !important; }
         tr.bt-3px td:not(.cat-header) { border-top: 3px solid black !important; }
         tr.bb-4px td { border-bottom: 4px solid black !important; }
 
-        /* 月次セルの枠線設定：指示に基づき左枠線3pxを適用 */
         .br-3px { border-right: 3px solid black !important; }
         .bl-3px { border-left: 3px solid black !important; }
 
-        /* 列幅設定：全月次120px */
         .col-item { width: 180px; }
         .col-type { width: 100px; }
         .col-month { width: 120px; }
@@ -42,16 +39,8 @@
         .text-right { text-align: right !important; padding-right: 12px !important; }
         .text-center { text-align: center !important; }
 
-        /* 固定列設定：項目右4px、区分左右4px */
-        .sticky-left { 
-            position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; 
-            border-right: 4px solid black !important;
-        }
-        .sticky-left-2 { 
-            position: sticky; left: 180px; z-index: 30; background: white !important; 
-            border-left: 4px solid black !important;
-            border-right: 4px solid black !important;
-        }
+        .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; border-right: 4px solid black !important; }
+        .sticky-left-2 { position: sticky; left: 180px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
 
         /* 営業推進管理表用 */
         .sales-raw-table th { background: #edf2f7; font-weight: bold; }
@@ -185,7 +174,6 @@
         const items = [{n:'売上',k:'売上',t:['予算','実績','達成率']},{n:'稼働原価',k:'稼働原価',t:['予算','実績','達成率']},{n:'A利益',k:'A利益',t:['予算','実績','達成率']},{n:'待機原価',k:'待機原価',t:['実績']},{n:'プロパー(稼働)',k:'プロパー(稼働)',t:['予算','実績','達成率']},{n:'BP',k:'BP',t:['実績']},{n:'稼働エンジニア数',k:'稼働エンジニア数',t:['予算','実績']},{n:'プロパー(待機)',k:'プロパー(待機)',t:['予算','実績']},{n:'待機率',k:'待機率',t:['実績']},{n:'エンジニア総数',k:'エンジニア総数',t:['予算','実績','達成率']}];
         const targets2px = ['売上','稼働原価','A利益','プロパー(稼働)','稼働エンジニア数','プロパー(待機)','エンジニア総数'];
         const targets3px = ['売上','稼働原価','A利益','プロパー(稼働)','エンジニア総数'];
-
         items.forEach(item => {
             item.t.forEach((type, idx) => {
                 const tr = document.createElement('tr');
@@ -205,8 +193,6 @@
                 const h1 = (type==='達成率'||item.k==='待機率') ? (sum(bD.slice(0,6))===0?0:(sum(aD.slice(0,6))/sum(bD.slice(0,6)))*100) : sum(data.slice(0,6));
                 const h2 = (type==='達成率'||item.k==='待機率') ? (sum(bD.slice(6,12))===0?0:(sum(aD.slice(6,12))/sum(bD.slice(6,12)))*100) : sum(data.slice(6,12));
                 const tot = (type==='達成率'||item.k==='待機率') ? (sum(bD)===0?0:(sum(aD)/sum(bD))*100) : h1+h2;
-                
-                // データセルに3pxの枠線を適用する判定
                 for(let i=0;i<6;i++) {
                     const borderClass = (i < 5 ? 'br-3px ' : '') + (i > 0 ? 'bl-3px ' : '');
                     html += `<td class="text-right ${borderClass}">${formatVal(data[i],item.k,type)}</td>`;
@@ -228,16 +214,20 @@
         const region = document.getElementById('sales-region-select').value;
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
-        const exclude = [5, 6, 7, 8];
+        const excludeCols = [0, 5, 6, 7, 8]; // 0番目(NO)および以前削除指示のあった項目
+
         let hHtml = "<tr>";
-        headers.forEach((cell, idx) => { if (!exclude.includes(idx)) hHtml += `<th>${cell || ""}</th>`; });
+        headers.forEach((cell, idx) => { if (!excludeCols.includes(idx)) hHtml += `<th>${cell || ""}</th>`; });
         hHtml += "</tr>"; head.innerHTML = hHtml;
+        
         let bHtml = "";
         rawData.forEach(row => {
             if (region !== "全国合計" && row[1] !== region) return;
+            // 「売上＆原価用」の行（空行や特定ラベル）をスキップ
+            if (!row[2] || row[2].includes("売上") || row[2].includes("原価")) return;
             bHtml += "<tr>";
             row.forEach((cell, idx) => {
-                if (!exclude.includes(idx)) {
+                if (!excludeCols.includes(idx)) {
                     const val = (typeof cell === 'number') ? cell.toLocaleString() : (cell || "");
                     const align = (typeof cell === 'number') ? 'text-right' : 'text-center';
                     bHtml += `<td class="${align}">${val}</td>`;
@@ -257,6 +247,7 @@
 </script>
 </body>
 </html>
+
 
 
 
