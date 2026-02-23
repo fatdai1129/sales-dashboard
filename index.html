@@ -18,7 +18,7 @@
         
         /* --- 実績管理セクション：一切の変更を禁止（完全固定） --- */
         table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: max-content; table-layout: fixed; }
-        th, td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
+        th, td { border: 4px solid black !important; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
         th { background: #edf2f7; }
         
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
@@ -210,58 +210,52 @@
         updateCharts(region);
     }
 
-    /* --- 営業推進管理表：二段ヘッダー（月タイトルを上へ、空いた所に売上/利益） --- */
+    /* --- 営業推進管理表：赤枠の所にセルを1行追加 --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
         
-        // ヘッダー作成
         let hHtml = "<tr>";
-        hHtml += `<th rowspan="2">${headers[1] || ""}</th>`; // 所属
-        hHtml += `<th rowspan="2">${headers[4] || ""}<br>${headers[3] || ""}</th>`; // 名/№
+        hHtml += `<th rowspan="2">${headers[1] || ""}</th>`;
+        hHtml += `<th rowspan="2">${headers[4] || ""}<br>${headers[3] || ""}</th>`;
         hHtml += `<th rowspan="2">給料<br>コスト</th>`;
-        
-        // 1行目の各月タイトル（赤丸の月次記載を上に移動）
         for (let i = 12; i < headers.length; i += 2) {
             hHtml += `<th>${headers[i] || ""}</th>`;
         }
         hHtml += "</tr><tr>";
-        
-        // 2行目の「売上 / 利益」タイトル（空いた箇所に記載）
         for (let i = 12; i < headers.length; i += 2) {
             hHtml += `<th>売上<br>利益</th>`;
         }
         hHtml += "</tr>";
         head.innerHTML = hHtml;
         
-        // ボディ
         let bHtml = "";
+
+        // 【修正点】赤枠の所にセルを1行追加（空行）
+        bHtml += "<tr>";
+        for (let k = 0; k < 15; k++) { bHtml += "<td></td>"; }
+        bHtml += "</tr>";
+
         rawData.forEach(row => {
             if (region !== "全国合計" && row[1] !== region) return;
             if (!row[2] || row[2].includes("売上") || row[2].includes("原価")) return;
             
             bHtml += "<tr>";
-            bHtml += `<td class="text-center">${row[1] || ""}</td>`; // 所属
-            bHtml += `<td class="text-center">${row[4] || ""}<br>${row[3] || ""}</td>`; // 名/№
-            
-            // 給料(10)とコスト(11)の二段表示
+            bHtml += `<td class="text-center">${row[1] || ""}</td>`;
+            bHtml += `<td class="text-center">${row[4] || ""}<br>${row[3] || ""}</td>`;
             const salary = (typeof row[10] === 'number') ? row[10].toLocaleString() : (row[10] || "-");
             const cost = (typeof row[11] === 'number') ? Math.floor(row[11]).toLocaleString() : (row[11] || "-");
             bHtml += `<td class="text-right">${salary}<br>${cost}</td>`;
-            
-            // 月次データ：上段売上 / 下段利益（売上-原価）を表示
             for (let i = 12; i < row.length; i += 2) {
                 const sVal = row[i];
                 const cVal = row[i+1];
-                
                 const sales = (typeof sVal === 'number') ? sVal.toLocaleString() : (sVal || "-");
                 let profit = "-";
                 if (typeof sVal === 'number' && typeof cVal === 'number') {
                     profit = Math.floor(sVal - cVal).toLocaleString();
                 }
-                
                 bHtml += `<td class="text-right">${sales}<br>${profit}</td>`;
             }
             bHtml += "</tr>";
