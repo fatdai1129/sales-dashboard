@@ -2,36 +2,48 @@
 <html lang="ja" class="notranslate">
 <head>
     <meta charset="UTF-8">
-    <title>実績管理ポータル</title>
+    <title>Freeeks 統合管理ポータル</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Hiragino Sans', sans-serif; background-color: #f0f4f8; padding: 20px; color: #333; }
+        body { font-family: 'Hiragino Sans', sans-serif; background-color: #f0f4f8; padding: 0; margin: 0; color: #333; }
         #pw_screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a202c; display: flex; justify-content: center; align-items: center; z-index: 10000; }
         #pw_box { background: white; padding: 40px; border-radius: 12px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         #main_content { display: none; }
+        
+        /* --- ナビゲーションタブ --- */
+        .nav-bar { background: #2d3748; padding: 0 20px; display: flex; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .nav-item { padding: 18px 25px; color: #a0aec0; cursor: pointer; font-weight: bold; border-bottom: 3px solid transparent; transition: 0.3s; }
+        .nav-item:hover { color: white; background: rgba(255,255,255,0.1); }
+        .nav-item.active { color: white; border-bottom: 3px solid #3182ce; background: rgba(255,255,255,0.05); }
+        
+        .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 枠線デザイン：固定 --- */
-        table { width: 100%; border-collapse: collapse; background: white; border: 4px solid black !important; table-layout: fixed; }
-        th, td { border-top: 1px solid black; border-bottom: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 8px 4px; font-size: 0.85rem; word-break: break-all; }
+        /* --- 枠線共通デザイン（4px/3px固定） --- */
+        table { border-collapse: collapse; background: white; border: 4px solid black !important; table-layout: fixed; min-width: 100%; }
+        th, td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 8px 4px; font-size: 0.8rem; }
         th { background: #edf2f7; text-align: center; border-bottom: 4px solid black !important; }
-        .cat-header { border: 4px solid black !important; background: #ebf8ff; font-weight: bold; width: 130px; text-align: center !important; }
-        .type-col { width: 70px; text-align: center !important; }
-        .total-col { background: #fffaf0; font-weight: bold; }
-        tr.bb-4px td { border-bottom: 4px solid black !important; } 
+        tr.bb-4px td { border-bottom: 4px solid black !important; }
         tr.bb-3px td { border-bottom: 3px solid black !important; }
-        .text-right { text-align: right !important; padding-right: 8px !important; }
+        .text-right { text-align: right !important; }
         .text-center { text-align: center !important; }
+        .sticky-col { position: sticky; left: 0; background: #fff; z-index: 10; }
+        
+        /* 実績表用 */
+        .cat-header { width: 130px; font-weight: bold; background: #ebf8ff !important; text-align: center; }
+        .type-col { width: 70px; text-align: center; }
+        .total-col { background: #fffaf0; font-weight: bold; }
+
         .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
         .chart-box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); height: 350px; }
-        #sync_status { font-size: 12px; color: #718096; margin-left: 15px; }
+        #sync_status { font-size: 12px; color: #cbd5e0; margin-left: auto; }
     </style>
 </head>
 <body class="notranslate">
 
 <div id="pw_screen">
     <div id="pw_box">
-        <h2 style="margin-top:0;">実績管理ログイン</h2>
+        <h2 style="margin-top:0;">Freeeks 営業実績管理システム</h2>
         <input type="password" id="pass_val" style="padding:12px; font-size:18px; border:2px solid #ddd; border-radius:6px; width:220px;" onkeydown="if(event.keyCode==13)checkPW()">
         <br><br>
         <button onclick="checkPW()" style="padding:12px 35px; background:#3182ce; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:16px;">ログイン</button>
@@ -40,186 +52,229 @@
 </div>
 
 <div id="main_content">
-    <div class="card">
-        <div style="display:flex; align-items:center; margin-bottom:20px;">
-            <h2 style="margin:0; border-left:5px solid #3182ce; padding-left:15px; margin-right: 25px;">営業実績・予算管理表</h2>
-            <select id="region-select" style="padding:8px 15px; border-radius:6px; font-size:1rem; cursor:pointer;" onchange="renderAll()">
-                <option value="全体合計">全体合計</option>
-                <option value="東海">東海</option>
-                <option value="首都圏">首都圏</option>
-                <option value="東日本">東日本</option>
-                <option value="西日本">西日本</option>
-            </select>
-            <span id="sync_status">データ確認中...</span>
-        </div>
-        <table id="sales-table">
-            <thead>
-                <tr>
-                    <th rowspan="2" class="cat-header">項目</th>
-                    <th rowspan="2" class="type-col">区分</th>
-                    <th colspan="6">上期実績</th><th class="total-col">上期計</th>
-                    <th colspan="6" style="border-left:4px solid black !important;">下期実績・予想</th><th class="total-col">下期計</th>
-                    <th class="total-col">年間計</th>
-                </tr>
-                <tr>
-                    <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th style="border-right:4px solid black !important;">11月</th><th class="total-col">計</th>
-                    <th style="border-left:4px solid black !important;">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th style="border-right:4px solid black !important;">5月</th><th class="total-col">計</th>
-                    <th class="total-col">合計</th>
-                </tr>
-            </thead>
-            <tbody id="table-body"></tbody>
-        </table>
+    <div class="nav-bar">
+        <div class="nav-item active" id="tab-performance" onclick="switchTab('performance')">実績管理</div>
+        <div class="nav-item" id="tab-sales" onclick="switchTab('sales')">営業推進</div>
+        <div id="sync_status">データ同期中...</div>
     </div>
-    <div class="charts-container">
-        <div class="chart-box"><canvas id="salesChart"></canvas></div>
-        <div class="chart-box"><canvas id="engChart"></canvas></div>
-        <div class="chart-box"><canvas id="waitCostChart"></canvas></div>
+
+    <div class="container">
+        <div id="section-performance">
+            <div class="card">
+                <div style="display:flex; align-items:center; margin-bottom:20px;">
+                    <h2 style="margin:0; border-left:5px solid #3182ce; padding-left:15px; margin-right: 25px;">拠点別実績・予算</h2>
+                    <select id="region-select" style="padding:8px 15px; border-radius:6px; font-size:1rem;" onchange="renderPerformance()">
+                        <option value="全体合計">全体合計</option>
+                        <option value="東海">東海</option>
+                        <option value="首都圏">首都圏</option>
+                        <option value="東日本">東日本</option>
+                        <option value="西日本">西日本</option>
+                    </select>
+                </div>
+                <table id="performance-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" class="cat-header">項目</th>
+                            <th rowspan="2" class="type-col">区分</th>
+                            <th colspan="6">上期実績</th><th class="total-col">上期計</th>
+                            <th colspan="6" style="border-left:4px solid black !important;">下期実績・予想</th><th class="total-col">下期計</th>
+                            <th class="total-col">年間計</th>
+                        </tr>
+                        <tr>
+                            <th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th style="border-right:4px solid black !important;">11月</th><th class="total-col">計</th>
+                            <th style="border-left:4px solid black !important;">12月</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th style="border-right:4px solid black !important;">5月</th><th class="total-col">計</th>
+                            <th class="total-col">合計</th>
+                        </tr>
+                    </thead>
+                    <tbody id="performance-body"></tbody>
+                </table>
+            </div>
+            <div class="charts-container">
+                <div class="chart-box"><canvas id="salesChart"></canvas></div>
+                <div class="chart-box"><canvas id="engChart"></canvas></div>
+                <div class="chart-box"><canvas id="waitCostChart"></canvas></div>
+            </div>
+        </div>
+
+        <div id="section-sales" style="display:none;">
+            <div class="card">
+                <h2 style="margin:0 0 20px 0; border-left:5px solid #48bb78; padding-left:15px;">営業推進管理表</h2>
+                <div style="overflow-x: auto;">
+                    <table id="sales-promotion-table" style="min-width: 1500px;">
+                        <thead id="promotion-head"></thead>
+                        <tbody id="promotion-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbzLPhdnyAo1D7SH-T3uv0EOb5aWekcfnFRtReGhsnkQ5_sLbi36fTc6o5eVYukeliVJIA/exec';
-    let dataMap = {};
+    let perfMap = {};
+    let salesRows = [];
     let charts = {};
 
-    // ページ読み込みと同時に「バックグラウンド」で通信開始
     window.onload = () => {
-        loadCache(); // まずキャッシュを読み込む
-        fetchData(); // 裏で最新データを獲りに行く
+        const cachedPerf = localStorage.getItem('freeeks_perf_cache');
+        const cachedSales = localStorage.getItem('freeeks_sales_cache');
+        if(cachedPerf) perfMap = JSON.parse(cachedPerf);
+        if(cachedSales) salesRows = JSON.parse(cachedSales);
+        fetchAll();
     };
-
-    function loadCache() {
-        const cached = localStorage.getItem('freeeks_data_cache');
-        if (cached) {
-            dataMap = JSON.parse(cached);
-            document.getElementById('sync_status').innerText = '保存済みデータを表示中（バックグラウンド更新中...）';
-        }
-    }
 
     function checkPW() {
         if (document.getElementById('pass_val').value === "freeeks2022") {
             document.getElementById('pw_screen').style.display = 'none';
             document.getElementById('main_content').style.display = 'block';
-            renderAll(); // ログインした瞬間に（キャッシュがあれば）描画
-        } else {
-            document.getElementById('err_msg').style.display = 'block';
-        }
+            renderAll();
+        } else { document.getElementById('err_msg').style.display = 'block'; }
     }
 
-    async function fetchData() {
+    function switchTab(tab) {
+        document.getElementById('section-performance').style.display = tab === 'performance' ? 'block' : 'none';
+        document.getElementById('section-sales').style.display = tab === 'sales' ? 'block' : 'none';
+        document.getElementById('tab-performance').className = 'nav-item' + (tab === 'performance' ? ' active' : '');
+        document.getElementById('tab-sales').className = 'nav-item' + (tab === 'sales' ? ' active' : '');
+        renderAll();
+    }
+
+    async function fetchAll() {
         try {
-            const response = await fetch(`${GAS_URL}?p=freeeks2022`);
-            const rows = await response.json();
-            const newDataMap = {};
-            rows.slice(1).forEach(r => {
-                const key = `${r[0]}-${r[1]}-${r[2]}`;
-                newDataMap[key] = r.slice(3, 15).map(v => (v === "" || v == null) ? null : parseFloat(String(v).replace(/,/g,'')) || 0);
+            // 1. 実績データ取得
+            const resPerf = await fetch(`${GAS_URL}?p=freeeks2022&s=実績データ`);
+            const rowsPerf = await resPerf.json();
+            perfMap = {};
+            rowsPerf.slice(1).forEach(r => {
+                perfMap[`${r[0]}-${r[1]}-${r[2]}`] = r.slice(3, 15).map(v => (v===""||v==null)?null:parseFloat(String(v).replace(/,/g,''))||0);
             });
-            
-            dataMap = newDataMap;
-            localStorage.setItem('freeeks_data_cache', JSON.stringify(dataMap)); // キャッシュに保存
-            document.getElementById('sync_status').innerText = '最新データに更新されました';
-            
-            // すでにログイン後の画面なら、自動で最新に書き換える
-            if (document.getElementById('main_content').style.display === 'block') {
-                renderAll();
-            }
+            localStorage.setItem('freeeks_perf_cache', JSON.stringify(perfMap));
+
+            // 2. 営業推進データ取得
+            const resSales = await fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表`);
+            salesRows = await resSales.json();
+            localStorage.setItem('freeeks_sales_cache', JSON.stringify(salesRows));
+
+            document.getElementById('sync_status').innerText = '最新データ同期完了';
+            renderAll();
         } catch (e) {
-            document.getElementById('sync_status').innerText = 'オフライン表示中（最新データの取得に失敗）';
+            document.getElementById('sync_status').innerText = '同期失敗（キャッシュ表示中）';
         }
     }
 
     function renderAll() {
-        renderTable();
-        updateCharts();
+        if (document.getElementById('section-performance').style.display !== 'none') renderPerformance();
+        if (document.getElementById('section-sales').style.display !== 'none') renderSalesPromotion();
     }
 
-    function getMonthlyValues(region, itemK, type) {
+    /* --- 実績管理ロジック（既存を統合） --- */
+    function getPerfVal(region, itemK, type) {
         if (type === '達成率') {
-            const bud = getMonthlyValues(region, itemK, '予算');
-            const act = getMonthlyValues(region, itemK, '実績');
-            return act.map((v, i) => (bud[i] == null || v == null) ? null : (bud[i] === 0 ? 0 : (v / bud[i]) * 100));
+            const b = getPerfVal(region, itemK, '予算'), a = getPerfVal(region, itemK, '実績');
+            return a.map((v, i) => (b[i]==null||v==null)?null:(b[i]===0?0:(v/b[i])*100));
         }
         if (itemK === '待機率') {
-            const waiting = getMonthlyValues(region, 'プロパー(待機)', '実績');
-            const total = getMonthlyValues(region, 'エンジニア総数', '実績');
-            return waiting.map((v, i) => (total[i] == null || v == null) ? null : (total[i] === 0 ? 0 : (v / total[i]) * 100));
+            const w = getPerfVal(region, 'プロパー(待機)', '実績'), t = getPerfVal(region, 'エンジニア総数', '実績');
+            return w.map((v, i) => (t[i]==null||v==null)?null:(t[i]===0?0:(v/t[i])*100));
         }
         if (region === '全体合計') {
-            const targets = ['東海', '首都圏', '西日本'];
             let sum = new Array(12).fill(null);
-            targets.forEach(t => {
-                const vals = getMonthlyValues(t, itemK, type);
-                vals.forEach((v, i) => { if (v !== null) sum[i] = (sum[i] || 0) + v; });
+            ['東海','首都圏','西日本'].forEach(reg => {
+                getPerfVal(reg, itemK, type).forEach((v,i) => { if(v!==null) sum[i]=(sum[i]||0)+v; });
             });
             return sum;
         }
         if (itemK === '稼働エンジニア数') {
-            const p = getMonthlyValues(region, 'プロパー(稼働)', type);
-            const b = getMonthlyValues(region, 'BP', '実績');
-            if (type === '予算') return p;
-            return p.map((v, i) => (v === null && b[i] === null) ? null : (v || 0) + (b[i] || 0));
+            const p = getPerfVal(region, 'プロパー(稼働)', type), b = getPerfVal(region, 'BP', '実績');
+            return type==='予算'?p:p.map((v,i)=>(v===null&&b[i]===null)?null:(v||0)+(b[i]||0));
         }
         if (itemK === 'エンジニア総数') {
-            const working = getMonthlyValues(region, '稼働エンジニア数', type);
-            const waiting = getMonthlyValues(region, 'プロパー(待機)', type);
-            return working.map((v, i) => (v === null && waiting[i] === null) ? null : (v || 0) + (waiting[i] || 0));
+            const wk = getPerfVal(region, '稼働エンジニア数', type), wt = getPerfVal(region, 'プロパー(待機)', type);
+            return wk.map((v,i)=>(v===null&&wt[i]===null)?null:(v||0)+(wt[i]||0));
         }
-        return dataMap[`${region}-${itemK}-${type}`] || new Array(12).fill(null);
+        return perfMap[`${region}-${itemK}-${type}`] || new Array(12).fill(null);
     }
 
-    function renderTable() {
+    function renderPerformance() {
         const region = document.getElementById('region-select').value;
-        const tbody = document.getElementById('table-body');
+        const tbody = document.getElementById('performance-body');
         tbody.innerHTML = '';
         const items = [
-            { n: '売上', k: '売上', t: ['予算', '実績', '達成率'] },
-            { n: '稼働原価', k: '稼働原価', t: ['予算', '実績', '達成率'] },
-            { n: 'A利益', k: 'A利益', t: ['予算', '実績', '達成率'] },
-            { n: '待機原価', k: '待機原価', t: ['実績'] },
-            { n: 'プロパー(稼働)', k: 'プロパー(稼働)', t: ['予算', '実績', '達成率'] },
-            { n: 'BP', k: 'BP', t: ['実績'] },
-            { n: '稼働エンジニア数', k: '稼働エンジニア数', t: ['予算', '実績'] },
-            { n: 'プロパー(待機)', k: 'プロパー(待機)', t: ['予算', '実績'] },
-            { n: '待機率', k: '待機率', t: ['実績'] },
-            { n: 'エンジニア総数', k: 'エンジニア総数', t: ['予算', '実績', '達成率'] }
+            {n:'売上',k:'売上',t:['予算','実績','達成率']},
+            {n:'稼働原価',k:'稼働原価',t:['予算','実績','達成率']},
+            {n:'A利益',k:'A利益',t:['予算','実績','達成率']},
+            {n:'待機原価',k:'待機原価',t:['実績']},
+            {n:'プロパー(稼働)',k:'プロパー(稼働)',t:['予算','実績','達成率']},
+            {n:'BP',k:'BP',t:['実績']},
+            {n:'稼働エンジニア数',k:'稼働エンジニア数',t:['予算','実績']},
+            {n:'プロパー(待機)',k:'プロパー(待機)',t:['予算','実績']},
+            {n:'待機率',k:'待機率',t:['実績']},
+            {n:'エンジニア総数',k:'エンジニア総数',t:['予算','実績','達成率']}
         ];
-
         items.forEach(item => {
             item.t.forEach((type, idx) => {
                 const tr = document.createElement('tr');
-                if (idx === item.t.length - 1) tr.className = 'bb-4px';
-                else if (['売上', '稼働原価', 'A利益', 'プロパー(稼働)', 'エンジニア総数'].includes(item.n) && type === '実績') tr.className = 'bb-3px';
-                let html = idx === 0 ? `<td rowspan="${item.t.length}" class="cat-header">${item.n}</td>` : '';
+                if(idx===item.t.length-1) tr.className='bb-4px';
+                else if(['売上','稼働原価','A利益','プロパー(稼働)','エンジニア総数'].includes(item.n)&&type==='実績') tr.className='bb-3px';
+                let html = idx===0?`<td rowspan="${item.t.length}" class="cat-header">${item.n}</td>` : '';
                 html += `<td class="type-col">${type}</td>`;
-                const data = getMonthlyValues(region, item.k, type);
+                const data = getPerfVal(region, item.k, type);
                 data.forEach((v, i) => {
                     const disp = formatVal(v, item.k, type);
-                    const borderR = (i === 5 || i === 11) ? 'style="border-right:4px solid black !important;"' : '';
-                    const borderL = (i === 6) ? 'style="border-left:4px solid black !important;"' : '';
-                    html += `<td class="${disp === '-' ? 'text-center' : 'text-right'}" ${borderR} ${borderL}>${disp}</td>`;
+                    html += `<td class="${disp==='-'?'text-center':'text-right'}" ${(i===5||i===11)?'style="border-right:4px solid black !important;"':''}>${disp}</td>`;
                 });
-                let h1Val, h2Val, totalVal;
-                if (type === '達成率' || item.k === '待機率') {
-                    const budK = (type === '達成率') ? item.k : 'エンジニア総数';
-                    const actK = (type === '達成率') ? item.k : 'プロパー(待機)';
-                    const bData = getMonthlyValues(region, budK, (type === '達成率' ? '予算' : '実績'));
-                    const aData = getMonthlyValues(region, actK, '実績');
-                    const sum = (arr) => arr.reduce((a, b) => a + (b || 0), 0);
-                    const b1 = sum(bData.slice(0, 6)), a1 = sum(aData.slice(0, 6));
-                    const b2 = sum(bData.slice(6, 12)), a2 = sum(aData.slice(6, 12));
-                    h1Val = b1 === 0 ? 0 : (a1 / b1) * 100; h2Val = b2 === 0 ? 0 : (a2 / b2) * 100;
-                    totalVal = (b1 + b2) === 0 ? 0 : ((a1 + a2) / (b1 + b2)) * 100;
+                // 合計計算
+                const sum = (arr)=>arr.reduce((a,b)=>a+(b||0),0);
+                let h1, h2, tot;
+                if(type==='達成率'||item.k==='待機率') {
+                    const bK = type==='達成率'?item.k:'エンジニア総数';
+                    const aK = type==='達成率'?item.k:'プロパー(待機)';
+                    const bd = getPerfVal(region, bK, (type==='達成率'?'予算':'実績')), ad = getPerfVal(region, aK, '実績');
+                    const b1=sum(bd.slice(0,6)), a1=sum(ad.slice(0,6)), b2=sum(bd.slice(6,12)), a2=sum(ad.slice(6,12));
+                    h1 = b1===0?0:(a1/b1)*100; h2 = b2===0?0:(a2/b2)*100; tot = (b1+b2)===0?0:((a1+a2)/(b1+b2))*100;
                 } else {
-                    const sum = (arr) => arr.reduce((a, b) => a + (b || 0), 0);
-                    h1Val = sum(data.slice(0, 6)); h2Val = sum(data.slice(6, 12)); totalVal = h1Val + h2Val;
+                    h1=sum(data.slice(0,6)); h2=sum(data.slice(6,12)); tot=h1+h2;
                 }
-                html += `<td class="total-col ${formatVal(h1Val, item.k, type) === '-' ? 'text-center' : 'text-right'}">${formatVal(h1Val, item.k, type)}</td>`;
-                html += `<td class="total-col ${formatVal(h2Val, item.k, type) === '-' ? 'text-center' : 'text-right'}">${formatVal(h2Val, item.k, type)}</td>`;
-                html += `<td class="total-col ${formatVal(totalVal, item.k, type) === '-' ? 'text-center' : 'text-right'}">${formatVal(totalVal, item.k, type)}</td>`;
+                [h1,h2,tot].forEach(v => html += `<td class="total-col ${formatVal(v,item.k,type)==='-'?'text-center':'text-right'}">${formatVal(v,item.k,type)}</td>`);
                 tr.innerHTML = html; tbody.appendChild(tr);
             });
         });
+        updateCharts(region);
+    }
+
+    /* --- 営業推進管理表ロジック --- */
+    function renderSalesPromotion() {
+        if (!salesRows || salesRows.length < 2) return;
+        const head = document.getElementById('promotion-head');
+        const body = document.getElementById('promotion-body');
+        
+        // ヘッダー生成（1行目と2行目）
+        let headHtml = `<tr>`;
+        salesRows[0].forEach((cell, i) => {
+            if (i < 5) headHtml += `<th rowspan="2">${cell}</th>`;
+            else if ((i - 5) % 2 === 0) headHtml += `<th colspan="2">${cell}</th>`;
+        });
+        headHtml += `</tr><tr>`;
+        salesRows[1].forEach((cell, i) => {
+            if (i >= 5) headHtml += `<th>${cell}</th>`;
+        });
+        headHtml += `</tr>`;
+        head.innerHTML = headHtml;
+
+        // ボディ生成
+        let bodyHtml = "";
+        salesRows.slice(2).forEach((row, rowIndex) => {
+            let trClass = (rowIndex === salesRows.slice(2).length - 1) ? 'class="bb-4px"' : '';
+            bodyHtml += `<tr ${trClass}>`;
+            row.forEach((cell, i) => {
+                let align = (i < 5) ? 'text-center' : 'text-right';
+                let val = (i >= 5 && cell !== "" && !isNaN(cell)) ? Math.round(cell).toLocaleString() : (cell || "-");
+                bodyHtml += `<td class="${align}">${val}</td>`;
+            });
+            bodyHtml += `</tr>`;
+        });
+        body.innerHTML = bodyHtml;
     }
 
     function formatVal(v, k, t) {
@@ -228,19 +283,19 @@
         return Math.round(v).toLocaleString();
     }
 
-    function updateCharts() {
-        const region = document.getElementById('region-select').value;
+    function updateCharts(region) {
+        const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
         renderChart('salesChart', '売上推移', [
-            { label: '実績', data: getMonthlyValues(region, '売上', '実績'), type: 'bar', backgroundColor: '#3182ce' },
-            { label: '予算', data: getMonthlyValues(region, '売上', '予算'), type: 'line', borderColor: '#e53e3e' }
+            { label: '実績', data: getPerfVal(region, '売上', '実績'), type: 'bar', backgroundColor: '#3182ce' },
+            { label: '予算', data: getPerfVal(region, '売上', '予算'), type: 'line', borderColor: '#e53e3e' }
         ]);
         renderChart('engChart', 'エンジニア内訳', [
-            { label: 'プロパー(稼働)', data: getMonthlyValues(region, 'プロパー(稼働)', '実績'), type: 'bar', backgroundColor: '#4299e1' },
-            { label: 'BP', data: getMonthlyValues(region, 'BP', '実績'), type: 'bar', backgroundColor: '#ed64a6' },
-            { label: 'プロパー(待機)', data: getMonthlyValues(region, 'プロパー(待機)', '実績'), type: 'bar', backgroundColor: '#a0aec0' }
+            { label: 'プロパー(稼働)', data: getPerfVal(region, 'プロパー(稼働)', '実績'), type: 'bar', backgroundColor: '#4299e1' },
+            { label: 'BP', data: getPerfVal(region, 'BP', '実績'), type: 'bar', backgroundColor: '#ed64a6' },
+            { label: 'プロパー(待機)', data: getPerfVal(region, 'プロパー(待機)', '実績'), type: 'bar', backgroundColor: '#a0aec0' }
         ], 'stacked');
         renderChart('waitCostChart', '待機原価推移', [
-            { label: '待機原価実績', data: getMonthlyValues(region, '待機原価', '実績'), type: 'line', fill: true, backgroundColor: 'rgba(237, 137, 54, 0.2)', borderColor: '#ed8936' }
+            { label: '待機原価実績', data: getPerfVal(region, '待機原価', '実績'), type: 'line', fill: true, backgroundColor: 'rgba(237, 137, 54, 0.2)', borderColor: '#ed8936' }
         ]);
     }
 
