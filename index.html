@@ -18,7 +18,7 @@
         
         /* --- 実績管理セクション：一切の変更を禁止（完全固定） --- */
         table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: max-content; table-layout: fixed; }
-        th, td { border: 4px solid black !important; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
+        th, td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
         th { background: #edf2f7; }
         
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
@@ -216,7 +216,7 @@
         updateCharts(region);
     }
 
-    /* --- 営業推進管理表：総合計結合セル変更対応 --- */
+    /* --- 営業推進管理表：境界線・サイズバランス・給料コスト合計対応 --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
@@ -264,6 +264,7 @@
             return { sales: sSum, profit: pSum };
         };
 
+        // 月次合計の算出
         let monthlyTotals = [];
         for (let i = 12; i < 36; i += 2) {
             let sSum = 0, pSum = 0;
@@ -275,15 +276,21 @@
             monthlyTotals.push({ sales: sSum, profit: pSum });
         }
 
+        // 【新機能】給料およびコストの合計値を算出
+        let totalSal = 0, totalCos = 0;
+        filteredRows.forEach(row => {
+            if (typeof row[10] === 'number') totalSal += row[10];
+            if (typeof row[11] === 'number') totalCos += Math.floor(row[11]);
+        });
+
         const border2pxTop = "border-bottom: 2px solid black !important;";
         const border2pxBottom = "border-top: 2px solid black !important;";
 
         let bHtml = "";
 
-        /* --- 総合計行：指示に基づき結合を赤枠の2セル（colspan="2"）に変更 --- */
+        // 総合計行：給料合計およびコスト合計を表示
         bHtml += "<tr><td colspan='2' rowspan='2' class='text-center col-sales-aff' style='font-weight:bold;'>総合計</td>";
-        // 給料/コスト列用の空セル（rowspan="2"）を追加
-        bHtml += "<td rowspan='2' class='col-sales-info'></td>";
+        bHtml += `<td rowspan='2' class='text-right col-sales-info' style='font-weight:bold;'>${totalSal.toLocaleString()}<br>${totalCos.toLocaleString()}</td>`;
         
         let gH1S = 0, gH1P = 0, gH2S = 0, gH2P = 0;
         monthlyTotals.forEach((t, idx) => {
@@ -359,6 +366,7 @@
 </script>
 </body>
 </html>
+
 
 
 
