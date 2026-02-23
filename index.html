@@ -16,28 +16,31 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 全国合計のサイズを基準に全拠点を固定 --- */
-        table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; min-width: 2000px; table-layout: fixed; }
-        th, td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 12px 6px; overflow: hidden; }
-        th { background: #edf2f7; border-bottom: 4px solid black !important; }
-        
-        /* 列幅の設定（全国合計のゆとりある幅） */
+        /* --- 拠点別実績・予算のサイズを完全固定（一切変更なし） --- */
+        table.perf-table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; min-width: 2000px; table-layout: fixed; }
+        table.perf-table th, table.perf-table td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 12px 6px; overflow: hidden; }
+        table.perf-table th { background: #edf2f7; border-bottom: 4px solid black !important; }
         .col-item { width: 180px; }
         .col-type { width: 100px; }
         .col-month { width: 120px; }
         .col-total { width: 140px; background: #fffaf0 !important; font-weight: bold; }
-
         .cat-header { background: #ebf8ff !important; font-weight: bold; text-align: center; border-bottom: 4px solid black !important; }
         tr.bb-4px td { border-bottom: 4px solid black !important; }
         tr.bb-3px td { border-bottom: 3px solid black !important; }
+
+        /* --- 営業進捗管理用のスタイル --- */
+        table.sales-table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1rem; width: 100%; min-width: 1200px; }
+        table.sales-table th, table.sales-table td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 12px 10px; }
+        table.sales-table th { background: #f7fafc; border-bottom: 4px solid black !important; }
+        .conf-A { background: #c6f6d5; color: #22543d; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        .conf-B { background: #bee3f8; color: #2a4365; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        .conf-C { background: #feebc8; color: #744210; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+
         .text-right { text-align: right !important; padding-right: 12px !important; }
         .text-center { text-align: center !important; }
-        
         .sticky-left { position: sticky; left: 0; background: #ebf8ff !important; z-index: 30; }
         .sticky-left-2 { position: sticky; left: 180px; background: white !important; z-index: 30; }
-        
-        .profit-low { color: red; font-weight: bold; }
-        .search-box { padding: 10px; border: 2px solid #cbd5e0; border-radius: 8px; width: 300px; }
+        .search-box { padding: 10px; border: 2px solid #cbd5e0; border-radius: 8px; width: 300px; margin-bottom: 20px; }
         .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
         .chart-box { background: white; padding: 20px; border-radius: 12px; height: 350px; }
     </style>
@@ -54,7 +57,7 @@
 <div id="main_content">
     <div class="nav-bar">
         <div class="nav-item active" id="tab-perf" onclick="switchTab('perf')">実績管理</div>
-        <div class="nav-item" id="tab-sales" onclick="switchTab('sales')">営業推進</div>
+        <div class="nav-item" id="tab-sales" onclick="switchTab('sales')">営業進捗</div>
         <div id="sync_status">データ同期中...</div>
     </div>
     <div class="container">
@@ -62,11 +65,11 @@
             <div class="card">
                 <div style="display:flex; align-items:center; margin-bottom:20px;">
                     <h2 style="margin:0; border-left:5px solid #3182ce; padding-left:15px; margin-right: 25px;">拠点別実績・予算</h2>
-                    <select id="region-select" style="padding:10px 20px; border-radius:6px; font-size:1.1rem; cursor:pointer;" onchange="renderPerf()">
+                    <select id="region-select" style="padding:10px 20px; border-radius:6px; font-size:1.1rem;" onchange="renderPerf()">
                         <option value="全体合計">全国合計</option><option value="東海">東海</option><option value="首都圏">首都圏</option><option value="東日本">東日本</option><option value="西日本">西日本</option>
                     </select>
                 </div>
-                <table>
+                <table class="perf-table">
                     <thead>
                         <tr>
                             <th rowspan="2" class="col-item sticky-left">項目</th><th rowspan="2" class="col-type sticky-left-2">区分</th>
@@ -91,13 +94,27 @@
         </div>
         <div id="section-sales" style="display:none;">
             <div class="card">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
-                    <h2 style="margin:0; border-left:5px solid #48bb78; padding-left:15px;">営業推進管理表 (粗利自動計算)</h2>
-                    <input type="text" id="sales-search" class="search-box" placeholder="検索..." oninput="renderSales()">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <h2 style="margin:0; border-left:5px solid #48bb78; padding-left:15px;">営業進捗管理表</h2>
+                    <input type="text" id="sales-search" class="search-box" placeholder="担当・顧客・案件名で検索..." oninput="renderSales()">
                 </div>
-                <div style="overflow-x: auto; max-height: 700px;">
-                    <table style="width: auto; min-width: 100%; table-layout: auto;"><thead id="sales-head"></thead><tbody id="sales-body"></tbody></table>
-                </div>
+                <table class="sales-table">
+                    <thead>
+                        <tr>
+                            <th style="width:50px;">NO</th>
+                            <th style="width:120px;">営業担当</th>
+                            <th style="width:100px;">種別</th>
+                            <th>顧客名・案件名</th>
+                            <th style="width:120px;">ステータス</th>
+                            <th style="width:80px;">確度</th>
+                            <th style="width:150px;">売上見込</th>
+                            <th style="width:120px;">開始予定</th>
+                            <th style="width:250px;">備考</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sales-body"></tbody>
+                </table>
+                <div id="sales-summary" style="margin-top:20px; font-weight:bold; display:flex; gap:30px;"></div>
             </div>
         </div>
     </div>
@@ -126,7 +143,7 @@
     }
     async function fetchAll() {
         try {
-            const [rP, rS] = await Promise.all([fetch(`${GAS_URL}?p=freeeks2022&s=実績データ`), fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表`)]);
+            const [rP, rS] = await Promise.all([fetch(`${GAS_URL}?p=freeeks2022&s=実績データ`), fetch(`${GAS_URL}?p=freeeks2022&s=営業推進データ`)]);
             const rowsP = await rP.json(); perfMap = {};
             rowsP.slice(1).forEach(r => { perfMap[`${r[0]}-${r[1]}-${r[2]}`] = r.slice(3, 15).map(v => (v===""||v==null)?null:parseFloat(String(v).replace(/,/g,''))||0); });
             salesRows = await rS.json();
@@ -190,23 +207,27 @@
     }
     function renderSales() {
         if (!salesRows || salesRows.length < 2) return;
-        const head = document.getElementById('sales-head'), body = document.getElementById('sales-body'), query = document.getElementById('sales-search').value.toLowerCase();
-        let hHtml = `<tr><th rowspan="2" class="sticky-left" style="width:40px;">NO</th><th rowspan="2" class="sticky-left-2" style="width:120px;">所属 / 技術者</th><th rowspan="2">取引先</th><th rowspan="2">更新状況</th>`;
-        for (let i=5; i<salesRows[0].length; i+=2) hHtml += `<th colspan="4" style="border-left:4px solid black !important;">${salesRows[0][i]}</th>`;
-        hHtml += `</tr><tr>`;
-        for (let i=5; i<salesRows[0].length; i+=2) hHtml += `<th style="border-left:4px solid black !important;">売上</th><th>原価</th><th style="background:#fefcbf;">粗利</th><th style="background:#fefcbf;">%</th>`;
-        hHtml += `</tr>`; head.innerHTML = hHtml;
-        let bHtml = "";
-        salesRows.slice(2).forEach(row => {
-            if (query && !(row[1]+row[2]+row[3]).toLowerCase().includes(query)) return;
-            bHtml += `<tr><td class="text-center sticky-left">${row[0]||""}</td><td class="sticky-left-2"><b>${row[1]||""}</b><br>${row[2]||""}</td><td>${row[3]||"-"}</td><td class="text-center">${row[4]||"-"}</td>`;
-            for (let i=5; i<row.length; i+=2) {
-                const s=parseFloat(row[i])||0, c=parseFloat(row[i+1])||0, p=s-c, m=s>0?(p/s)*100:0;
-                bHtml += `<td class="text-right" style="border-left:4px solid black !important;">${s>0?s.toLocaleString():"-"}</td><td class="text-right">${c>0?c.toLocaleString():"-"}</td><td class="text-right" style="background:#fefcbf; font-weight:bold;">${p!==0?p.toLocaleString():"-"}</td><td class="text-right ${m<20&&s>0?'profit-low':''}" style="background:#fefcbf;">${s>0?m.toFixed(1)+'%':"-"}</td>`;
-            }
-            bHtml += `</tr>`;
+        const body = document.getElementById('sales-body'), query = document.getElementById('sales-search').value.toLowerCase();
+        let bHtml = "", totalA = 0;
+        salesRows.slice(1).forEach((row, i) => {
+            if (query && !(row[1]+row[3]+row[4]).toLowerCase().includes(query)) return;
+            const amount = parseFloat(String(row[6]).replace(/,/g,'')) || 0;
+            if (row[5] === 'A') totalA += amount;
+            const confClass = row[5] === 'A' ? 'conf-A' : (row[5] === 'B' ? 'conf-B' : (row[5] === 'C' ? 'conf-C' : ''));
+            bHtml += `<tr>
+                <td class="text-center">${row[0]||(i+1)}</td>
+                <td class="text-center">${row[1]||""}</td>
+                <td class="text-center">${row[2]||""}</td>
+                <td>${row[3]||""}</td>
+                <td class="text-center">${row[4]||""}</td>
+                <td class="text-center"><span class="${confClass}">${row[5]||""}</span></td>
+                <td class="text-right">${amount > 0 ? amount.toLocaleString() : "-"}</td>
+                <td class="text-center">${row[7]||"-"}</td>
+                <td>${row[8]||""}</td>
+            </tr>`;
         });
         body.innerHTML = bHtml;
+        document.getElementById('sales-summary').innerHTML = `<span>【確度A】合計見込金額: ${totalA.toLocaleString()}円</span>`;
     }
     function formatVal(v, k, t) { if (v === null || (v === 0 && k !== '待機率' && t !== '達成率')) return '-'; if (k === '待機率' || t === '達成率') return v.toFixed(1) + '%'; return Math.round(v).toLocaleString(); }
     function updateCharts(region) {
@@ -218,8 +239,6 @@
 </script>
 </body>
 </html>
-
-
 
 
 
