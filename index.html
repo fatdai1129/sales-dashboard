@@ -16,43 +16,28 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 実績管理セクション：完全固定 --- */
-        table.perf-table { border-collapse: separate; border-spacing: 0; background: white; border: 4px solid black !important; font-size: 1.1rem; width: 2140px; table-layout: fixed; }
-        table.perf-table th, table.perf-table td { border: 1px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
-        table.perf-table th { background: #edf2f7; border-bottom: 4px solid black !important; }
+        /* --- 全てのテーブル枠線を4px黒線に統一 --- */
+        table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: max-content; table-layout: fixed; }
+        th, td { border: 4px solid black !important; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
+        th { background: #edf2f7; }
         
-        /* 列幅：6月と7月を含む全ての月次列を120pxで統一 */
+        /* 実績管理表の列幅設定：6月・7月を含め全月次120px */
         .col-item { width: 180px; }
         .col-type { width: 100px; }
         .col-month { width: 120px; }
         .col-total { width: 140px; background: #fffaf0 !important; font-weight: bold; }
 
         .cat-header { background: #ebf8ff !important; font-weight: bold; text-align: center; }
-        tr.bb-4px td { border-bottom: 4px solid black !important; }
-        tr.bb-3px td { border-bottom: 3px solid black !important; }
-
-        /* 固定列：枠線問題を解決するための設定 */
-        .sticky-left { 
-            position: sticky; left: 0; z-index: 30; 
-            background: #ebf8ff !important; 
-            border-right: 4px solid black !important; /* 「区分」の左側の枠線を4pxに固定 */
-        }
-        .sticky-left-2 { 
-            position: sticky; left: 180px; z-index: 30; 
-            background: white !important; 
-            border-right: 4px solid black !important; /* 「6月実績」の左側の枠線を4pxに固定 */
-        }
-
-        /* 下期実績の開始列に4px左線を追加 */
-        .dec-col { border-left: 4px solid black !important; }
-
-        /* --- 営業推進管理表 --- */
-        table.sales-raw-table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: auto; min-width: 100%; }
-        table.sales-raw-table th, table.sales-raw-table td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 12px 10px; white-space: nowrap; }
-        table.sales-raw-table th { background: #edf2f7; border-bottom: 4px solid black !important; font-weight: bold; }
-
         .text-right { text-align: right !important; padding-right: 12px !important; }
         .text-center { text-align: center !important; }
+
+        /* 固定列の背景設定（枠線はtable全体のルール4pxを適用） */
+        .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; }
+        .sticky-left-2 { position: sticky; left: 180px; z-index: 30; background: white !important; }
+
+        /* --- 営業推進管理表 --- */
+        .sales-raw-table th { background: #edf2f7; font-weight: bold; }
+
         .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
         .chart-box { background: white; padding: 20px; border-radius: 12px; height: 350px; }
     </style>
@@ -84,7 +69,7 @@
                         <tr>
                             <th rowspan="2" class="col-item sticky-left">項目</th><th rowspan="2" class="col-type sticky-left-2">区分</th>
                             <th colspan="6">上期実績</th><th class="col-total">上期計</th>
-                            <th colspan="6" style="border-left:4px solid black !important;">下期実績</th><th class="col-total">下期計</th>
+                            <th colspan="6">下期実績</th><th class="col-total">下期計</th>
                             <th class="col-total">年間計</th>
                         </tr>
                         <tr>
@@ -182,7 +167,7 @@
         const items = [{n:'売上',k:'売上',t:['予算','実績','達成率']},{n:'稼働原価',k:'稼働原価',t:['予算','実績','達成率']},{n:'A利益',k:'A利益',t:['予算','実績','達成率']},{n:'待機原価',k:'待機原価',t:['実績']},{n:'プロパー(稼働)',k:'プロパー(稼働)',t:['予算','実績','達成率']},{n:'BP',k:'BP',t:['実績']},{n:'稼働エンジニア数',k:'稼働エンジニア数',t:['予算','実績']},{n:'プロパー(待機)',k:'プロパー(待機)',t:['予算','実績']},{n:'待機率',k:'待機率',t:['実績']},{n:'エンジニア総数',k:'エンジニア総数',t:['予算','実績','達成率']}];
         items.forEach(item => {
             item.t.forEach((type, idx) => {
-                const tr = document.createElement('tr'); if(idx===item.t.length-1) tr.className='bb-4px'; else if(['売上','稼働原価','A利益','プロパー(稼働)','エンジニア総数'].includes(item.n)&&type==='実績') tr.className='bb-3px';
+                const tr = document.createElement('tr');
                 let html = idx===0?`<td rowspan="${item.t.length}" class="cat-header sticky-left">${item.n}</td>` : '';
                 html += `<td class="text-center sticky-left-2">${type}</td>`;
                 const data = getPerfVal(region, item.k, type), sum = (arr)=>arr.reduce((a,b)=>a+(b||0),0);
@@ -192,7 +177,7 @@
                 const tot = (type==='達成率'||item.k==='待機率') ? (sum(bD)===0?0:(sum(aD)/sum(bD))*100) : h1+h2;
                 for(let i=0;i<6;i++) html += `<td class="text-right">${formatVal(data[i],item.k,type)}</td>`;
                 html += `<td class="text-right col-total">${formatVal(h1,item.k,type)}</td>`;
-                for(let i=6;i<12;i++) html += `<td class="text-right ${i===6?'dec-col':''}">${formatVal(data[i],item.k,type)}</td>`;
+                for(let i=6;i<12;i++) html += `<td class="text-right">${formatVal(data[i],item.k,type)}</td>`;
                 html += `<td class="text-right col-total">${formatVal(h2,item.k,type)}</td>`;
                 html += `<td class="text-right col-total">${formatVal(tot,item.k,type)}</td>`;
                 tr.innerHTML = html; tbody.appendChild(tr);
@@ -234,6 +219,7 @@
 </script>
 </body>
 </html>
+
 
 
 
