@@ -16,10 +16,10 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 実績管理セクション：一切の変更を禁止（完全固定） --- */
-        table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: max-content; table-layout: fixed; }
-        th, td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
-        th { background: #edf2f7; }
+        /* --- 実績管理セクション：余白解消のための幅調整 --- */
+        .perf-table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: 100%; min-width: 1800px; table-layout: fixed; }
+        .perf-table th, .perf-table td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
+        .perf-table th { background: #edf2f7; }
         
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
@@ -30,26 +30,26 @@
         .br-3px { border-right: 3px solid black !important; }
         .bl-3px { border-left: 3px solid black !important; }
 
-        .col-item { width: 180px; }
-        .col-type { width: 100px; }
-        .col-month { width: 120px; }
-        .col-total { width: 140px; background: #fffaf0 !important; font-weight: bold; }
+        /* 実績管理の列幅バランス */
+        .col-item { width: 220px; }
+        .col-type { width: 120px; }
+        .col-month { width: auto; }
+        .col-total { width: 160px; background: #fffaf0 !important; font-weight: bold; }
 
         .cat-header { background: #ebf8ff !important; font-weight: bold; text-align: center; }
         .text-right { text-align: right !important; padding-right: 12px !important; }
         .text-center { text-align: center !important; }
 
         .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; border-right: 4px solid black !important; }
-        .sticky-left-2 { position: sticky; left: 180px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
+        .sticky-left-2 { position: sticky; left: 220px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
 
-        /* 営業推進管理表用：列幅調整（全体的に横に広げ、余白を埋める） */
-        .sales-raw-table { width: 100%; min-width: 2000px; } /* 表の全幅を設定 */
-        .sales-raw-table th, .sales-raw-table td { width: 130px; } /* 各セルの基準幅を拡大 */
+        /* --- 営業推進管理表用：一切の変更なし（完全維持） --- */
+        .sales-raw-table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: 100%; min-width: 2000px; table-layout: fixed; }
+        .sales-raw-table th, .sales-raw-table td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; width: 130px; }
         .col-sales-aff { width: 150px !important; }
         .col-sales-name { width: 220px !important; }
         .col-sales-info { width: 150px !important; }
         .col-sales-total { width: 160px !important; background: #fffaf0 !important; font-weight: bold; }
-
         .sales-raw-table th { background: #edf2f7; font-weight: bold; }
 
         .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
@@ -217,13 +217,11 @@
         updateCharts(region);
     }
 
-    /* --- 営業推進管理表：境界線・サイズバランス・給料コスト合計対応 --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
-        
         let hHtml = "<tr>";
         hHtml += `<th rowspan="2" class="col-sales-aff">${headers[1] || ""}</th>`;
         hHtml += `<th rowspan="2" class="col-sales-name">${headers[4] || ""}<br>${headers[3] || ""}</th>`;
@@ -241,7 +239,6 @@
             hHtml += `<th>売上<br>利益</th>`;
         }
         hHtml += "</tr>"; head.innerHTML = hHtml;
-        
         let filteredRows = rawData.filter(row => {
             if (region === "東日本") {
                 const isTokai = (row[1] === '東海') || (row[1] === 'BP東海' && row[3] === 'BP 要員');
@@ -254,7 +251,6 @@
             }
             return row[2] && !row[2].includes("売上") && !row[2].includes("原価") && row[4];
         });
-
         const calcTotal = (row, start, end) => {
             let sSum = 0, pSum = 0;
             for (let i = start; i <= end; i += 2) {
@@ -264,7 +260,6 @@
             }
             return { sales: sSum, profit: pSum };
         };
-
         let monthlyTotals = [];
         for (let i = 12; i < 36; i += 2) {
             let sSum = 0, pSum = 0;
@@ -275,22 +270,16 @@
             });
             monthlyTotals.push({ sales: sSum, profit: pSum });
         }
-
         let totalSal = 0, totalCos = 0;
         filteredRows.forEach(row => {
             if (typeof row[10] === 'number') totalSal += row[10];
             if (typeof row[11] === 'number') totalCos += Math.floor(row[11]);
         });
-
         const border2pxTop = "border-bottom: 2px solid black !important;";
         const border2pxBottom = "border-top: 2px solid black !important;";
-
         let bHtml = "";
-
-        // 総合計行：分割して枠線（2px）を追加
         bHtml += "<tr><td colspan='2' rowspan='2' class='text-center col-sales-aff' style='font-weight:bold;'>総合計</td>";
         bHtml += `<td class="text-right col-sales-info" style="font-weight:bold; ${border2pxTop}">${totalSal.toLocaleString()}</td>`;
-        
         let gH1S = 0, gH1P = 0, gH2S = 0, gH2P = 0;
         monthlyTotals.forEach((t, idx) => {
             bHtml += `<td class="text-right" style="font-weight:bold; ${border2pxTop}">${t.sales.toLocaleString()}</td>`;
@@ -302,7 +291,6 @@
             }
         });
         bHtml += "</tr><tr>";
-        // 総合計下段：コスト合計を表示
         bHtml += `<td class="text-right col-sales-info" style="font-weight:bold; ${border2pxBottom}">${totalCos.toLocaleString()}</td>`;
         monthlyTotals.forEach((t, idx) => {
             bHtml += `<td class="text-right" style="font-weight:bold; ${border2pxBottom}">${t.profit.toLocaleString()}</td>`;
@@ -314,14 +302,10 @@
             }
         });
         bHtml += "</tr>";
-
         filteredRows.forEach(row => {
             const h1 = calcTotal(row, 12, 22), h2 = calcTotal(row, 24, 34);
             let affDisplay = row[1] || "";
-            if ((affDisplay === '東海' || affDisplay === '首都圏') && row[2] === 'BP') {
-                affDisplay = 'BP' + affDisplay;
-            }
-
+            if ((affDisplay === '東海' || affDisplay === '首都圏') && row[2] === 'BP') affDisplay = 'BP' + affDisplay;
             bHtml += "<tr>";
             bHtml += `<td rowspan="2" class="text-center col-sales-aff">${affDisplay}</td>`;
             bHtml += `<td class="text-center col-sales-name" style="${border2pxTop}">${row[4] || ""}</td>`;
@@ -336,9 +320,7 @@
                     bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0; ${border2pxTop}">${(h1.sales+h2.sales).toLocaleString()}</td>`;
                 }
             }
-            bHtml += "</tr>";
-
-            bHtml += "<tr>";
+            bHtml += "</tr><tr>";
             bHtml += `<td class="text-center col-sales-name" style="${border2pxBottom}">${row[3] || ""}</td>`;
             const cos = (typeof row[11] === 'number') ? Math.floor(row[11]).toLocaleString() : (row[11] || "-");
             bHtml += `<td class="text-right col-sales-info" style="${border2pxBottom}">${cos}</td>`;
@@ -367,6 +349,7 @@
 </script>
 </body>
 </html>
+
 
 
 
