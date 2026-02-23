@@ -2,7 +2,7 @@
 <html lang="ja" class="notranslate">
 <head>
     <meta charset="UTF-8">
-    <title>営業実績管理</title>
+    <title>営業管理</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Hiragino Sans', sans-serif; background-color: #f0f4f8; padding: 0; margin: 0; color: #333; }
@@ -43,7 +43,7 @@
 </head>
 <body>
 <div id="pw_screen"><div id="pw_box">
-    <h2 style="margin:0 0 20px 0;">営業実績管理</h2>
+    <h2 style="margin:0 0 20px 0;">営業管理</h2>
     <input type="password" id="pass_val" style="padding:12px; width:220px;" onkeydown="if(event.keyCode==13)checkPW()"><br><br>
     <button onclick="checkPW()" style="padding:12px 35px; background:#3182ce; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">ログイン</button>
     <p id="err_msg" style="color:red; display:none;">パスワードが違います</p>
@@ -81,9 +81,9 @@
                 </table>
             </div>
             <div class="charts-container">
-                <div class="chart-box"><canvas id="salesChart"></canvas></div>
-                <div class="chart-box"><canvas id="engChart"></canvas></div>
-                <div class="chart-box"><canvas id="waitCostChart"></canvas></div>
+                <div class="chart-box" style="background: white; padding: 20px; border-radius: 12px; height: 350px;"><canvas id="salesChart"></canvas></div>
+                <div class="chart-box" style="background: white; padding: 20px; border-radius: 12px; height: 350px;"><canvas id="engChart"></canvas></div>
+                <div class="chart-box" style="background: white; padding: 20px; border-radius: 12px; height: 350px;"><canvas id="waitCostChart"></canvas></div>
             </div>
         </div>
         <div id="section-sales" style="display:none;">
@@ -123,7 +123,6 @@
     }
     async function fetchAll() {
         try {
-            // 指示に基づき、シート名「営業推進管理表」を指定して全データを取得
             const [rP, rS] = await Promise.all([
                 fetch(`${GAS_URL}?p=freeeks2022&s=実績データ`), 
                 fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表`)
@@ -139,7 +138,6 @@
         if (document.getElementById('section-perf').style.display !== 'none') renderPerf();
         if (document.getElementById('section-sales').style.display !== 'none') renderSales();
     }
-    /* --- 実績管理：一切触っていません --- */
     function getPerfVal(region, itemK, type) {
         if (type === '達成率') {
             const b = getPerfVal(region, itemK, '予算'), a = getPerfVal(region, itemK, '実績');
@@ -187,18 +185,13 @@
         });
         updateCharts(region);
     }
-    /* --- 営業推進管理表：10行目以降の生データ表示 --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
-        const data = salesRows.slice(9); // 10行目（インデックス9）以降を抽出
-        
-        // 最初の行をヘッダーとして表示
+        const data = salesRows.slice(9);
         let hHtml = "<tr>";
         data[0].forEach(cell => { hHtml += `<th>${cell || ""}</th>`; });
         hHtml += "</tr>"; head.innerHTML = hHtml;
-        
-        // 2行目以降を全データとして表示
         let bHtml = "";
         data.slice(1).forEach(row => {
             bHtml += "<tr>";
