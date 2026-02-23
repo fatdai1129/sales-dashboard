@@ -16,7 +16,7 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 実績管理セクション：一切の変更禁止（完全固定） --- */
+        /* --- 実績管理セクション：一切の変更を禁止（完全固定） --- */
         table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: max-content; table-layout: fixed; }
         th, td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
         th { background: #edf2f7; }
@@ -210,34 +210,38 @@
         updateCharts(region);
     }
 
-    /* --- 営業推進管理表：赤丸の項目を削除 --- */
+    /* --- 営業推進管理表：二段表示対応 --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
         
-        // 削除対象項目インデックス：0(NO), 2(売上＆原価用の行), 5(年齢), 6(企業名), 7(内容), 8(状況), 9(売込金額1.8)
-        const excludeCols = [0, 2, 5, 6, 7, 8, 9];
-
+        // ヘッダー作成（技術者名と№を結合）
         let hHtml = "<tr>";
-        headers.forEach((cell, idx) => { if (!excludeCols.includes(idx)) hHtml += `<th>${cell || ""}</th>`; });
+        hHtml += `<th>${headers[1] || ""}</th>`; // 所属
+        hHtml += `<th>${headers[3] || ""}<br>${headers[4] || ""}</th>`; // 技術者名・№
+        // 10列目以降を表示
+        for (let i = 10; i < headers.length; i++) {
+            hHtml += `<th>${headers[i] || ""}</th>`;
+        }
         hHtml += "</tr>"; head.innerHTML = hHtml;
         
+        // ボディ作成
         let bHtml = "";
         rawData.forEach(row => {
             if (region !== "全国合計" && row[1] !== region) return;
-            // 以前のご指示に基づき、データ行でないものはスキップ
             if (!row[2] || row[2].includes("売上") || row[2].includes("原価")) return;
             
             bHtml += "<tr>";
-            row.forEach((cell, idx) => {
-                if (!excludeCols.includes(idx)) {
-                    const val = (typeof cell === 'number') ? cell.toLocaleString() : (cell || "");
-                    const align = (typeof cell === 'number') ? 'text-right' : 'text-center';
-                    bHtml += `<td class="${align}">${val}</td>`;
-                }
-            });
+            bHtml += `<td class="text-center">${row[1] || ""}</td>`; // 所属
+            bHtml += `<td class="text-center">${row[3] || ""}<br>${row[4] || ""}</td>`; // 上段：名 / 下段：№
+            // 10列目以降
+            for (let i = 10; i < row.length; i++) {
+                const val = (typeof row[i] === 'number') ? row[i].toLocaleString() : (row[i] || "");
+                const align = (typeof row[i] === 'number') ? 'text-right' : 'text-center';
+                bHtml += `<td class="${align}">${val}</td>`;
+            }
             bHtml += "</tr>";
         });
         body.innerHTML = bHtml;
