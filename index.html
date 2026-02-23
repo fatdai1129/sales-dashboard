@@ -28,8 +28,9 @@
         tr.bt-3px td:not(.cat-header) { border-top: 3px solid black !important; }
         tr.bb-4px td { border-bottom: 4px solid black !important; }
 
-        /* 月次セルの右枠線 3px 設定用クラス */
+        /* 月次セルの枠線設定：指示に基づき左枠線3pxを適用 */
         .br-3px { border-right: 3px solid black !important; }
+        .bl-3px { border-left: 3px solid black !important; }
 
         /* 列幅設定：全月次120px */
         .col-item { width: 180px; }
@@ -41,7 +42,7 @@
         .text-right { text-align: right !important; padding-right: 12px !important; }
         .text-center { text-align: center !important; }
 
-        /* 固定列設定：境界4px */
+        /* 固定列設定：項目右4px、区分左右4px */
         .sticky-left { 
             position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; 
             border-right: 4px solid black !important;
@@ -90,8 +91,8 @@
                             <th class="col-total">年間計</th>
                         </tr>
                         <tr>
-                            <th class="col-month br-3px">6月</th><th class="col-month br-3px">7月</th><th class="col-month br-3px">8月</th><th class="col-month br-3px">9月</th><th class="col-month br-3px">10月</th><th class="col-month">11月</th><th class="col-total">計</th>
-                            <th class="col-month br-3px">12月</th><th class="col-month br-3px">1月</th><th class="col-month br-3px">2月</th><th class="col-month br-3px">3月</th><th class="col-month br-3px">4月</th><th class="col-month">5月</th><th class="col-total">計</th>
+                            <th class="col-month br-3px">6月</th><th class="col-month bl-3px br-3px">7月</th><th class="col-month bl-3px br-3px">8月</th><th class="col-month bl-3px br-3px">9月</th><th class="col-month bl-3px br-3px">10月</th><th class="col-month bl-3px">11月</th><th class="col-total">計</th>
+                            <th class="col-month br-3px">12月</th><th class="col-month bl-3px br-3px">1月</th><th class="col-month bl-3px br-3px">2月</th><th class="col-month bl-3px br-3px">3月</th><th class="col-month bl-3px br-3px">4月</th><th class="col-month bl-3px">5月</th><th class="col-total">計</th>
                             <th class="col-total">合計</th>
                         </tr>
                     </thead>
@@ -205,15 +206,15 @@
                 const h2 = (type==='達成率'||item.k==='待機率') ? (sum(bD.slice(6,12))===0?0:(sum(aD.slice(6,12))/sum(bD.slice(6,12)))*100) : sum(data.slice(6,12));
                 const tot = (type==='達成率'||item.k==='待機率') ? (sum(bD)===0?0:(sum(aD)/sum(bD))*100) : h1+h2;
                 
-                // データセルに3pxの右枠線を適用する判定
+                // データセルに3pxの枠線を適用する判定
                 for(let i=0;i<6;i++) {
-                    const is3px = (i < 5) ? 'br-3px' : '';
-                    html += `<td class="text-right ${is3px}">${formatVal(data[i],item.k,type)}</td>`;
+                    const borderClass = (i < 5 ? 'br-3px ' : '') + (i > 0 ? 'bl-3px ' : '');
+                    html += `<td class="text-right ${borderClass}">${formatVal(data[i],item.k,type)}</td>`;
                 }
                 html += `<td class="text-right col-total">${formatVal(h1,item.k,type)}</td>`;
                 for(let i=6;i<12;i++) {
-                    const is3px = (i < 11) ? 'br-3px' : '';
-                    html += `<td class="text-right ${is3px}">${formatVal(data[i],item.k,type)}</td>`;
+                    const borderClass = (i < 11 ? 'br-3px ' : '') + (i > 6 ? 'bl-3px ' : '');
+                    html += `<td class="text-right ${borderClass}">${formatVal(data[i],item.k,type)}</td>`;
                 }
                 html += `<td class="text-right col-total">${formatVal(h2,item.k,type)}</td>`;
                 html += `<td class="text-right col-total">${formatVal(tot,item.k,type)}</td>`;
