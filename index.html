@@ -16,7 +16,7 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 実績管理セクション：一切の変更を禁止 --- */
+        /* --- 実績管理セクション：一切の変更禁止（完全固定） --- */
         table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: max-content; table-layout: fixed; }
         th, td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
         th { background: #edf2f7; }
@@ -42,7 +42,7 @@
         .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; border-right: 4px solid black !important; }
         .sticky-left-2 { position: sticky; left: 180px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
 
-        /* 営業推進管理表用 */
+        /* 営業推進管理表用：デザイン統一 */
         .sales-raw-table th { background: #edf2f7; font-weight: bold; }
 
         .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
@@ -209,12 +209,16 @@
         });
         updateCharts(region);
     }
+
+    /* --- 営業推進管理表：赤丸の項目を削除 --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
-        const excludeCols = [0, 5, 6, 7, 8]; // 0番目(NO)および以前削除指示のあった項目
+        
+        // 削除対象項目インデックス：0(NO), 2(売上＆原価用の行), 5(年齢), 6(企業名), 7(内容), 8(状況), 9(売込金額1.8)
+        const excludeCols = [0, 2, 5, 6, 7, 8, 9];
 
         let hHtml = "<tr>";
         headers.forEach((cell, idx) => { if (!excludeCols.includes(idx)) hHtml += `<th>${cell || ""}</th>`; });
@@ -223,8 +227,9 @@
         let bHtml = "";
         rawData.forEach(row => {
             if (region !== "全国合計" && row[1] !== region) return;
-            // 「売上＆原価用」の行（空行や特定ラベル）をスキップ
+            // 以前のご指示に基づき、データ行でないものはスキップ
             if (!row[2] || row[2].includes("売上") || row[2].includes("原価")) return;
+            
             bHtml += "<tr>";
             row.forEach((cell, idx) => {
                 if (!excludeCols.includes(idx)) {
@@ -247,7 +252,6 @@
 </script>
 </body>
 </html>
-
 
 
 
