@@ -210,24 +210,24 @@
         updateCharts(region);
     }
 
-    /* --- 営業推進管理表：二段表示対応 --- */
+    /* --- 営業推進管理表：赤丸の項目（コスト行データ）を削除 --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
         
-        // ヘッダー（給与➩給料 / 原価➩コスト）
+        // ヘッダー（給料のみとし、コスト行を削除）
         let hHtml = "<tr>";
         hHtml += `<th>${headers[1] || ""}</th>`; // 所属
         hHtml += `<th>${headers[4] || ""}<br>${headers[3] || ""}</th>`; // 名/№
-        hHtml += `<th>給料<br>コスト</th>`; // 統合ヘッダー
-        for (let i = 12; i < headers.length; i++) {
+        hHtml += `<th>給料</th>`; // 給料のみ表示
+        for (let i = 12; i < headers.length; i += 2) { // 各月の左側（売上）のみ取得
             hHtml += `<th>${headers[i] || ""}</th>`;
         }
         hHtml += "</tr>"; head.innerHTML = hHtml;
         
-        // ボディ（上段：給与数値 / 下段：コスト数値）
+        // ボディ
         let bHtml = "";
         rawData.forEach(row => {
             if (region !== "全国合計" && row[1] !== region) return;
@@ -237,13 +237,12 @@
             bHtml += `<td class="text-center">${row[1] || ""}</td>`; // 所属
             bHtml += `<td class="text-center">${row[4] || ""}<br>${row[3] || ""}</td>`; // 名/№
             
-            // 給与(10)と原価(11)を二段表示
+            // 給与(10)のみ表示
             const salary = (typeof row[10] === 'number') ? row[10].toLocaleString() : (row[10] || "-");
-            const cost = (typeof row[11] === 'number') ? row[11].toLocaleString() : (row[11] || "-");
-            bHtml += `<td class="text-right">${salary}<br>${cost}</td>`;
+            bHtml += `<td class="text-right">${salary}</td>`;
             
-            // 6月(12)以降
-            for (let i = 12; i < row.length; i++) {
+            // 6月(12)以降、2列おきに取得（売上セルのみ）
+            for (let i = 12; i < row.length; i += 2) {
                 const val = (typeof row[i] === 'number') ? row[i].toLocaleString() : (row[i] || "");
                 const align = (typeof row[i] === 'number') ? 'text-right' : 'text-center';
                 bHtml += `<td class="${align}">${val}</td>`;
@@ -262,6 +261,7 @@
 </script>
 </body>
 </html>
+
 
 
 
