@@ -16,7 +16,7 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 実績管理セクション：完全固定（枠線消失防止版） --- */
+        /* --- 実績管理セクション：完全固定 --- */
         table.perf-table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; min-width: 2000px; table-layout: fixed; }
         table.perf-table th, table.perf-table td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 12px 6px; overflow: hidden; }
         table.perf-table th { background: #edf2f7; border-bottom: 4px solid black !important; }
@@ -28,16 +28,17 @@
         tr.bb-4px td { border-bottom: 4px solid black !important; }
         tr.bb-3px td { border-bottom: 3px solid black !important; }
 
-        /* 固定列の枠線消失問題をbox-shadowで解決 */
+        /* 項目列と区分列の固定設定。指示通り「区分」の左側に4px線を描画 */
         .sticky-left { 
             position: sticky; left: 0; z-index: 30; 
             background: #ebf8ff !important; 
-            box-shadow: inset -4px 0 0 0 black; /* 右側の4px線を確定 */
+            box-shadow: inset -4px 0 0 0 black; 
         }
         .sticky-left-2 { 
             position: sticky; left: 180px; z-index: 30; 
             background: white !important; 
-            box-shadow: inset -4px 0 0 0 black; /* 右側の4px線を確定 */
+            /* 指示通り、左側に4pxの線を設定 (正の値で左側inset) */
+            box-shadow: inset 4px 0 0 0 black !important; 
         }
 
         /* --- 営業推進管理表 --- */
@@ -91,9 +92,9 @@
                 </table>
             </div>
             <div class="charts-container">
-                <div class="chart-box" style="background: white; padding: 20px; border-radius: 12px; height: 350px;"><canvas id="salesChart"></canvas></div>
-                <div class="chart-box" style="background: white; padding: 20px; border-radius: 12px; height: 350px;"><canvas id="engChart"></canvas></div>
-                <div class="chart-box" style="background: white; padding: 20px; border-radius: 12px; height: 350px;"><canvas id="waitCostChart"></canvas></div>
+                <div class="chart-box"><canvas id="salesChart"></canvas></div>
+                <div class="chart-box"><canvas id="engChart"></canvas></div>
+                <div class="chart-box"><canvas id="waitCostChart"></canvas></div>
             </div>
         </div>
         <div id="section-sales" style="display:none;">
@@ -228,7 +229,6 @@
 </script>
 </body>
 </html>
-
 
 
 
