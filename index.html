@@ -7,7 +7,12 @@
     <style>
         body { font-family: 'Hiragino Sans', sans-serif; background-color: #f0f4f8; padding: 0; margin: 0; color: #333; }
         #pw_screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a202c; display: flex; justify-content: center; align-items: center; z-index: 10000; }
-        #pw_box { background: white; padding: 40px; border-radius: 12px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        /* ログイン画面のサイズを倍増、入力文字を中央寄せ */
+        #pw_box { background: white; padding: 80px 60px; border-radius: 16px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.5); transform: scale(1.2); }
+        #pass_val { padding: 15px; width: 280px; font-size: 1.2rem; text-align: center; border: 2px solid #cbd5e0; border-radius: 8px; }
+        #pw_box h2 { font-size: 2rem; margin-bottom: 30px; }
+        #pw_box button { padding: 15px 50px; font-size: 1.2rem; border-radius: 8px; }
+
         #main_content { display: none; }
         .nav-bar { background: #2d3748; display: flex; align-items: center; position: sticky; top: 0; z-index: 1000; height: 60px; }
         .nav-item { padding: 0 25px; height: 60px; line-height: 60px; color: #a0aec0; cursor: pointer; font-weight: bold; border-bottom: 3px solid transparent; }
@@ -65,10 +70,10 @@
 </head>
 <body>
 <div id="pw_screen"><div id="pw_box">
-    <h2 style="margin:0 0 20px 0;">営業管理システム</h2>
-    <input type="password" id="pass_val" style="padding:12px; width:220px;" onkeydown="if(event.keyCode==13)checkPW()"><br><br>
-    <button onclick="checkPW()" style="padding:12px 35px; background:#3182ce; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">ログイン</button>
-    <p id="err_msg" style="color:red; display:none;">パスワードが違います</p>
+    <h2 style="margin:0 0 30px 0;">営業管理システム</h2>
+    <input type="password" id="pass_val" onkeydown="if(event.keyCode==13)checkPW()"><br><br>
+    <button onclick="checkPW()" style="background:#3182ce; color:white; border:none; cursor:pointer; font-weight:bold;">ログイン</button>
+    <p id="err_msg" style="color:red; display:none; font-size:1.2rem; margin-top:20px;">パスワードが違います</p>
 </div></div>
 
 <div id="main_content">
@@ -421,7 +426,7 @@
     }
 
     /* =========================================
-       3. 売込状況一覧 ロジック（日付フォーマット修正版）
+       3. 売込状況一覧 ロジック
     ========================================= */
     function renderStatus() {
         const tbody = document.getElementById('status-body');
@@ -513,7 +518,6 @@
 </script>
 </body>
 </html>
-
 
 
 
