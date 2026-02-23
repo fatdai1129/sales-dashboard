@@ -2,7 +2,7 @@
 <html lang="ja" class="notranslate">
 <head>
     <meta charset="UTF-8">
-    <title>営業管理</title>
+    <title>営業管理システム</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Hiragino Sans', sans-serif; background-color: #f0f4f8; padding: 0; margin: 0; color: #333; }
@@ -16,41 +16,48 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 実績管理セクション：余白解消のための幅調整 --- */
-        .perf-table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: 100%; min-width: 1800px; table-layout: fixed; }
-        .perf-table th, .perf-table td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
-        .perf-table th { background: #edf2f7; }
-        
+        /* --- 共通テーブル設定 --- */
+        table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; }
+        th, td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
+        th { background: #edf2f7; font-weight: bold; }
+        .text-right { text-align: right !important; padding-right: 12px !important; }
+        .text-center { text-align: center !important; }
+
+        /* --- 1. 拠点別実績・予算（余白解消版） --- */
+        .perf-table { width: 100%; min-width: 1800px; table-layout: fixed; }
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
         tr.bb-3px td:not(.cat-header) { border-bottom: 3px solid black !important; }
         tr.bt-3px td:not(.cat-header) { border-top: 3px solid black !important; }
         tr.bb-4px td { border-bottom: 4px solid black !important; }
-
         .br-3px { border-right: 3px solid black !important; }
         .bl-3px { border-left: 3px solid black !important; }
-
-        /* 実績管理の列幅バランス */
         .col-item { width: 220px; }
         .col-type { width: 120px; }
         .col-month { width: auto; }
         .col-total { width: 160px; background: #fffaf0 !important; font-weight: bold; }
-
         .cat-header { background: #ebf8ff !important; font-weight: bold; text-align: center; }
-        .text-right { text-align: right !important; padding-right: 12px !important; }
-        .text-center { text-align: center !important; }
-
         .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; border-right: 4px solid black !important; }
         .sticky-left-2 { position: sticky; left: 220px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
 
-        /* --- 営業推進管理表用：一切の変更なし（完全維持） --- */
-        .sales-raw-table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: 100%; min-width: 2000px; table-layout: fixed; }
-        .sales-raw-table th, .sales-raw-table td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; width: 130px; }
+        /* --- 2. 営業推進管理表（2px境界・サイズ調整・給料コスト合計版） --- */
+        .sales-raw-table { width: 100%; min-width: 2000px; table-layout: fixed; }
+        .sales-raw-table th, .sales-raw-table td { width: 130px; }
         .col-sales-aff { width: 150px !important; }
         .col-sales-name { width: 220px !important; }
         .col-sales-info { width: 150px !important; }
         .col-sales-total { width: 160px !important; background: #fffaf0 !important; font-weight: bold; }
-        .sales-raw-table th { background: #edf2f7; font-weight: bold; }
+
+        /* --- 3. 売込状況一覧 --- */
+        .status-table { width: 100%; min-width: 1200px; table-layout: fixed; }
+        .status-table th { position: sticky; top: 0; z-index: 10; }
+        .col-status-name { width: 180px; }
+        .col-status-aff { width: 130px; }
+        .col-status-cond { width: 130px; }
+        .col-status-reason { width: auto; }
+        .col-status-date { width: 150px; }
+        .col-status-period { width: 150px; }
+        .status-wait { color: #c53030; font-weight: bold; background-color: #fff5f5; }
 
         .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
         .chart-box { background: white; padding: 20px; border-radius: 12px; height: 350px; }
@@ -58,17 +65,20 @@
 </head>
 <body>
 <div id="pw_screen"><div id="pw_box">
-    <h2 style="margin:0 0 20px 0;">営業管理</h2>
+    <h2 style="margin:0 0 20px 0;">営業管理システム</h2>
     <input type="password" id="pass_val" style="padding:12px; width:220px;" onkeydown="if(event.keyCode==13)checkPW()"><br><br>
     <button onclick="checkPW()" style="padding:12px 35px; background:#3182ce; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">ログイン</button>
     <p id="err_msg" style="color:red; display:none;">パスワードが違います</p>
 </div></div>
+
 <div id="main_content">
     <div class="nav-bar">
         <div class="nav-item active" id="tab-perf" onclick="switchTab('perf')">実績管理</div>
         <div class="nav-item" id="tab-sales" onclick="switchTab('sales')">営業推進管理表</div>
+        <div class="nav-item" id="tab-status" onclick="switchTab('status')">売込状況一覧</div>
         <div id="sync_status">データ同期中...</div>
     </div>
+
     <div class="container">
         <div id="section-perf">
             <div class="card">
@@ -101,6 +111,7 @@
                 <div class="chart-box"><canvas id="waitCostChart"></canvas></div>
             </div>
         </div>
+
         <div id="section-sales" style="display:none;">
             <div class="card">
                 <div style="display:flex; align-items:center; margin-bottom:20px;">
@@ -114,16 +125,43 @@
                 </div>
             </div>
         </div>
+
+        <div id="section-status" style="display:none;">
+            <div class="card">
+                <div style="display:flex; align-items:center; margin-bottom:20px;">
+                    <h2 style="margin:0; border-left:5px solid #ed8936; padding-left:15px; margin-right: 25px;">売込状況一覧</h2>
+                    <input type="text" id="status-search" placeholder="名前・所属などで検索..." style="padding:10px; width:300px; border-radius:6px; border:1px solid #cbd5e0;" oninput="renderStatus()">
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="status-table">
+                        <thead>
+                            <tr>
+                                <th class="col-status-name">従業員名</th>
+                                <th class="col-status-aff">所属</th>
+                                <th class="col-status-cond">稼働状況</th>
+                                <th class="col-status-reason">退場理由</th>
+                                <th class="col-status-date">参画可能日</th>
+                                <th class="col-status-period">未参画期間</th>
+                            </tr>
+                        </thead>
+                        <tbody id="status-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
 <script>
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbzLPhdnyAo1D7SH-T3uv0EOb5aWekcfnFRtReGhsnkQ5_sLbi36fTc6o5eVYukeliVJIA/exec';
-    let perfMap = {}, salesRows = [], charts = {};
+    let perfMap = {}, salesRows = [], statusRows = [], charts = {};
+
     window.onload = () => {
-        const cP = localStorage.getItem('f_perf'), cS = localStorage.getItem('f_sales');
-        if(cP) perfMap = JSON.parse(cP); if(cS) salesRows = JSON.parse(cS);
+        const cP = localStorage.getItem('f_perf'), cS = localStorage.getItem('f_sales'), cSt = localStorage.getItem('f_status');
+        if(cP) perfMap = JSON.parse(cP); if(cS) salesRows = JSON.parse(cS); if(cSt) statusRows = JSON.parse(cSt);
         fetchAll();
     };
+
     function checkPW() {
         if (document.getElementById('pass_val').value === "freeeks2022") {
             document.getElementById('pw_screen').style.display = 'none';
@@ -131,27 +169,50 @@
             renderAll();
         } else { document.getElementById('err_msg').style.display = 'block'; }
     }
+
     function switchTab(tab) {
-        document.getElementById('section-perf').style.display = tab === 'perf' ? 'block' : 'none';
-        document.getElementById('section-sales').style.display = tab === 'sales' ? 'block' : 'none';
-        document.getElementById('tab-perf').className = 'nav-item' + (tab === 'perf' ? ' active' : '');
-        document.getElementById('tab-sales').className = 'nav-item' + (tab === 'sales' ? ' active' : '');
+        ['perf', 'sales', 'status'].forEach(t => {
+            document.getElementById(`section-${t}`).style.display = (t === tab) ? 'block' : 'none';
+            document.getElementById(`tab-${t}`).className = 'nav-item' + (t === tab ? ' active' : '');
+        });
         renderAll();
     }
+
     async function fetchAll() {
         try {
-            const [rP, rS] = await Promise.all([fetch(`${GAS_URL}?p=freeeks2022&s=実績データ`), fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表`)]);
+            // GASから3つのシートのデータを一括取得
+            const [rP, rS, rSt] = await Promise.all([
+                fetch(`${GAS_URL}?p=freeeks2022&s=実績データ`),
+                fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表`),
+                fetch(`${GAS_URL}?p=freeeks2022&s=売込状況一覧`) // ※シート名が異なる場合はここを修正
+            ]);
+            
             const rowsP = await rP.json(); perfMap = {};
             rowsP.slice(1).forEach(r => { perfMap[`${r[0]}-${r[1]}-${r[2]}`] = r.slice(3, 15).map(v => (v===""||v==null)?null:parseFloat(String(v).replace(/,/g,''))||0); });
+            
             salesRows = await rS.json();
-            localStorage.setItem('f_perf', JSON.stringify(perfMap)); localStorage.setItem('f_sales', JSON.stringify(salesRows));
-            document.getElementById('sync_status').innerText = '最新データ同期完了'; renderAll();
-        } catch (e) { document.getElementById('sync_status').innerText = '同期失敗'; }
+            statusRows = await rSt.json();
+            
+            localStorage.setItem('f_perf', JSON.stringify(perfMap)); 
+            localStorage.setItem('f_sales', JSON.stringify(salesRows));
+            localStorage.setItem('f_status', JSON.stringify(statusRows));
+            
+            document.getElementById('sync_status').innerText = '最新データ同期完了'; 
+            renderAll();
+        } catch (e) { 
+            document.getElementById('sync_status').innerText = '同期失敗'; 
+        }
     }
+
     function renderAll() {
         if (document.getElementById('section-perf').style.display !== 'none') renderPerf();
         if (document.getElementById('section-sales').style.display !== 'none') renderSales();
+        if (document.getElementById('section-status').style.display !== 'none') renderStatus();
     }
+
+    /* =========================================
+       1. 拠点別実績・予算 ロジック
+    ========================================= */
     function getPerfVal(region, itemK, type) {
         if (type === '達成率') {
             const b = getPerfVal(region, itemK, '予算'), a = getPerfVal(region, itemK, '実績');
@@ -176,11 +237,13 @@
         }
         return perfMap[`${region}-${itemK}-${type}`] || new Array(12).fill(null);
     }
+
     function renderPerf() {
         const region = document.getElementById('region-select').value, tbody = document.getElementById('perf-body'); tbody.innerHTML = '';
         const items = [{n:'売上',k:'売上',t:['予算','実績','達成率']},{n:'稼働原価',k:'稼働原価',t:['予算','実績','達成率']},{n:'A利益',k:'A利益',t:['予算','実績','達成率']},{n:'待機原価',k:'待機原価',t:['実績']},{n:'プロパー(稼働)',k:'プロパー(稼働)',t:['予算','実績','達成率']},{n:'BP',k:'BP',t:['実績']},{n:'稼働エンジニア数',k:'稼働エンジニア数',t:['予算','実績']},{n:'プロパー(待機)',k:'プロパー(待機)',t:['予算','実績']},{n:'待機率',k:'待機率',t:['実績']},{n:'エンジニア総数',k:'エンジニア総数',t:['予算','実績','達成率']}];
         const targets2px = ['売上','稼働原価','A利益','プロパー(稼働)','稼働エンジニア数','プロパー(待機)','エンジニア総数'];
         const targets3px = ['売上','稼働原価','A利益','プロパー(稼働)','エンジニア総数'];
+        
         items.forEach(item => {
             item.t.forEach((type, idx) => {
                 const tr = document.createElement('tr');
@@ -217,11 +280,15 @@
         updateCharts(region);
     }
 
+    /* =========================================
+       2. 営業推進管理表 ロジック
+    ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
+        
         let hHtml = "<tr>";
         hHtml += `<th rowspan="2" class="col-sales-aff">${headers[1] || ""}</th>`;
         hHtml += `<th rowspan="2" class="col-sales-name">${headers[4] || ""}<br>${headers[3] || ""}</th>`;
@@ -235,10 +302,9 @@
             }
         }
         hHtml += "</tr><tr>";
-        for (let i = 12; i < 36; i += 2) {
-            hHtml += `<th>売上<br>利益</th>`;
-        }
+        for (let i = 12; i < 36; i += 2) { hHtml += `<th>売上<br>利益</th>`; }
         hHtml += "</tr>"; head.innerHTML = hHtml;
+        
         let filteredRows = rawData.filter(row => {
             if (region === "東日本") {
                 const isTokai = (row[1] === '東海') || (row[1] === 'BP東海' && row[3] === 'BP 要員');
@@ -251,6 +317,7 @@
             }
             return row[2] && !row[2].includes("売上") && !row[2].includes("原価") && row[4];
         });
+
         const calcTotal = (row, start, end) => {
             let sSum = 0, pSum = 0;
             for (let i = start; i <= end; i += 2) {
@@ -260,6 +327,7 @@
             }
             return { sales: sSum, profit: pSum };
         };
+
         let monthlyTotals = [];
         for (let i = 12; i < 36; i += 2) {
             let sSum = 0, pSum = 0;
@@ -270,14 +338,19 @@
             });
             monthlyTotals.push({ sales: sSum, profit: pSum });
         }
+
         let totalSal = 0, totalCos = 0;
         filteredRows.forEach(row => {
             if (typeof row[10] === 'number') totalSal += row[10];
             if (typeof row[11] === 'number') totalCos += Math.floor(row[11]);
         });
+
         const border2pxTop = "border-bottom: 2px solid black !important;";
         const border2pxBottom = "border-top: 2px solid black !important;";
+
         let bHtml = "";
+
+        // 総合計行
         bHtml += "<tr><td colspan='2' rowspan='2' class='text-center col-sales-aff' style='font-weight:bold;'>総合計</td>";
         bHtml += `<td class="text-right col-sales-info" style="font-weight:bold; ${border2pxTop}">${totalSal.toLocaleString()}</td>`;
         let gH1S = 0, gH1P = 0, gH2S = 0, gH2P = 0;
@@ -302,10 +375,13 @@
             }
         });
         bHtml += "</tr>";
+
+        // 個人データ行
         filteredRows.forEach(row => {
             const h1 = calcTotal(row, 12, 22), h2 = calcTotal(row, 24, 34);
             let affDisplay = row[1] || "";
             if ((affDisplay === '東海' || affDisplay === '首都圏') && row[2] === 'BP') affDisplay = 'BP' + affDisplay;
+
             bHtml += "<tr>";
             bHtml += `<td rowspan="2" class="text-center col-sales-aff">${affDisplay}</td>`;
             bHtml += `<td class="text-center col-sales-name" style="${border2pxTop}">${row[4] || ""}</td>`;
@@ -339,7 +415,49 @@
         body.innerHTML = bHtml;
     }
 
+    /* =========================================
+       3. 売込状況一覧 ロジック
+    ========================================= */
+    function renderStatus() {
+        const tbody = document.getElementById('status-body');
+        const search = document.getElementById('status-search').value.toLowerCase();
+        tbody.innerHTML = '';
+        if (!statusRows || statusRows.length < 2) return;
+
+        // 2行目以降をループ
+        statusRows.slice(1).forEach(row => {
+            if (!row[0]) return; // 名前がなければスキップ
+            const textString = row.join('').toLowerCase();
+            if (search && !textString.includes(search)) return;
+
+            const tr = document.createElement('tr');
+            let statusClass = (row[2] === "待機中") ? "status-wait" : "";
+
+            // 列の順番: 従業員名(0), 所属(1), 稼働状況(2), 退場理由(3), 参画可能日(4), 未参画期間(5) を想定
+            tr.innerHTML = `
+                <td class="text-center" style="font-weight:bold;">${row[0] || ""}</td>
+                <td class="text-center">${row[1] || ""}</td>
+                <td class="text-center ${statusClass}">${row[2] || ""}</td>
+                <td>${row[3] || ""}</td>
+                <td class="text-center">${formatDate(row[4])}</td>
+                <td class="text-center">${row[5] || ""}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    /* --- ユーティリティ関数 --- */
     function formatVal(v, k, t) { if (v === null || (v === 0 && k !== '待機率' && t !== '達成率')) return '-'; if (k === '待機率' || t === '達成率') return v.toFixed(1) + '%'; return Math.round(v).toLocaleString(); }
+    
+    function formatDate(val) {
+        if (!val) return "";
+        if (typeof val === 'number') {
+            const date = new Date((val - 25569) * 86400 * 1000); // スプレッドシートのシリアル値を日付に
+            return date.toLocaleDateString('ja-JP');
+        }
+        return val;
+    }
+
     function updateCharts(region) {
         const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
         if (charts.s) charts.s.destroy(); charts.s = new Chart(document.getElementById('salesChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ label: '実績', data: getPerfVal(region, '売上', '実績'), backgroundColor: '#3182ce' },{ label: '予算', data: getPerfVal(region, '売上', '予算'), type: 'line', borderColor: '#e53e3e' }]}, options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: '売上推移' } } } });
@@ -349,7 +467,6 @@
 </script>
 </body>
 </html>
-
 
 
 
