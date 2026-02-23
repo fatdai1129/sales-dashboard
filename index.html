@@ -187,17 +187,27 @@
 
     async function fetchAll() {
         try {
-            const [rP, rS, rSt] = await Promise.all([
+            // 1. 実績と推進表のデータを取得
+            const [rP, rS] = await Promise.all([
                 fetch(`${GAS_URL}?p=freeeks2022&s=実績データ`),
-                fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表`),
-                fetch(`${GAS_URL}?p=freeeks2022&s=売込状況一覧`)
+                fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表`)
             ]);
             
+            // 2. 売込状況のデータを取得（シート名の揺れに対応する安全な設計）
+            let rSt = await fetch(`${GAS_URL}?p=freeeks2022&s=売込状況`);
+            let stData = await rSt.json();
+            
+            // もし「売込状況」でデータが空だった場合、「売込状況一覧」で再取得する
+            if (!stData || stData.length <= 1 || stData.error) {
+                const rStFallback = await fetch(`${GAS_URL}?p=freeeks2022&s=売込状況一覧`);
+                stData = await rStFallback.json();
+            }
+
             const rowsP = await rP.json(); perfMap = {};
             rowsP.slice(1).forEach(r => { perfMap[`${r[0]}-${r[1]}-${r[2]}`] = r.slice(3, 15).map(v => (v===""||v==null)?null:parseFloat(String(v).replace(/,/g,''))||0); });
             
             salesRows = await rS.json();
-            statusRows = await rSt.json();
+            statusRows = stData;
             
             localStorage.setItem('f_perf', JSON.stringify(perfMap)); 
             localStorage.setItem('f_sales', JSON.stringify(salesRows));
@@ -206,6 +216,7 @@
             document.getElementById('sync_status').innerText = '最新データ同期完了'; 
             renderAll();
         } catch (e) { 
+            console.error(e);
             document.getElementById('sync_status').innerText = '同期失敗'; 
         }
     }
@@ -287,7 +298,7 @@
     }
 
     /* =========================================
-       2. 営業推進管理表 
+       2. 営業推進管理表 ロジック
     ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
@@ -423,39 +434,33 @@
     }
 
     /* =========================================
-       3. 売込状況一覧 ロジック（フィルタ・ソート完全対応）
+       3. 売込状況一覧 ロジック（完全対応版）
     ========================================= */
     function renderStatus() {
         const tbody = document.getElementById('status-body');
         const region = document.getElementById('status-region-select').value;
         tbody.innerHTML = '';
-        if (!statusRows || statusRows.length < 2) return;
+        
+        // データが存在しない場合のメッセージ
+        if (!statusRows || statusRows.length <= 1) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">データがありません。</td></tr>';
+            return;
+        }
 
-        // 1. データのフィルタリング（所属列がA列・B列どちらに移動しても対応）
+        // 1. データのフィルタリング（緩い判定のincludesを使用）
         let filteredRows = statusRows.slice(1).filter(row => {
-            if (!row[0] && !row[1]) return false; 
+            if (!row || row.length < 2) return false;
             
-            const c0 = String(row[0] || "").trim();
-            const c1 = String(row[1] || "").trim();
-            
-            // 行の中に特定の拠点名が含まれているかチェック
-            const isTokai = (c0 === '東海' || c0 === 'BP東海' || c1 === '東海' || c1 === 'BP東海');
-            const isShitoken = (c0 === '首都圏' || c0 === 'BP首都圏' || c1 === '首都圏' || c1 === 'BP首都圏');
-            const isWest = (c0 === '西日本' || c0 === 'BP西日本' || c1 === '西日本' || c1 === 'BP西日本');
+            // 所属（A列・B列のどちらにあっても確実に拾うための結合テキスト）
+            const searchTargetText = String(row[0] || "") + " " + String(row[1] || "");
 
-            // 拠点プルダウンの条件分岐
             if (region === "全国合計") {
-                return isTokai || isShitoken || isWest; // 3拠点のいずれかであれば表示
+                return true; // 全国合計は強制的に全表示
             } else if (region === "東日本") {
-                return isTokai || isShitoken; // 東海か首都圏であれば表示
-            } else if (region === "東海") {
-                return isTokai;
-            } else if (region === "首都圏") {
-                return isShitoken;
-            } else if (region === "西日本") {
-                return isWest;
+                return searchTargetText.includes('東海') || searchTargetText.includes('首都圏');
+            } else {
+                return searchTargetText.includes(region);
             }
-            return true;
         });
 
         // 2. データのソート（待機中 ➩ 休業中 ➩ 休職中 ➩ 稼働中）
@@ -463,7 +468,7 @@
         filteredRows.sort((a, b) => {
             const statusA = String(a[2] || "").trim();
             const statusB = String(b[2] || "").trim();
-            const rankA = order[statusA] || 99; // 指定外のステータスは下に回す
+            const rankA = order[statusA] || 99; 
             const rankB = order[statusB] || 99;
             return rankA - rankB;
         });
@@ -492,23 +497,9 @@
                 period = "-";
             }
 
-            // 所属と従業員名の判定（A列・B列のどちらに書かれていても自動判別）
-            const c0 = String(row[0] || "").trim();
-            const c1 = String(row[1] || "").trim();
-            let aff = c1;
-            let name = c0;
-            const knownAffs = ['東海', 'BP東海', '首都圏', 'BP首都圏', '西日本', 'BP西日本'];
-            if (knownAffs.includes(c0)) {
-                aff = c0;
-                name = c1;
-            } else if (knownAffs.includes(c1)) {
-                aff = c1;
-                name = c0;
-            }
-
             tr.innerHTML = `
-                <td class="text-center">${aff}</td>
-                <td class="text-center" style="font-weight:bold;">${name}</td>
+                <td class="text-center">${row[0] || ""}</td>
+                <td class="text-center" style="font-weight:bold;">${row[1] || ""}</td>
                 <td class="text-center ${statusClass}">${row[2] || ""}</td>
                 <td>${row[3] || ""}</td>
                 <td class="text-center">${formatStatusDate(row[4])}</td>
@@ -518,7 +509,6 @@
         });
     }
 
-    // 日付フォーマットの修正（ISO文字列対応）
     function formatStatusDate(val) {
         if (!val || val === "-") return "-";
         
