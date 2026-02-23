@@ -287,7 +287,7 @@
     }
 
     /* =========================================
-       2. 営業推進管理表 ロジック
+       2. 営業推進管理表 
     ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
@@ -423,7 +423,7 @@
     }
 
     /* =========================================
-       3. 売込状況一覧 ロジック（フィルタ＆ソート対応）
+       3. 売込状況一覧 ロジック（フィルタ・ソート完全対応）
     ========================================= */
     function renderStatus() {
         const tbody = document.getElementById('status-body');
@@ -431,34 +431,38 @@
         tbody.innerHTML = '';
         if (!statusRows || statusRows.length < 2) return;
 
-        // 1. データのフィルタリング
+        // 1. データのフィルタリング（所属列がA列・B列どちらに移動しても対応）
         let filteredRows = statusRows.slice(1).filter(row => {
             if (!row[0] && !row[1]) return false; 
             
-            const aff = row[1] || ""; // スプレッドシートB列=所属
+            const c0 = String(row[0] || "").trim();
+            const c1 = String(row[1] || "").trim();
             
-            // 拠点フィルター
+            // 行の中に特定の拠点名が含まれているかチェック
+            const isTokai = (c0 === '東海' || c0 === 'BP東海' || c1 === '東海' || c1 === 'BP東海');
+            const isShitoken = (c0 === '首都圏' || c0 === 'BP首都圏' || c1 === '首都圏' || c1 === 'BP首都圏');
+            const isWest = (c0 === '西日本' || c0 === 'BP西日本' || c1 === '西日本' || c1 === 'BP西日本');
+
+            // 拠点プルダウンの条件分岐
             if (region === "全国合計") {
-                const isTokai = (aff === '東海' || aff === 'BP東海');
-                const isShitoken = (aff === '首都圏' || aff === 'BP首都圏');
-                const isWest = (aff === '西日本' || aff === 'BP西日本');
-                return (isTokai || isShitoken || isWest);
+                return isTokai || isShitoken || isWest; // 3拠点のいずれかであれば表示
             } else if (region === "東日本") {
-                const isTokai = (aff === '東海' || aff === 'BP東海');
-                const isShitoken = (aff === '首都圏' || aff === 'BP首都圏');
-                return (isTokai || isShitoken);
-            } else {
-                const isRegionMatch = (aff === region);
-                const isBpMatch = (aff === 'BP' + region);
-                return (isRegionMatch || isBpMatch);
+                return isTokai || isShitoken; // 東海か首都圏であれば表示
+            } else if (region === "東海") {
+                return isTokai;
+            } else if (region === "首都圏") {
+                return isShitoken;
+            } else if (region === "西日本") {
+                return isWest;
             }
+            return true;
         });
 
-        // 2. データのソート（待機中 ➩ 休業中 ➩ 休職中 ➩ 稼働中 の順）
+        // 2. データのソート（待機中 ➩ 休業中 ➩ 休職中 ➩ 稼働中）
         const order = { "待機中": 1, "休業中": 2, "休職中": 3, "稼働中": 4 };
         filteredRows.sort((a, b) => {
-            const statusA = a[2] || "";
-            const statusB = b[2] || "";
+            const statusA = String(a[2] || "").trim();
+            const statusB = String(b[2] || "").trim();
             const rankA = order[statusA] || 99; // 指定外のステータスは下に回す
             const rankB = order[statusB] || 99;
             return rankA - rankB;
@@ -468,14 +472,17 @@
         filteredRows.forEach(row => {
             const tr = document.createElement('tr');
             
+            // 稼働状況に応じたスタイル
             let statusClass = "";
-            if (row[2] === "待機中") {
+            const st = String(row[2] || "").trim();
+            if (st === "待機中") {
                 statusClass = "status-wait";
                 tr.classList.add('status-wait');
-            } else if (row[2] === "稼働中") {
+            } else if (st === "稼働中") {
                 statusClass = "status-active";
             }
 
+            // 未参画期間の処理
             let period = row[5];
             if (period === 0 || period === "0") {
                 period = "0ヶ月";
@@ -485,9 +492,23 @@
                 period = "-";
             }
 
+            // 所属と従業員名の判定（A列・B列のどちらに書かれていても自動判別）
+            const c0 = String(row[0] || "").trim();
+            const c1 = String(row[1] || "").trim();
+            let aff = c1;
+            let name = c0;
+            const knownAffs = ['東海', 'BP東海', '首都圏', 'BP首都圏', '西日本', 'BP西日本'];
+            if (knownAffs.includes(c0)) {
+                aff = c0;
+                name = c1;
+            } else if (knownAffs.includes(c1)) {
+                aff = c1;
+                name = c0;
+            }
+
             tr.innerHTML = `
-                <td class="text-center">${row[1] || ""}</td>
-                <td class="text-center" style="font-weight:bold;">${row[0] || ""}</td>
+                <td class="text-center">${aff}</td>
+                <td class="text-center" style="font-weight:bold;">${name}</td>
                 <td class="text-center ${statusClass}">${row[2] || ""}</td>
                 <td>${row[3] || ""}</td>
                 <td class="text-center">${formatStatusDate(row[4])}</td>
@@ -497,6 +518,7 @@
         });
     }
 
+    // 日付フォーマットの修正（ISO文字列対応）
     function formatStatusDate(val) {
         if (!val || val === "-") return "-";
         
