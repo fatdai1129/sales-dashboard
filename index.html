@@ -11,44 +11,17 @@
         #main_content { display: none; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 枠線：固定（一切の変更禁止） --- */
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            background: white; 
-            border: 4px solid black !important; 
-            table-layout: fixed; 
-        }
-        
-        th, td { 
-            border-top: 1px solid black;
-            border-bottom: 1px solid black;
-            border-left: 4px solid black !important;
-            border-right: 4px solid black !important;
-            padding: 8px 4px; 
-            font-size: 0.85rem; 
-            word-break: break-all; 
-        }
-        
+        /* --- 枠線：固定 --- */
+        table { width: 100%; border-collapse: collapse; background: white; border: 4px solid black !important; table-layout: fixed; }
+        th, td { border-top: 1px solid black; border-bottom: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 8px 4px; font-size: 0.85rem; word-break: break-all; }
         th { background: #edf2f7; text-align: center; border-bottom: 4px solid black !important; }
-
-        .cat-header { 
-            border: 4px solid black !important; 
-            background: #ebf8ff; 
-            font-weight: bold; 
-            width: 130px; 
-            text-align: center !important; 
-        }
-
+        .cat-header { border: 4px solid black !important; background: #ebf8ff; font-weight: bold; width: 130px; text-align: center !important; }
         .type-col { width: 70px; text-align: center !important; }
         .total-col { background: #fffaf0; font-weight: bold; }
-
         tr.bb-4px td { border-bottom: 4px solid black !important; } 
         tr.bb-3px td { border-bottom: 3px solid black !important; }
-
         .text-right { text-align: right !important; padding-right: 8px !important; }
         .text-center { text-align: center !important; }
-        
         .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
         .chart-box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); height: 350px; }
     </style>
@@ -105,7 +78,8 @@
 </div>
 
 <script>
-    const SHEET_ID = '1LRVwKu-YXWJvRgSophqF0VlORS5_dcjztSvfz95Qe_E';
+    // --- セキュリティ強化：GASのURLを使用 ---
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwjEXoVHeeFmFB9I90Q6-5DEZMXRTduaFpDe91eEFghZoclcmndRs7mlEQ2fJYI9jg0jw/exec';
     let rawRows = [];
     let charts = {};
 
@@ -121,29 +95,17 @@
 
     async function fetchData() {
         document.getElementById('loading').style.display = 'block';
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('実績データ')}`;
+        // パスワードをパラメータとしてGASに送信
+        const url = `${GAS_URL}?p=freeeks2022`;
         try {
             const response = await fetch(url);
-            const text = await response.text();
-            rawRows = parseCSV(text);
+            rawRows = await response.json(); // GASからJSON形式で取得
             renderAll();
         } catch (e) {
-            alert('データ取得に失敗しました');
+            alert('データ連携に失敗しました。GASの公開設定を確認してください。');
         } finally {
             document.getElementById('loading').style.display = 'none';
         }
-    }
-
-    function parseCSV(t) {
-        return t.split(/\r?\n/).filter(l => l.trim() !== "").map(l => {
-            const res = []; let cur = '', q = false;
-            for (let ch of l) {
-                if (ch === '"') q = !q;
-                else if (ch === ',' && !q) { res.push(cur.trim()); cur = ''; }
-                else cur += ch;
-            }
-            res.push(cur.trim()); return res;
-        });
     }
 
     function renderAll() {
@@ -215,24 +177,7 @@
     }
 
     function getMonthlyValues(region, itemK, type) {
-        // --- 今回の追加：東日本のデータ補完 (東海 + 首都圏) ---
-        if (region === '東日本') {
-            const vTokai = getMonthlyValues('東海', itemK, type);
-            const vShuto = getMonthlyValues('首都圏', itemK, type);
-            return vTokai.map((v, i) => {
-                const val1 = v;
-                const val2 = vShuto[i];
-                if (val1 === null && val2 === null) return null;
-                const n1 = val1 || 0;
-                const n2 = val2 || 0;
-                // 率（達成率・待機率）の場合は平均値を算出
-                if (type === '達成率' || itemK === '待機率') {
-                    return (n1 + n2) / 2;
-                }
-                return n1 + n2;
-            });
-        }
-
+        // エンジニア数系の特殊計算（プロパー＋BPなど）は維持
         if (itemK === '稼働エンジニア数') {
             if (type === '予算') return getMonthlyValues(region, 'プロパー(稼働)', '予算');
             if (type === '実績') {
@@ -248,23 +193,25 @@
         }
 
         let res = new Array(12).fill(null);
+        // 達成率の計算
         if (type === '達成率') {
             const bud = getMonthlyValues(region, itemK, '予算');
             const act = getMonthlyValues(region, itemK, '実績');
             return act.map((v, i) => (bud[i] === null || act[i] === null) ? null : (bud[i] === 0 ? 0 : (v / bud[i]) * 100));
         }
 
+        // --- シンプルになったデータ取得 ---
         rawRows.slice(1).forEach(r => {
-            const rN = (r[0] || '').trim();
-            const iN = (r[1] || '').trim();
-            const tN = (r[2] || '').trim();
+            const rN = (r[0] || '').trim(); // 拠点
+            const iN = (r[1] || '').trim(); // 項目
+            const tN = (r[2] || '').trim(); // 区分
             let match = (region === '全体合計') ? true : (rN === region);
             if (match && iN === itemK && tN === type) {
                 for (let i = 0; i < 12; i++) {
                     let cellVal = r[i+3];
                     if (cellVal !== undefined && cellVal !== "") {
                         if (res[i] === null) res[i] = 0;
-                        res[i] += parseFloat(String(cellVal).replace(/,/g,'').replace(/"/g, '')) || 0;
+                        res[i] += parseFloat(String(cellVal).replace(/,/g,'')) || 0;
                     }
                 }
             }
@@ -280,19 +227,15 @@
 
     function updateCharts() {
         const region = document.getElementById('region-select').value;
-        const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
-
         renderChart('salesChart', '売上推移', [
             { label: '実績', data: getMonthlyValues(region, '売上', '実績'), type: 'bar', backgroundColor: '#3182ce' },
             { label: '予算', data: getMonthlyValues(region, '売上', '予算'), type: 'line', borderColor: '#e53e3e', tension: 0.1 }
         ]);
-
         renderChart('engChart', 'エンジニア内訳', [
             { label: 'プロパー(稼働)', data: getMonthlyValues(region, 'プロパー(稼働)', '実績'), type: 'bar', backgroundColor: '#4299e1' },
             { label: 'BP', data: getMonthlyValues(region, 'BP', '実績'), type: 'bar', backgroundColor: '#ed64a6' },
             { label: 'プロパー(待機)', data: getMonthlyValues(region, 'プロパー(待機)', '実績'), type: 'bar', backgroundColor: '#a0aec0' }
         ], 'stacked');
-
         renderChart('waitCostChart', '待機原価推移', [
             { label: '待機原価実績', data: getMonthlyValues(region, '待機原価', '実績'), type: 'line', fill: true, backgroundColor: 'rgba(237, 137, 54, 0.2)', borderColor: '#ed8936', tension: 0.3 }
         ]);
@@ -301,7 +244,6 @@
     function renderChart(id, title, datasets, mode = 'default') {
         const ctx = document.getElementById(id).getContext('2d');
         if (charts[id]) charts[id].destroy();
-
         charts[id] = new Chart(ctx, {
             type: 'bar',
             data: { labels: ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'], datasets: datasets },
@@ -309,15 +251,13 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { title: { display: true, text: title, font: { size: 16 } } },
-                scales: {
-                    x: { stacked: mode === 'stacked' },
-                    y: { stacked: mode === 'stacked', beginAtZero: true }
-                }
+                scales: { x: { stacked: mode === 'stacked' }, y: { stacked: mode === 'stacked', beginAtZero: true } }
             }
         });
     }
 </script>
 </body>
 </html>
+
 
 
