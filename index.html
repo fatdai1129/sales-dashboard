@@ -210,7 +210,7 @@
         updateCharts(region);
     }
 
-    /* --- 営業推進管理表：赤線の所に2pxの枠線を追加 --- */
+    /* --- 営業推進管理表：境界線を確実に2pxに変更 --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
@@ -261,16 +261,16 @@
             monthlyTotals.push({ sales: sSum, profit: pSum });
         }
 
-        // 2pxの境界線スタイル設定
+        // 上下両方のセルに2pxの指定を行うことで確実に表示
         const border2pxTop = "border-bottom: 2px solid black !important;";
         const border2pxBottom = "border-top: 2px solid black !important;";
 
         let bHtml = "";
 
-        // 総合計行 (2行構成で中間を2pxに)
+        // 総合計行
         bHtml += "<tr><td colspan='3' rowspan='2' class='text-center' style='font-weight:bold;'>総合計</td>";
         let gH1S = 0, gH1P = 0, gH2S = 0, gH2P = 0;
-        // 上段 (売上)
+        // 総合計上段
         monthlyTotals.forEach((t, idx) => {
             bHtml += `<td class="text-right" style="font-weight:bold; ${border2pxTop}">${t.sales.toLocaleString()}</td>`;
             if (idx < 6) gH1S += t.sales; else gH2S += t.sales;
@@ -281,29 +281,28 @@
             }
         });
         bHtml += "</tr><tr>";
-        // 下段 (利益)
+        // 総合計下段
         monthlyTotals.forEach((t, idx) => {
-            bHtml += `<td class="text-right" style="font-weight:bold;">${t.profit.toLocaleString()}</td>`;
+            bHtml += `<td class="text-right" style="font-weight:bold; ${border2pxBottom}">${t.profit.toLocaleString()}</td>`;
             if (idx < 6) gH1P += t.profit; else gH2P += t.profit;
-            if (idx === 5) bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0;">${gH1P.toLocaleString()}</td>`;
+            if (idx === 5) bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0; ${border2pxBottom}">${gH1P.toLocaleString()}</td>`;
             if (idx === 11) {
-                bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0;">${gH2P.toLocaleString()}</td>`;
-                bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0;">${(gH1P+gH2P).toLocaleString()}</td>`;
+                bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0; ${border2pxBottom}">${gH2P.toLocaleString()}</td>`;
+                bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0; ${border2pxBottom}">${(gH1P+gH2P).toLocaleString()}</td>`;
             }
         });
         bHtml += "</tr>";
 
-        // 個人データ行 (2行構成で中間を2pxに)
+        // 個人データ行
         filteredRows.forEach(row => {
-            const h1 = calcTotal(row, 12, 22);
-            const h2 = calcTotal(row, 24, 34);
+            const h1 = calcTotal(row, 12, 22), h2 = calcTotal(row, 24, 34);
             
             // 上段行
             bHtml += "<tr>";
-            bHtml += `<td rowspan="2" class="text-center">${row[1] || ""}</td>`; // 所属
-            bHtml += `<td class="text-center" style="${border2pxTop}">${row[4] || ""}</td>`; // 技術者名
+            bHtml += `<td rowspan="2" class="text-center">${row[1] || ""}</td>`;
+            bHtml += `<td class="text-center" style="${border2pxTop}">${row[4] || ""}</td>`;
             const sal = (typeof row[10] === 'number') ? row[10].toLocaleString() : (row[10] || "-");
-            bHtml += `<td class="text-right" style="${border2pxTop}">${sal}</td>`; // 給料
+            bHtml += `<td class="text-right" style="${border2pxTop}">${sal}</td>`;
             for (let i = 12; i < 36; i += 2) {
                 const s = (typeof row[i] === 'number') ? row[i].toLocaleString() : "-";
                 bHtml += `<td class="text-right" style="${border2pxTop}">${s}</td>`;
@@ -315,19 +314,19 @@
             }
             bHtml += "</tr>";
 
-            // 下段行 (赤線の箇所が2pxの境界となる)
+            // 下段行
             bHtml += "<tr>";
-            bHtml += `<td class="text-center">${row[3] || ""}</td>`; // 技術者№
+            bHtml += `<td class="text-center" style="${border2pxBottom}">${row[3] || ""}</td>`;
             const cos = (typeof row[11] === 'number') ? Math.floor(row[11]).toLocaleString() : (row[11] || "-");
-            bHtml += `<td class="text-right">${cos}</td>`; // コスト
+            bHtml += `<td class="text-right" style="${border2pxBottom}">${cos}</td>`;
             for (let i = 12; i < 36; i += 2) {
                 let p = "-";
                 if (typeof row[i] === 'number' && typeof row[i+1] === 'number') p = Math.floor(row[i] - row[i+1]).toLocaleString();
-                bHtml += `<td class="text-right">${p}</td>`;
-                if (i === 22) bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0;">${h1.profit.toLocaleString()}</td>`;
+                bHtml += `<td class="text-right" style="${border2pxBottom}">${p}</td>`;
+                if (i === 22) bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0; ${border2pxBottom}">${h1.profit.toLocaleString()}</td>`;
                 if (i === 34) {
-                    bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0;">${h2.profit.toLocaleString()}</td>`;
-                    bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0;">${(h1.profit+h2.profit).toLocaleString()}</td>`;
+                    bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0; ${border2pxBottom}">${h2.profit.toLocaleString()}</td>`;
+                    bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0; ${border2pxBottom}">${(h1.profit+h2.profit).toLocaleString()}</td>`;
                 }
             }
             bHtml += "</tr>";
