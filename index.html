@@ -23,7 +23,7 @@
         .text-right { text-align: right !important; padding-right: 12px !important; }
         .text-center { text-align: center !important; }
 
-        /* --- 1. 拠点別実績・予算（余白解消版） --- */
+        /* --- 1. 拠点別実績・予算 --- */
         .perf-table { width: 100%; min-width: 1800px; table-layout: fixed; }
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
@@ -40,7 +40,7 @@
         .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; border-right: 4px solid black !important; }
         .sticky-left-2 { position: sticky; left: 220px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
 
-        /* --- 2. 営業推進管理表（2px境界・サイズ調整・給料コスト合計版） --- */
+        /* --- 2. 営業推進管理表 --- */
         .sales-raw-table { width: 100%; min-width: 2000px; table-layout: fixed; }
         .sales-raw-table th, .sales-raw-table td { width: 130px; }
         .col-sales-aff { width: 150px !important; }
@@ -51,8 +51,8 @@
         /* --- 3. 売込状況一覧 --- */
         .status-table { width: 100%; min-width: 1200px; table-layout: fixed; }
         .status-table th { position: sticky; top: 0; z-index: 10; }
-        .col-status-name { width: 180px; }
         .col-status-aff { width: 130px; }
+        .col-status-name { width: 180px; }
         .col-status-cond { width: 130px; }
         .col-status-reason { width: auto; }
         .col-status-date { width: 150px; }
@@ -136,8 +136,8 @@
                     <table class="status-table">
                         <thead>
                             <tr>
-                                <th class="col-status-name">従業員名</th>
                                 <th class="col-status-aff">所属</th>
+                                <th class="col-status-name">従業員名</th>
                                 <th class="col-status-cond">稼働状況</th>
                                 <th class="col-status-reason">退場理由</th>
                                 <th class="col-status-date">参画可能日</th>
@@ -180,11 +180,10 @@
 
     async function fetchAll() {
         try {
-            // GASから3つのシートのデータを一括取得
             const [rP, rS, rSt] = await Promise.all([
                 fetch(`${GAS_URL}?p=freeeks2022&s=実績データ`),
                 fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表`),
-                fetch(`${GAS_URL}?p=freeeks2022&s=売込状況一覧`) // ※シート名が異なる場合はここを修正
+                fetch(`${GAS_URL}?p=freeeks2022&s=売込状況一覧`)
             ]);
             
             const rowsP = await rP.json(); perfMap = {};
@@ -211,7 +210,7 @@
     }
 
     /* =========================================
-       1. 拠点別実績・予算 ロジック
+       1. 拠点別実績・予算
     ========================================= */
     function getPerfVal(region, itemK, type) {
         if (type === '達成率') {
@@ -281,7 +280,7 @@
     }
 
     /* =========================================
-       2. 営業推進管理表 ロジック
+       2. 営業推進管理表
     ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
@@ -416,7 +415,7 @@
     }
 
     /* =========================================
-       3. 売込状況一覧 ロジック
+       3. 売込状況一覧
     ========================================= */
     function renderStatus() {
         const tbody = document.getElementById('status-body');
@@ -424,19 +423,20 @@
         tbody.innerHTML = '';
         if (!statusRows || statusRows.length < 2) return;
 
-        // 2行目以降をループ
         statusRows.slice(1).forEach(row => {
-            if (!row[0]) return; // 名前がなければスキップ
+            // スプレッドシートのA列(0)=所属、B列(1)=従業員名 と想定。どちらも無ければスキップ
+            if (!row[0] && !row[1]) return; 
+            
             const textString = row.join('').toLowerCase();
             if (search && !textString.includes(search)) return;
 
             const tr = document.createElement('tr');
             let statusClass = (row[2] === "待機中") ? "status-wait" : "";
 
-            // 列の順番: 従業員名(0), 所属(1), 稼働状況(2), 退場理由(3), 参画可能日(4), 未参画期間(5) を想定
+            // 左から：所属(row[0])、従業員名(row[1]) の順に表示
             tr.innerHTML = `
-                <td class="text-center" style="font-weight:bold;">${row[0] || ""}</td>
-                <td class="text-center">${row[1] || ""}</td>
+                <td class="text-center">${row[0] || ""}</td>
+                <td class="text-center" style="font-weight:bold;">${row[1] || ""}</td>
                 <td class="text-center ${statusClass}">${row[2] || ""}</td>
                 <td>${row[3] || ""}</td>
                 <td class="text-center">${formatDate(row[4])}</td>
@@ -452,7 +452,7 @@
     function formatDate(val) {
         if (!val) return "";
         if (typeof val === 'number') {
-            const date = new Date((val - 25569) * 86400 * 1000); // スプレッドシートのシリアル値を日付に
+            const date = new Date((val - 25569) * 86400 * 1000);
             return date.toLocaleDateString('ja-JP');
         }
         return val;
@@ -467,6 +467,7 @@
 </script>
 </body>
 </html>
+
 
 
 
