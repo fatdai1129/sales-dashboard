@@ -17,18 +17,21 @@
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
         /* --- 実績管理セクション：完全固定 --- */
-        table.perf-table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; min-width: 2000px; table-layout: fixed; }
+        table.perf-table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; min-width: 2140px; table-layout: fixed; }
         table.perf-table th, table.perf-table td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 12px 6px; overflow: hidden; }
         table.perf-table th { background: #edf2f7; border-bottom: 4px solid black !important; }
+        
+        /* 列幅の設定：6月と7月を含め全ての月を120pxで統一 */
         .col-item { width: 180px; }
         .col-type { width: 100px; }
         .col-month { width: 120px; }
         .col-total { width: 140px; background: #fffaf0 !important; font-weight: bold; }
+
         .cat-header { background: #ebf8ff !important; font-weight: bold; text-align: center; border-bottom: 4px solid black !important; }
         tr.bb-4px td { border-bottom: 4px solid black !important; }
         tr.bb-3px td { border-bottom: 3px solid black !important; }
 
-        /* 項目列と区分列の固定設定。指示通り「区分」の左側に4px線を描画 */
+        /* 固定列：指示通り「区分」の左側に4px線を描画 */
         .sticky-left { 
             position: sticky; left: 0; z-index: 30; 
             background: #ebf8ff !important; 
@@ -37,7 +40,7 @@
         .sticky-left-2 { 
             position: sticky; left: 180px; z-index: 30; 
             background: white !important; 
-            /* 指示通り、左側に4pxの線を設定 (正の値で左側inset) */
+            /* 区分列の左側（項目との境界）を4pxに設定 */
             box-shadow: inset 4px 0 0 0 black !important; 
         }
 
