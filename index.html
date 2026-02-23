@@ -23,7 +23,7 @@
         .text-right { text-align: right !important; padding-right: 12px !important; }
         .text-center { text-align: center !important; }
 
-        /* --- 1. 拠点別実績・予算 --- */
+        /* --- 1. 拠点別実績・予算（余白解消版） --- */
         .perf-table { width: 100%; min-width: 1800px; table-layout: fixed; }
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
@@ -40,7 +40,7 @@
         .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; border-right: 4px solid black !important; }
         .sticky-left-2 { position: sticky; left: 220px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
 
-        /* --- 2. 営業推進管理表 --- */
+        /* --- 2. 営業推進管理表（2px境界・サイズ調整・給料コスト合計版） --- */
         .sales-raw-table { width: 100%; min-width: 2000px; table-layout: fixed; }
         .sales-raw-table th, .sales-raw-table td { width: 130px; }
         .col-sales-aff { width: 150px !important; }
@@ -119,6 +119,7 @@
                     <select id="sales-region-select" style="padding:10px 20px; border-radius:6px; font-size:1.1rem; cursor:pointer;" onchange="renderSales()">
                         <option value="全国合計">全国合計</option><option value="東海">東海</option><option value="首都圏">首都圏</option><option value="東日本">東日本</option><option value="西日本">西日本</option>
                     </select>
+                    <input type="text" id="sales-search" placeholder="名前・所属などで検索..." style="padding:10px; width:300px; border-radius:6px; border:1px solid #cbd5e0; margin-left:auto;" oninput="renderSales()">
                 </div>
                 <div style="overflow-x: auto;">
                     <table class="sales-raw-table"><thead id="sales-head"></thead><tbody id="sales-body"></tbody></table>
@@ -280,11 +281,12 @@
     }
 
     /* =========================================
-       2. 営業推進管理表
+       2. 営業推進管理表 (検索対応版)
     ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
+        const searchKeyword = document.getElementById('sales-search').value.toLowerCase(); // 検索ボックスの値を取得
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
         
@@ -314,7 +316,14 @@
                 const isBpPersonnelMatch = (row[1] === 'BP' + region && row[3] === 'BP 要員');
                 if (!isRegionMatch && !isBpPersonnelMatch) return false;
             }
-            return row[2] && !row[2].includes("売上") && !row[2].includes("原価") && row[4];
+            
+            // 既存の必須条件
+            if (!(row[2] && !row[2].includes("売上") && !row[2].includes("原価") && row[4])) return false;
+            
+            // 検索キーワードでの絞り込み
+            if (searchKeyword && !row.join('').toLowerCase().includes(searchKeyword)) return false;
+
+            return true;
         });
 
         const calcTotal = (row, start, end) => {
@@ -424,7 +433,6 @@
         if (!statusRows || statusRows.length < 2) return;
 
         statusRows.slice(1).forEach(row => {
-            // スプレッドシートのA列(0)=所属、B列(1)=従業員名 と想定。どちらも無ければスキップ
             if (!row[0] && !row[1]) return; 
             
             const textString = row.join('').toLowerCase();
@@ -433,7 +441,6 @@
             const tr = document.createElement('tr');
             let statusClass = (row[2] === "待機中") ? "status-wait" : "";
 
-            // 左から：所属(row[0])、従業員名(row[1]) の順に表示
             tr.innerHTML = `
                 <td class="text-center">${row[0] || ""}</td>
                 <td class="text-center" style="font-weight:bold;">${row[1] || ""}</td>
