@@ -110,7 +110,7 @@
     </div>
 </div>
 <script>
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbzLPhnyAo1D7SH-T3uv0EOb5aWekcfnFRtReGhsnkQ5_sLbi36fTc6o5eVYukeliVJIA/exec';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbzLPhdnyAo1D7SH-T3uv0EOb5aWekcfnFRtReGhsnkQ5_sLbi36fTc6o5eVYukeliVJIA/exec';
     let perfMap = {}, salesRows = [], charts = {};
     window.onload = () => {
         const cP = localStorage.getItem('f_perf'), cS = localStorage.getItem('f_sales');
@@ -210,18 +210,18 @@
         updateCharts(region);
     }
 
-    /* --- 営業推進管理表：給料/コストの二段表示を復元 --- */
+    /* --- 営業推進管理表：二段表示対応（コスト小数点切り捨て版） --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
         
-        // ヘッダー：給料/コストを復元
+        // ヘッダー：給料/コスト
         let hHtml = "<tr>";
         hHtml += `<th>${headers[1] || ""}</th>`; // 所属
         hHtml += `<th>${headers[4] || ""}<br>${headers[3] || ""}</th>`; // 名/№
-        hHtml += `<th>給料<br>コスト</th>`; // 給料/コスト（指示に基づき復元）
+        hHtml += `<th>給料<br>コスト</th>`;
         for (let i = 12; i < headers.length; i += 2) { // 売上列のみ
             hHtml += `<th>${headers[i] || ""}</th>`;
         }
@@ -237,9 +237,10 @@
             bHtml += `<td class="text-center">${row[1] || ""}</td>`; // 所属
             bHtml += `<td class="text-center">${row[4] || ""}<br>${row[3] || ""}</td>`; // 名/№
             
-            // 給与(10)と原価(11)の二段表示（復元）
+            // 給料(10)とコスト(11)の二段表示
             const salary = (typeof row[10] === 'number') ? row[10].toLocaleString() : (row[10] || "-");
-            const cost = (typeof row[11] === 'number') ? row[11].toLocaleString() : (row[11] || "-");
+            // 指示通り、コスト(row[11])を小数点切り捨て(Math.floor)で表示
+            const cost = (typeof row[11] === 'number') ? Math.floor(row[11]).toLocaleString() : (row[11] || "-");
             bHtml += `<td class="text-right">${salary}<br>${cost}</td>`;
             
             // 月次データ：売上のみ表示
