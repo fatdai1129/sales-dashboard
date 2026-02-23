@@ -89,8 +89,6 @@
     <div class="container">
         <div id="section-perf">
             <div class="card">
-                <div style="font-size: 1.4rem; font-weight: bold; color: #2d3748; margin-bottom: 15px;">2025年6月期</div>
-                
                 <div style="display:flex; align-items:center; margin-bottom:20px;">
                     <h2 style="margin:0; border-left:5px solid #3182ce; padding-left:15px; margin-right: 25px;">拠点別実績・予算</h2>
                     <select id="region-select" style="padding:10px 20px; border-radius:6px; font-size:1.1rem; cursor:pointer;" onchange="renderPerf()">
@@ -468,11 +466,7 @@
             if (region === "全国") {
                 return true; 
             } else if (region === "東日本") {
-                return searchTargetText.includes('東海') || searchTargetText.includes('首都圏') || searchTargetText.includes('静岡オフィス') || searchTargetText.includes('東京本社');
-            } else if (region === "東海") {
-                return searchTargetText.includes('東海') || searchTargetText.includes('静岡オフィス');
-            } else if (region === "首都圏") {
-                return searchTargetText.includes('首都圏') || searchTargetText.includes('東京本社');
+                return searchTargetText.includes('東海') || searchTargetText.includes('首都圏');
             } else if (region === "西日本") {
                 return searchTargetText.includes('西日本') || searchTargetText.includes('大阪オフィス');
             } else {
@@ -514,7 +508,7 @@
             const c0 = String(row[0] || "").trim();
             const c1 = String(row[1] || "").trim();
             let aff = c1, name = c0;
-            const knownAffs = ['東海', 'BP東海', '首都圏', 'BP首都圏', '西日本', 'BP西日本', '大阪オフィス', 'BP大阪オフィス', '静岡オフィス', 'BP静岡オフィス', '東京本社', 'BP東京本社'];
+            const knownAffs = ['東海', 'BP東海', '首都圏', 'BP首都圏', '西日本', 'BP西日本', '大阪オフィス', 'BP大阪オフィス'];
             if (knownAffs.includes(c0)) { aff = c0; name = c1; }
             else if (knownAffs.includes(c1)) { aff = c1; name = c0; }
 
@@ -562,6 +556,7 @@
 </script>
 </body>
 </html>
+
 
 
 
