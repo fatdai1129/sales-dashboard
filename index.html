@@ -52,10 +52,11 @@
         .col-sales-total { width: 160px !important; background: #fffaf0 !important; font-weight: bold; }
 
         /* 売込状況一覧 */
-        .status-table { width: 100%; min-width: 1400px; table-layout: fixed; font-size: 1.25rem; }
+        .status-table { width: 100%; min-width: 1500px; table-layout: fixed; font-size: 1.25rem; }
         .status-table th, .status-table td { padding: 18px 12px; }
         .col-status-aff { width: 160px; }
         .col-status-name { width: 220px; }
+        .col-status-salary { width: 140px; } /* 新規追加：給料列 */
         .col-status-cond { width: 180px; }
         .col-status-reason { width: auto; }
         .col-status-date { width: 200px; }
@@ -138,6 +139,7 @@
                     <select id="status-region-select" style="padding:12px 25px; border-radius:8px; font-size:1.2rem; cursor:pointer; border: 2px solid #ed8936;" onchange="renderStatus()">
                         <option value="全国合計">全国合計</option><option value="東海">東海</option><option value="首都圏">首都圏</option><option value="東日本">東日本</option><option value="西日本">西日本</option>
                     </select>
+                    <span id="status-update-date" style="margin-left: 30px; font-size: 1.2rem; font-weight: bold; color: #4a5568;"></span>
                 </div>
                 <div style="overflow-x: auto;">
                     <table class="status-table">
@@ -145,7 +147,7 @@
                             <tr>
                                 <th class="col-status-aff">所属</th>
                                 <th class="col-status-name">従業員名</th>
-                                <th class="col-status-cond">稼働状況</th>
+                                <th class="col-status-salary">給料</th> <th class="col-status-cond">稼働状況</th>
                                 <th class="col-status-reason">退場理由</th>
                                 <th class="col-status-date">参画可能日</th>
                                 <th class="col-status-period">未参画期間</th>
@@ -187,17 +189,13 @@
 
     async function fetchAll() {
         try {
-            // 1. 実績と推進表のデータを取得
             const [rP, rS] = await Promise.all([
                 fetch(`${GAS_URL}?p=freeeks2022&s=実績データ`),
                 fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表`)
             ]);
             
-            // 2. 売込状況のデータを取得（シート名の揺れに対応する安全な設計）
             let rSt = await fetch(`${GAS_URL}?p=freeeks2022&s=売込状況`);
             let stData = await rSt.json();
-            
-            // もし「売込状況」でデータが空だった場合、「売込状況一覧」で再取得する
             if (!stData || stData.length <= 1 || stData.error) {
                 const rStFallback = await fetch(`${GAS_URL}?p=freeeks2022&s=売込状況一覧`);
                 stData = await rStFallback.json();
@@ -434,28 +432,39 @@
     }
 
     /* =========================================
-       3. 売込状況一覧 ロジック（完全対応版）
+       3. 売込状況一覧 ロジック（給料・更新日追加版）
     ========================================= */
     function renderStatus() {
         const tbody = document.getElementById('status-body');
         const region = document.getElementById('status-region-select').value;
         tbody.innerHTML = '';
         
-        // データが存在しない場合のメッセージ
+        // --- 1. 更新日の表示（I1セル ＝ インデックス8） ---
+        const updateDateEl = document.getElementById('status-update-date');
+        if (statusRows && statusRows.length > 0) {
+            let updateVal = statusRows[0][8]; // I列の1行目
+            if (updateVal) {
+                // シリアル値などの場合は日付に変換、文字列ならそのまま
+                let formattedUpdate = formatStatusDate(updateVal); 
+                updateDateEl.innerText = "更新日: " + formattedUpdate;
+            } else {
+                updateDateEl.innerText = "";
+            }
+        }
+
         if (!statusRows || statusRows.length <= 1) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center">データがありません。</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">データがありません。</td></tr>';
             return;
         }
 
-        // 1. データのフィルタリング（緩い判定のincludesを使用）
+        // --- 2. データのフィルタリング ---
         let filteredRows = statusRows.slice(1).filter(row => {
             if (!row || row.length < 2) return false;
             
-            // 所属（A列・B列のどちらにあっても確実に拾うための結合テキスト）
             const searchTargetText = String(row[0] || "") + " " + String(row[1] || "");
 
             if (region === "全国合計") {
-                return true; // 全国合計は強制的に全表示
+                return true; 
             } else if (region === "東日本") {
                 return searchTargetText.includes('東海') || searchTargetText.includes('首都圏');
             } else {
@@ -463,7 +472,7 @@
             }
         });
 
-        // 2. データのソート（待機中 ➩ 休業中 ➩ 休職中 ➩ 稼働中）
+        // --- 3. データのソート ---
         const order = { "待機中": 1, "休業中": 2, "休職中": 3, "稼働中": 4 };
         filteredRows.sort((a, b) => {
             const statusA = String(a[2] || "").trim();
@@ -473,11 +482,10 @@
             return rankA - rankB;
         });
 
-        // 3. テーブルへの描画
+        // --- 4. テーブルへの描画 ---
         filteredRows.forEach(row => {
             const tr = document.createElement('tr');
             
-            // 稼働状況に応じたスタイル
             let statusClass = "";
             const st = String(row[2] || "").trim();
             if (st === "待機中") {
@@ -487,7 +495,6 @@
                 statusClass = "status-active";
             }
 
-            // 未参画期間の処理
             let period = row[5];
             if (period === 0 || period === "0") {
                 period = "0ヶ月";
@@ -497,9 +504,22 @@
                 period = "-";
             }
 
+            // A列・B列の自動判別（所属と従業員名）
+            const c0 = String(row[0] || "").trim();
+            const c1 = String(row[1] || "").trim();
+            let aff = c1, name = c0;
+            const knownAffs = ['東海', 'BP東海', '首都圏', 'BP首都圏', '西日本', 'BP西日本'];
+            if (knownAffs.includes(c0)) { aff = c0; name = c1; }
+            else if (knownAffs.includes(c1)) { aff = c1; name = c0; }
+
+            // 給料（G列 ＝ インデックス6）のカンマ区切り処理
+            let salary = row[6] ? row[6] : "-";
+            if (typeof salary === 'number') salary = salary.toLocaleString();
+
             tr.innerHTML = `
-                <td class="text-center">${row[0] || ""}</td>
-                <td class="text-center" style="font-weight:bold;">${row[1] || ""}</td>
+                <td class="text-center">${aff}</td>
+                <td class="text-center" style="font-weight:bold;">${name}</td>
+                <td class="text-right">${salary}</td>
                 <td class="text-center ${statusClass}">${row[2] || ""}</td>
                 <td>${row[3] || ""}</td>
                 <td class="text-center">${formatStatusDate(row[4])}</td>
@@ -525,7 +545,7 @@
             const d = String(date.getDate()).padStart(2, '0');
             return `${y}/${m}/${d}`; 
         }
-        return val;
+        return val; // 日付以外（テキストなど）の場合はそのまま返す
     }
 
     function formatVal(v, k, t) { if (v === null || (v === 0 && k !== '待機率' && t !== '達成率')) return '-'; if (k === '待機率' || t === '達成率') return v.toFixed(1) + '%'; return Math.round(v).toLocaleString(); }
