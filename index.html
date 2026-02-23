@@ -210,7 +210,7 @@
         updateCharts(region);
     }
 
-    /* --- 営業推進管理表：赤枠の所にセルを1行追加 --- */
+    /* --- 営業推進管理表：挿入行の高さをデータ行と一致させる --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
@@ -233,9 +233,9 @@
         
         let bHtml = "";
 
-        // 【修正点】赤枠の所にセルを1行追加（空行）
+        // 【修正点】挿入した空行に改行コードを入れて、データ行（二段表示）と高さを合わせる
         bHtml += "<tr>";
-        for (let k = 0; k < 15; k++) { bHtml += "<td></td>"; }
+        for (let k = 0; k < 15; k++) { bHtml += "<td><br></td>"; }
         bHtml += "</tr>";
 
         rawData.forEach(row => {
@@ -272,6 +272,7 @@
 </script>
 </body>
 </html>
+
 
 
 
