@@ -210,22 +210,31 @@
         updateCharts(region);
     }
 
-    /* --- 営業推進管理表：二段表示対応（コスト小数点切り捨て版） --- */
+    /* --- 営業推進管理表：二段ヘッダー（月タイトルを上へ、空いた所に売上/利益） --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
         
-        // ヘッダー：給料/コスト
+        // ヘッダー作成
         let hHtml = "<tr>";
-        hHtml += `<th>${headers[1] || ""}</th>`; // 所属
-        hHtml += `<th>${headers[4] || ""}<br>${headers[3] || ""}</th>`; // 名/№
-        hHtml += `<th>給料<br>コスト</th>`;
-        for (let i = 12; i < headers.length; i += 2) { // 売上列のみ
+        hHtml += `<th rowspan="2">${headers[1] || ""}</th>`; // 所属
+        hHtml += `<th rowspan="2">${headers[4] || ""}<br>${headers[3] || ""}</th>`; // 名/№
+        hHtml += `<th rowspan="2">給料<br>コスト</th>`;
+        
+        // 1行目の各月タイトル（赤丸の月次記載を上に移動）
+        for (let i = 12; i < headers.length; i += 2) {
             hHtml += `<th>${headers[i] || ""}</th>`;
         }
-        hHtml += "</tr>"; head.innerHTML = hHtml;
+        hHtml += "</tr><tr>";
+        
+        // 2行目の「売上 / 利益」タイトル（空いた箇所に記載）
+        for (let i = 12; i < headers.length; i += 2) {
+            hHtml += `<th>売上<br>利益</th>`;
+        }
+        hHtml += "</tr>";
+        head.innerHTML = hHtml;
         
         // ボディ
         let bHtml = "";
@@ -239,15 +248,21 @@
             
             // 給料(10)とコスト(11)の二段表示
             const salary = (typeof row[10] === 'number') ? row[10].toLocaleString() : (row[10] || "-");
-            // 指示通り、コスト(row[11])を小数点切り捨て(Math.floor)で表示
             const cost = (typeof row[11] === 'number') ? Math.floor(row[11]).toLocaleString() : (row[11] || "-");
             bHtml += `<td class="text-right">${salary}<br>${cost}</td>`;
             
-            // 月次データ：売上のみ表示
+            // 月次データ：上段売上 / 下段利益（売上-原価）を表示
             for (let i = 12; i < row.length; i += 2) {
-                const val = (typeof row[i] === 'number') ? row[i].toLocaleString() : (row[i] || "");
-                const align = (typeof row[i] === 'number') ? 'text-right' : 'text-center';
-                bHtml += `<td class="${align}">${val}</td>`;
+                const sVal = row[i];
+                const cVal = row[i+1];
+                
+                const sales = (typeof sVal === 'number') ? sVal.toLocaleString() : (sVal || "-");
+                let profit = "-";
+                if (typeof sVal === 'number' && typeof cVal === 'number') {
+                    profit = Math.floor(sVal - cVal).toLocaleString();
+                }
+                
+                bHtml += `<td class="text-right">${sales}<br>${profit}</td>`;
             }
             bHtml += "</tr>";
         });
