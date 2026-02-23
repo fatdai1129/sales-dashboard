@@ -264,7 +264,6 @@
             return { sales: sSum, profit: pSum };
         };
 
-        // 月次合計の算出
         let monthlyTotals = [];
         for (let i = 12; i < 36; i += 2) {
             let sSum = 0, pSum = 0;
@@ -276,7 +275,6 @@
             monthlyTotals.push({ sales: sSum, profit: pSum });
         }
 
-        // 【新機能】給料およびコストの合計値を算出
         let totalSal = 0, totalCos = 0;
         filteredRows.forEach(row => {
             if (typeof row[10] === 'number') totalSal += row[10];
@@ -288,9 +286,9 @@
 
         let bHtml = "";
 
-        // 総合計行：給料合計およびコスト合計を表示
+        // 総合計行：分割して枠線（2px）を追加
         bHtml += "<tr><td colspan='2' rowspan='2' class='text-center col-sales-aff' style='font-weight:bold;'>総合計</td>";
-        bHtml += `<td rowspan='2' class='text-right col-sales-info' style='font-weight:bold;'>${totalSal.toLocaleString()}<br>${totalCos.toLocaleString()}</td>`;
+        bHtml += `<td class="text-right col-sales-info" style="font-weight:bold; ${border2pxTop}">${totalSal.toLocaleString()}</td>`;
         
         let gH1S = 0, gH1P = 0, gH2S = 0, gH2P = 0;
         monthlyTotals.forEach((t, idx) => {
@@ -303,6 +301,8 @@
             }
         });
         bHtml += "</tr><tr>";
+        // 総合計下段：コスト合計を表示
+        bHtml += `<td class="text-right col-sales-info" style="font-weight:bold; ${border2pxBottom}">${totalCos.toLocaleString()}</td>`;
         monthlyTotals.forEach((t, idx) => {
             bHtml += `<td class="text-right" style="font-weight:bold; ${border2pxBottom}">${t.profit.toLocaleString()}</td>`;
             if (idx < 6) gH1P += t.profit; else gH2P += t.profit;
@@ -366,6 +366,7 @@
 </script>
 </body>
 </html>
+
 
 
 
