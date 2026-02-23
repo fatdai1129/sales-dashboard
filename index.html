@@ -20,14 +20,14 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* 共通テーブル設定（太枠デザインの復元） */
+        /* 共通テーブル設定：PC版太枠デザイン */
         table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; }
         th, td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
         th { background: #edf2f7; font-weight: bold; }
         .text-right { text-align: right !important; padding-right: 12px !important; }
         .text-center { text-align: center !important; }
 
-        /* 実績管理：特殊な枠線指定 */
+        /* 実績管理表の特殊枠線 */
         .perf-table { width: 100%; min-width: 1800px; table-layout: fixed; }
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
@@ -49,7 +49,7 @@
         .col-sales-name { width: 220px !important; }
         .col-sales-info { width: 150px !important; }
 
-        /* 売込状況一覧（固定幅と色分けの復元） */
+        /* 売込状況一覧：列幅固定バランス */
         .status-table { width: 100%; min-width: 1400px; table-layout: fixed; font-size: 1.25rem; }
         .status-table th, .status-table td { padding: 18px 12px; }
         .col-status-aff { width: 160px; }
@@ -60,21 +60,20 @@
         .col-status-date { width: 200px; }
         .col-status-period { width: 160px; }
         
+        /* 塗りつぶし色 */
         .status-wait { color: #c53030 !important; font-weight: bold; background-color: #fff5f5 !important; }
         .status-active { color: #2b6cb0 !important; font-weight: bold; background-color: #ffffe0 !important; }
 
         .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
         .chart-box { background: white; padding: 20px; border-radius: 12px; height: 350px; }
 
-        /* スマホ対応 */
+        /* スマホ対応（PCの太枠を壊さないように設計） */
         @media (max-width: 768px) {
             .nav-bar { flex-wrap: wrap; height: auto; }
-            .nav-item { padding: 12px 10px; flex: 1; text-align: center; font-size: 0.9rem; border-bottom: 2px solid transparent; height: auto; line-height: 1.2; }
+            .nav-item { padding: 12px 5px; flex: 1; text-align: center; font-size: 0.85rem; height: auto; line-height: 1.2; }
             .container { padding: 10px; }
-            .card { padding: 15px; }
             .card > div:first-child { flex-direction: column; align-items: flex-start !important; }
             select, input[type="text"] { width: 100% !important; margin: 10px 0 !important; }
-            #status-update-date { margin-left: 0 !important; }
             .sticky-left, .sticky-left-2 { position: static !important; }
             .charts-container { grid-template-columns: 1fr; }
         }
@@ -150,7 +149,7 @@
                 <div style="display:flex; align-items:center; margin-bottom:25px;">
                     <h2 style="margin:0; border-left:6px solid #ed8936; padding-left:20px; margin-right: 30px; font-size:1.6rem;">売込状況一覧</h2>
                     <select id="status-region-select" style="padding:12px 25px; border-radius:8px; font-size:1.2rem; cursor:pointer; border: 2px solid #ed8936;" onchange="renderStatus()">
-                        <option value="全国">全国</option><option value="東海">東海</option><option value="首都圏">首都圏</option><option value="東日本">東日本</option><option value="西日本">西日本</option>
+                        <option value="全国">全国</option><option value="東海">東海</option><option value="首都圏">首都圏</option><option value="東日本">東東日本</option><option value="西日本">西日本</option>
                     </select>
                     <span id="status-update-date" style="margin-left: 30px; font-size: 1.2rem; font-weight: bold; color: #4a5568;"></span>
                 </div>
@@ -224,21 +223,8 @@
         if (document.getElementById('section-status').style.display !== 'none') renderStatus();
     }
 
-    // 拠点マッチングロジックの定義
-    function isRegionalMatch(dataRegion, selectedRegion) {
-        if (selectedRegion === "全国") return true;
-        const regionMap = {
-            "東海": ["東海", "静岡オフィス", "BP東海", "BP静岡オフィス"],
-            "首都圏": ["首都圏", "東京本社", "BP首都圏", "BP東京本社"],
-            "西日本": ["西日本", "大阪オフィス", "BP西日本", "BP大阪オフィス"]
-        };
-        const targets = selectedRegion === "東日本" ? [...regionMap["東海"], ...regionMap["首都圏"]] : regionMap[selectedRegion];
-        if (!targets) return dataRegion.includes(selectedRegion);
-        return targets.some(t => dataRegion.includes(t));
-    }
-
     /* =========================================
-       1. 実績管理ロジック
+       1. 実績管理
     ========================================= */
     function getPerfVal(region, itemK, type) {
         if (type === '達成率') {
@@ -281,24 +267,23 @@
                 let html = idx===0?`<td rowspan="${item.t.length}" class="cat-header sticky-left">${item.n}</td>` : '';
                 html += `<td class="text-center sticky-left-2">${type}</td>`;
                 
+                const data = getPerfVal(region, item.k, type);
                 const sumF = (arr) => {
                     let hasVal = false;
                     let s = arr.reduce((a,b) => { if(b !== null) hasVal = true; return a + (b || 0); }, 0);
                     return hasVal ? s : null;
                 };
 
-                const data = getPerfVal(region, item.k, type);
                 const bD = getPerfVal(region, (type==='達成率'?item.k:'エンジニア総数'), (type==='達成率'?'予算':'実績'));
                 const aD = getPerfVal(region, (type==='達成率'?item.k:'プロパー(待機)'), '実績');
-                
                 const h1 = (type==='達成率'||item.k==='待機率') ? (sumF(bD.slice(0,6))===0?0:(sumF(aD.slice(0,6))/sumF(bD.slice(0,6)))*100) : sumF(data.slice(0,6));
                 const h2 = (type==='達成率'||item.k==='待機率') ? (sumF(bD.slice(6,12))===0?0:(sumF(aD.slice(6,12))/sumF(bD.slice(6,12)))*100) : sumF(data.slice(6,12));
                 const tot = (type==='達成率'||item.k==='待機率') ? (sumF(bD)===0?0:(sumF(aD)/sumF(bD))*100) : sumF(data);
 
                 for(let i=0;i<12;i++) {
-                    const borderCls = (i < 5 || (i >= 6 && i < 11)) ? 'br-3px ' : '';
-                    const borderClsL = (i > 0 && i !== 6) ? 'bl-3px ' : '';
-                    html += `<td class="text-right ${borderCls} ${borderClsL}">${formatVal(data[i],item.k,type)}</td>`;
+                    const bCls = (i < 5 || (i >= 6 && i < 11)) ? 'br-3px ' : '';
+                    const bClsL = (i > 0 && i !== 6) ? 'bl-3px ' : '';
+                    html += `<td class="text-right ${bCls} ${bClsL}">${formatVal(data[i],item.k,type)}</td>`;
                     if(i===5) html += `<td class="text-right col-total">${formatVal(h1,item.k,type)}</td>`;
                     if(i===11) html += `<td class="text-right col-total">${formatVal(h2,item.k,type)}</td>`;
                 }
@@ -316,21 +301,20 @@
     }
 
     /* =========================================
-       2. 営業推進管理表ロジック
+       2. 営業推進管理表
     ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value, kw = document.getElementById('sales-search').value.toLowerCase();
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
         const all = salesRows.slice(9), headers = all[0], raw = all.slice(1);
-        
         let hHtml = `<tr><th rowspan="2" class="col-sales-aff">${headers[1]}</th><th rowspan="2" class="col-sales-name">${headers[4]}</th><th rowspan="2" class="col-sales-info">コスト</th>`;
         for (let i=12;i<36;i+=2) { hHtml += `<th>${headers[i]}</th>`; if(i===22) hHtml += `<th rowspan="2" class="col-total">上期計</th>`; if(i===34) hHtml += `<th rowspan="2" class="col-total">下期計</th><th rowspan="2" class="col-total">年間</th>`; }
         head.innerHTML = hHtml + "</tr><tr>";
         for (let i=12;i<36;i+=2) head.innerHTML += `<th>売上/利</th>`;
 
         let bHtml = "";
-        raw.filter(r => isRegionalMatch(r[1], region) && r[4] && r.join('').toLowerCase().includes(kw)).forEach(r => {
+        raw.filter(r => (region==='全国'||r[1]===region) && r[4] && r.join('').toLowerCase().includes(kw)).forEach(r => {
             bHtml += `<tr><td rowspan="2" class="text-center">${r[1]}</td><td rowspan="2" class="text-center">${r[4]}</td><td class="text-right">${(r[10]||0).toLocaleString()}</td>`;
             let s1=0, p1=0, s2=0, p2=0;
             for(let i=12;i<36;i+=2){
@@ -353,37 +337,41 @@
     }
 
     /* =========================================
-       3. 売込状況一覧ロジック
+       3. 売込状況一覧
     ========================================= */
     function renderStatus() {
         const tbody = document.getElementById('status-body'), reg = document.getElementById('status-region-select').value;
         tbody.innerHTML = '';
-        if (!statusRows || statusRows.length <= 1) { tbody.innerHTML = '<tr><td colspan="7" class="text-center">データがありません。</td></tr>'; return; }
+        if (!statusRows || statusRows.length <= 1) { tbody.innerHTML = '<tr><td colspan="7" class="text-center">データ取得中...</td></tr>'; return; }
         document.getElementById('status-update-date').innerText = "更新日: " + (formatStatusDate(statusRows[0][8]) || "-");
 
-        let filtered = statusRows.slice(1).filter(r => isRegionalMatch(r[0] + r[1], reg));
+        let filtered = statusRows.slice(1).filter(r => {
+            if (reg === "全国") return true;
+            const search = String(r[0]||"") + String(r[1]||"");
+            const map = {
+                "東海": ["東海", "静岡"],
+                "首都圏": ["首都圏", "東京本社"],
+                "東日本": ["東海", "静岡", "首都圏", "東京本社"],
+                "西日本": ["西日本", "大阪"]
+            };
+            const targets = map[reg] || [reg];
+            return targets.some(t => search.includes(t));
+        });
+
         const order = { "待機中": 1, "休業中": 2, "休職中": 3, "稼働中": 4 };
         filtered.sort((a, b) => (order[a[2]]||99) - (order[b[2]]||99));
 
         filtered.forEach(row => {
             const tr = document.createElement('tr');
-            const st = String(row[2] || "").trim();
-            if (st === "待機中") tr.classList.add('status-wait');
-            else if (st === "稼働中") tr.classList.add('status-active');
+            if (row[2] === "待機中") tr.classList.add('status-wait');
+            else if (row[2] === "稼働中") tr.classList.add('status-active');
             
             const c0 = String(row[0]||""), c1 = String(row[1]||"");
             let aff = c1, name = c0;
-            if (['東海', '首都圏', '西日本', '大阪', '静岡', '東京本社'].some(v => c0.includes(v))) { aff = c0; name = c1; }
+            const known = ['東海', '静岡', '首都圏', '本社', '西日本', '大阪'];
+            if (known.some(v => c0.includes(v))) { aff = c0; name = c1; }
 
-            tr.innerHTML = `
-                <td class="text-center">${aff}</td>
-                <td class="text-center" style="font-weight:bold;">${name}</td>
-                <td class="text-center">${(row[6]||0).toLocaleString()}</td>
-                <td class="text-center">${row[2]||""}</td>
-                <td class="text-center">${row[3]||""}</td>
-                <td class="text-center">${formatStatusDate(row[4])}</td>
-                <td class="text-center">${row[5]||0}ヶ月</td>
-            `;
+            tr.innerHTML = `<td class="text-center">${aff}</td><td class="text-center" style="font-weight:bold;">${name}</td><td class="text-center">${(row[6]||0).toLocaleString()}</td><td class="text-center">${row[2]||""}</td><td class="text-center">${row[3]||""}</td><td class="text-center">${formatStatusDate(row[4])}</td><td class="text-center">${row[5]||0}ヶ月</td>`;
             tbody.appendChild(tr);
         });
     }
