@@ -11,7 +11,7 @@
         #main_content { display: none; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 枠線：固定（一切の変更禁止） --- */
+        /* --- 枠線：固定 --- */
         table { width: 100%; border-collapse: collapse; background: white; border: 4px solid black !important; table-layout: fixed; }
         th, td { border-top: 1px solid black; border-bottom: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 8px 4px; font-size: 0.85rem; word-break: break-all; }
         th { background: #edf2f7; text-align: center; border-bottom: 4px solid black !important; }
@@ -69,7 +69,6 @@
             <tbody id="table-body"></tbody>
         </table>
     </div>
-
     <div class="charts-container">
         <div class="chart-box"><canvas id="salesChart"></canvas></div>
         <div class="chart-box"><canvas id="engChart"></canvas></div>
@@ -78,9 +77,8 @@
 </div>
 
 <script>
-    // --- 最新のGAS URLに更新 ---
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbzLPhdnyAo1D7SH-T3uv0EOb5aWekcfnFRtReGhsnkQ5_sLbi36fTc6o5eVYukeliVJIA/exec';
-    let rawRows = [];
+    let dataMap = {}; // 高速検索用マップ
     let charts = {};
 
     function checkPW() {
@@ -94,22 +92,67 @@
     }
 
     async function fetchData() {
-        document.getElementById('loading').style.display = 'block';
-        const url = `${GAS_URL}?p=freeeks2022`;
+        const loading = document.getElementById('loading');
+        loading.style.display = 'block';
         try {
-            const response = await fetch(url);
-            rawRows = await response.json();
+            const response = await fetch(`${GAS_URL}?p=freeeks2022`);
+            const rows = await response.json();
+            
+            // データを一気に整理してマップに格納（爆速化のキモ）
+            dataMap = {};
+            rows.slice(1).forEach(r => {
+                const key = `${r[0]}-${r[1]}-${r[2]}`; // 拠点-項目-区分
+                dataMap[key] = r.slice(3, 15).map(v => v === "" ? null : parseFloat(String(v).replace(/,/g,'')) || 0);
+            });
             renderAll();
         } catch (e) {
-            alert('データ連携に失敗しました。GASの公開設定を確認してください。');
+            alert('データ連携に失敗しました。');
         } finally {
-            document.getElementById('loading').style.display = 'none';
+            loading.style.display = 'none';
         }
     }
 
     function renderAll() {
         renderTable();
         updateCharts();
+    }
+
+    function getMonthlyValues(region, itemK, type) {
+        // 特殊計算：エンジニア数系
+        if (itemK === '稼働エンジニア数') {
+            const p = getMonthlyValues(region, 'プロパー(稼働)', type);
+            const b = getMonthlyValues(region, 'BP', '実績');
+            if (type === '予算') return p;
+            return p.map((v, i) => (v === null && b[i] === null) ? null : (v || 0) + (b[i] || 0));
+        }
+        if (itemK === 'エンジニア総数') {
+            const working = getMonthlyValues(region, '稼働エンジニア数', type);
+            const waiting = getMonthlyValues(region, 'プロパー(待機)', type);
+            return working.map((v, i) => (v === null && waiting[i] === null) ? null : (v || 0) + (waiting[i] || 0));
+        }
+
+        // 達成率の計算
+        if (type === '達成率') {
+            const bud = getMonthlyValues(region, itemK, '予算');
+            const act = getMonthlyValues(region, itemK, '実績');
+            return act.map((v, i) => (bud[i] === null || act[i] === null) ? null : (bud[i] === 0 ? 0 : (v / bud[i]) * 100));
+        }
+
+        // 全体合計の計算
+        if (region === '全体合計') {
+            const targets = ['東海', '首都圏', '西日本']; // 東日本は含めない（二重計上防止）
+            let sum = new Array(12).fill(null);
+            targets.forEach(t => {
+                const vals = dataMap[`${t}-${itemK}-${type}`];
+                if (vals) {
+                    vals.forEach((v, i) => { if (v !== null) sum[i] = (sum[i] || 0) + v; });
+                }
+            });
+            return sum;
+        }
+
+        // 通常のデータ取得（整理済みマップから一瞬で取り出す）
+        return dataMap[`${region}-${itemK}-${type}`] || new Array(12).fill(null);
     }
 
     function renderTable() {
@@ -130,33 +173,24 @@
             { n: 'エンジニア総数', k: 'エンジニア総数', t: ['予算', '実績', '達成率'] }
         ];
 
-        const target3px = ['売上', '稼働原価', 'A利益', 'プロパー(稼働)', 'エンジニア総数'];
-
         items.forEach(item => {
             item.t.forEach((type, idx) => {
                 const tr = document.createElement('tr');
-                if (idx === item.t.length - 1) {
-                    tr.className = 'bb-4px'; 
-                } else if (target3px.includes(item.n) && type === '実績') {
-                    tr.className = 'bb-3px'; 
-                }
+                if (idx === item.t.length - 1) tr.className = 'bb-4px';
+                else if (['売上', '稼働原価', 'A利益', 'プロパー(稼働)', 'エンジニア総数'].includes(item.n) && type === '実績') tr.className = 'bb-3px';
 
                 let html = idx === 0 ? `<td rowspan="${item.t.length}" class="cat-header">${item.n}</td>` : '';
                 html += `<td class="type-col">${type}</td>`;
 
                 const data = getMonthlyValues(region, item.k, type);
-                let h1Sum = null; let h2Sum = null;
+                let h1Sum = null, h2Sum = null;
 
                 data.forEach((v, i) => {
                     const disp = formatVal(v, item.k, type);
-                    const align = disp === '-' ? 'text-center' : 'text-right';
                     const borderR = (i === 5 || i === 11) ? 'style="border-right:4px solid black !important;"' : '';
                     const borderL = (i === 6) ? 'style="border-left:4px solid black !important;"' : '';
-                    html += `<td class="${align}" ${borderR} ${borderL}>${disp}</td>`;
-                    if (v !== null) {
-                        if (i < 6) h1Sum = (h1Sum || 0) + v;
-                        else h2Sum = (h2Sum || 0) + v;
-                    }
+                    html += `<td class="${disp === '-' ? 'text-center' : 'text-right'}" ${borderR} ${borderL}>${disp}</td>`;
+                    if (v !== null) { i < 6 ? h1Sum = (h1Sum || 0) + v : h2Sum = (h2Sum || 0) + v; }
                     if (i === 5) {
                         const h1Disp = formatVal(h1Sum, item.k, type);
                         html += `<td class="total-col ${h1Disp === '-' ? 'text-center' : 'text-right'}">${h1Disp}</td>`;
@@ -164,76 +198,26 @@
                 });
 
                 const h2Disp = formatVal(h2Sum, item.k, type);
+                const totalDisp = formatVal((h1Sum || 0) + (h2Sum || 0), item.k, type);
                 html += `<td class="total-col ${h2Disp === '-' ? 'text-center' : 'text-right'}">${h2Disp}</td>`;
-                const totalVal = (h1Sum === null && h2Sum === null) ? null : (h1Sum || 0) + (h2Sum || 0);
-                const totalDisp = formatVal(totalVal, item.k, type);
                 html += `<td class="total-col ${totalDisp === '-' ? 'text-center' : 'text-right'}">${totalDisp}</td>`;
-
-                tr.innerHTML = html;
-                tbody.appendChild(tr);
+                tr.innerHTML = html; tbody.appendChild(tr);
             });
         });
     }
 
-    function getMonthlyValues(region, itemK, type) {
-        if (itemK === '稼働エンジニア数') {
-            if (type === '予算') return getMonthlyValues(region, 'プロパー(稼働)', '予算');
-            if (type === '実績') {
-                const p = getMonthlyValues(region, 'プロパー(稼働)', '実績');
-                const b = getMonthlyValues(region, 'BP', '実績');
-                return p.map((v, i) => (v === null && b[i] === null) ? null : (v || 0) + (b[i] || 0));
-            }
-        }
-        if (itemK === 'エンジニア総数') {
-            const working = getMonthlyValues(region, '稼働エンジニア数', type);
-            const waiting = getMonthlyValues(region, 'プロパー(待機)', type);
-            return working.map((v, i) => (v === null && waiting[i] === null) ? null : (v || 0) + (waiting[i] || 0));
-        }
-
-        let res = new Array(12).fill(null);
-        if (type === '達成率') {
-            const bud = getMonthlyValues(region, itemK, '予算');
-            const act = getMonthlyValues(region, itemK, '実績');
-            return act.map((v, i) => (bud[i] === null || act[i] === null) ? null : (bud[i] === 0 ? 0 : (v / bud[i]) * 100));
-        }
-
-        rawRows.slice(1).forEach(r => {
-            const rN = (r[0] || '').trim();
-            const iN = (r[1] || '').trim();
-            const tN = (r[2] || '').trim();
-            
-            // 全体合計の時は二重計上を防ぐため、元の3拠点のみを足す
-            let match = false;
-            if (region === '全体合計') {
-                if (rN === '東海' || rN === '首都圏' || rN === '西日本') match = true;
-            } else {
-                if (rN === region) match = true;
-            }
-
-            if (match && iN === itemK && tN === type) {
-                for (let i = 0; i < 12; i++) {
-                    let cellVal = r[i+3];
-                    if (cellVal !== undefined && cellVal !== "") {
-                        if (res[i] === null) res[i] = 0;
-                        res[i] += parseFloat(String(cellVal).replace(/,/g,'')) || 0;
-                    }
-                }
-            }
-        });
-        return res;
-    }
-
     function formatVal(v, k, t) {
-        if (v === null) return '-';
+        if (v === null || (v === 0 && k !== '待機率' && t !== '達成率')) return '-';
         if (k === '待機率' || t === '達成率') return v.toFixed(1) + '%';
         return Math.round(v).toLocaleString();
     }
 
     function updateCharts() {
         const region = document.getElementById('region-select').value;
+        const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
         renderChart('salesChart', '売上推移', [
             { label: '実績', data: getMonthlyValues(region, '売上', '実績'), type: 'bar', backgroundColor: '#3182ce' },
-            { label: '予算', data: getMonthlyValues(region, '売上', '予算'), type: 'line', borderColor: '#e53e3e', tension: 0.1 }
+            { label: '予算', data: getMonthlyValues(region, '売上', '予算'), type: 'line', borderColor: '#e53e3e' }
         ]);
         renderChart('engChart', 'エンジニア内訳', [
             { label: 'プロパー(稼働)', data: getMonthlyValues(region, 'プロパー(稼働)', '実績'), type: 'bar', backgroundColor: '#4299e1' },
@@ -241,7 +225,7 @@
             { label: 'プロパー(待機)', data: getMonthlyValues(region, 'プロパー(待機)', '実績'), type: 'bar', backgroundColor: '#a0aec0' }
         ], 'stacked');
         renderChart('waitCostChart', '待機原価推移', [
-            { label: '待機原価実績', data: getMonthlyValues(region, '待機原価', '実績'), type: 'line', fill: true, backgroundColor: 'rgba(237, 137, 54, 0.2)', borderColor: '#ed8936', tension: 0.3 }
+            { label: '待機原価実績', data: getMonthlyValues(region, '待機原価', '実績'), type: 'line', fill: true, backgroundColor: 'rgba(237, 137, 54, 0.2)', borderColor: '#ed8936' }
         ]);
     }
 
@@ -249,12 +233,8 @@
         const ctx = document.getElementById(id).getContext('2d');
         if (charts[id]) charts[id].destroy();
         charts[id] = new Chart(ctx, {
-            type: 'bar',
-            data: { labels: ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'], datasets: datasets },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { title: { display: true, text: title, font: { size: 16 } } },
+            type: 'bar', data: { labels: ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'], datasets: datasets },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: title } },
                 scales: { x: { stacked: mode === 'stacked' }, y: { stacked: mode === 'stacked', beginAtZero: true } }
             }
         });
