@@ -11,7 +11,7 @@
         #main_content { display: none; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 枠線：固定 --- */
+        /* --- 枠線：固定（一切の変更禁止） --- */
         table { width: 100%; border-collapse: collapse; background: white; border: 4px solid black !important; table-layout: fixed; }
         th, td { border-top: 1px solid black; border-bottom: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 8px 4px; font-size: 0.85rem; word-break: break-all; }
         th { background: #edf2f7; text-align: center; border-bottom: 4px solid black !important; }
@@ -78,7 +78,7 @@
 
 <script>
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbzLPhdnyAo1D7SH-T3uv0EOb5aWekcfnFRtReGhsnkQ5_sLbi36fTc6o5eVYukeliVJIA/exec';
-    let dataMap = {}; // 高速検索用マップ
+    let dataMap = {};
     let charts = {};
 
     function checkPW() {
@@ -97,12 +97,10 @@
         try {
             const response = await fetch(`${GAS_URL}?p=freeeks2022`);
             const rows = await response.json();
-            
-            // データを一気に整理してマップに格納（爆速化のキモ）
             dataMap = {};
             rows.slice(1).forEach(r => {
-                const key = `${r[0]}-${r[1]}-${r[2]}`; // 拠点-項目-区分
-                dataMap[key] = r.slice(3, 15).map(v => v === "" ? null : parseFloat(String(v).replace(/,/g,'')) || 0);
+                const key = `${r[0]}-${r[1]}-${r[2]}`;
+                dataMap[key] = r.slice(3, 15).map(v => (v === "" || v == null) ? null : parseFloat(String(v).replace(/,/g,'')) || 0);
             });
             renderAll();
         } catch (e) {
@@ -118,10 +116,28 @@
     }
 
     function getMonthlyValues(region, itemK, type) {
-        // 特殊計算：エンジニア数系
+        // --- 1. 達成率の計算（常に 実績 / 予算） ---
+        if (type === '達成率') {
+            const bud = getMonthlyValues(region, itemK, '予算');
+            const act = getMonthlyValues(region, itemK, '実績');
+            return act.map((v, i) => (bud[i] == null || v == null) ? null : (bud[i] === 0 ? 0 : (v / bud[i]) * 100));
+        }
+
+        // --- 2. 全体合計の計算（東海＋首都圏＋西日本） ---
+        if (region === '全体合計') {
+            const targets = ['東海', '首都圏', '西日本'];
+            let sum = new Array(12).fill(null);
+            targets.forEach(t => {
+                const vals = getMonthlyValues(t, itemK, type);
+                vals.forEach((v, i) => { if (v !== null) sum[i] = (sum[i] || 0) + v; });
+            });
+            return sum;
+        }
+
+        // --- 3. エンジニア数系の特殊計算（実績・予算のみ） ---
         if (itemK === '稼働エンジニア数') {
             const p = getMonthlyValues(region, 'プロパー(稼働)', type);
-            const b = getMonthlyValues(region, 'BP', '実績');
+            const b = getMonthlyValues(region, 'BP', '実績'); // BPは実績のみ
             if (type === '予算') return p;
             return p.map((v, i) => (v === null && b[i] === null) ? null : (v || 0) + (b[i] || 0));
         }
@@ -131,27 +147,7 @@
             return working.map((v, i) => (v === null && waiting[i] === null) ? null : (v || 0) + (waiting[i] || 0));
         }
 
-        // 達成率の計算
-        if (type === '達成率') {
-            const bud = getMonthlyValues(region, itemK, '予算');
-            const act = getMonthlyValues(region, itemK, '実績');
-            return act.map((v, i) => (bud[i] === null || act[i] === null) ? null : (bud[i] === 0 ? 0 : (v / bud[i]) * 100));
-        }
-
-        // 全体合計の計算
-        if (region === '全体合計') {
-            const targets = ['東海', '首都圏', '西日本']; // 東日本は含めない（二重計上防止）
-            let sum = new Array(12).fill(null);
-            targets.forEach(t => {
-                const vals = dataMap[`${t}-${itemK}-${type}`];
-                if (vals) {
-                    vals.forEach((v, i) => { if (v !== null) sum[i] = (sum[i] || 0) + v; });
-                }
-            });
-            return sum;
-        }
-
-        // 通常のデータ取得（整理済みマップから一瞬で取り出す）
+        // --- 4. 通常のデータ取得 ---
         return dataMap[`${region}-${itemK}-${type}`] || new Array(12).fill(null);
     }
 
@@ -214,7 +210,6 @@
 
     function updateCharts() {
         const region = document.getElementById('region-select').value;
-        const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
         renderChart('salesChart', '売上推移', [
             { label: '実績', data: getMonthlyValues(region, '売上', '実績'), type: 'bar', backgroundColor: '#3182ce' },
             { label: '予算', data: getMonthlyValues(region, '売上', '予算'), type: 'line', borderColor: '#e53e3e' }
