@@ -16,16 +16,19 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- テーブル基本設定：枠線4px黒線 --- */
+        /* --- テーブル基本設定：全枠線4px黒線 --- */
         table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: max-content; table-layout: fixed; }
-        th, td { border: 4px solid black !important; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
+        th, td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
         th { background: #edf2f7; }
         
-        /* 指示に基づき、予算と実績の間の枠線を2pxに変更 (項目ヘッダーの底面は除外) */
+        /* 予算と実績の間 (2px), 実績と達成率の間 (3px), 項目区切り (4px) の制御 */
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
+        tr.bb-3px td:not(.cat-header) { border-bottom: 3px solid black !important; }
+        tr.bt-3px td:not(.cat-header) { border-top: 3px solid black !important; }
+        tr.bb-4px td { border-bottom: 4px solid black !important; }
 
-        /* 実績管理表の列幅設定 */
+        /* 列幅設定：全ての月次を120pxで統一 */
         .col-item { width: 180px; }
         .col-type { width: 100px; }
         .col-month { width: 120px; }
@@ -35,9 +38,15 @@
         .text-right { text-align: right !important; padding-right: 12px !important; }
         .text-center { text-align: center !important; }
 
-        /* 固定列設定 */
-        .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; }
-        .sticky-left-2 { position: sticky; left: 180px; z-index: 30; background: white !important; }
+        /* 固定列：枠線の視認性を確保するための設定 */
+        .sticky-left { 
+            position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; 
+            box-shadow: inset -4px 0 0 0 black; /* 項目の右側境界 */
+        }
+        .sticky-left-2 { 
+            position: sticky; left: 180px; z-index: 30; background: white !important; 
+            box-shadow: inset 4px 0 0 0 black, inset -4px 0 0 0 black; /* 区分の左右境界 */
+        }
 
         /* 営業推進管理表用 */
         .sales-raw-table th { background: #edf2f7; font-weight: bold; }
@@ -170,16 +179,21 @@
         const region = document.getElementById('region-select').value, tbody = document.getElementById('perf-body'); tbody.innerHTML = '';
         const items = [{n:'売上',k:'売上',t:['予算','実績','達成率']},{n:'稼働原価',k:'稼働原価',t:['予算','実績','達成率']},{n:'A利益',k:'A利益',t:['予算','実績','達成率']},{n:'待機原価',k:'待機原価',t:['実績']},{n:'プロパー(稼働)',k:'プロパー(稼働)',t:['予算','実績','達成率']},{n:'BP',k:'BP',t:['実績']},{n:'稼働エンジニア数',k:'稼働エンジニア数',t:['予算','実績']},{n:'プロパー(待機)',k:'プロパー(待機)',t:['予算','実績']},{n:'待機率',k:'待機率',t:['実績']},{n:'エンジニア総数',k:'エンジニア総数',t:['予算','実績','達成率']}];
         
-        // 予算と実績の間を2pxにする対象項目
-        const targets = ['売上','稼働原価','A利益','プロパー(稼働)','稼働エンジニア数','プロパー(待機)','エンジニア総数'];
+        const targets2px = ['売上','稼働原価','A利益','プロパー(稼働)','稼働エンジニア数','プロパー(待機)','エンジニア総数'];
+        const targets3px = ['売上','稼働原価','A利益','プロパー(稼働)','エンジニア総数'];
 
         items.forEach(item => {
             item.t.forEach((type, idx) => {
                 const tr = document.createElement('tr');
-                // 対象項目の予算と実績の間にクラスを付与
-                if (targets.includes(item.n)) {
+                if (idx === item.t.length - 1) tr.classList.add('bb-4px');
+
+                if (targets2px.includes(item.n)) {
                     if (type === '予算') tr.classList.add('bb-2px');
-                    if (type === '実績') tr.classList.add('bt-2px');
+                    if (type === '実績' && item.t.includes('予算')) tr.classList.add('bt-2px');
+                }
+                if (targets3px.includes(item.n)) {
+                    if (type === '実績') tr.classList.add('bb-3px');
+                    if (type === '達成率') tr.classList.add('bt-3px');
                 }
 
                 let html = idx===0?`<td rowspan="${item.t.length}" class="cat-header sticky-left">${item.n}</td>` : '';
@@ -233,6 +247,7 @@
 </script>
 </body>
 </html>
+
 
 
 
