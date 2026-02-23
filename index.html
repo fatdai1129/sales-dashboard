@@ -18,7 +18,7 @@
         
         /* --- 実績管理セクション：一切の変更を禁止（完全固定） --- */
         table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: max-content; table-layout: fixed; }
-        th, td { border: 4px solid black !important; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
+        th, td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
         th { background: #edf2f7; }
         
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
@@ -42,7 +42,13 @@
         .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; border-right: 4px solid black !important; }
         .sticky-left-2 { position: sticky; left: 180px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
 
-        /* 営業推進管理表用：デザイン統一 */
+        /* 営業推進管理表用：列幅バランス調整 */
+        .sales-raw-table th, .sales-raw-table td { width: 110px; } /* デフォルト幅 */
+        .col-sales-aff { width: 130px !important; }
+        .col-sales-name { width: 180px !important; }
+        .col-sales-info { width: 130px !important; }
+        .col-sales-total { width: 130px !important; background: #fffaf0 !important; font-weight: bold; }
+
         .sales-raw-table th { background: #edf2f7; font-weight: bold; }
 
         .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
@@ -210,7 +216,7 @@
         updateCharts(region);
     }
 
-    /* --- 営業推進管理表：境界線を確実に2pxに変更 --- */
+    /* --- 営業推進管理表：境界線・サイズバランス調整版 --- */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
@@ -218,15 +224,15 @@
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
         
         let hHtml = "<tr>";
-        hHtml += `<th rowspan="2">${headers[1] || ""}</th>`;
-        hHtml += `<th rowspan="2">${headers[4] || ""}<br>${headers[3] || ""}</th>`;
-        hHtml += `<th rowspan="2">給料<br>コスト</th>`;
+        hHtml += `<th rowspan="2" class="col-sales-aff">${headers[1] || ""}</th>`;
+        hHtml += `<th rowspan="2" class="col-sales-name">${headers[4] || ""}<br>${headers[3] || ""}</th>`;
+        hHtml += `<th rowspan="2" class="col-sales-info">給料<br>コスト</th>`;
         for (let i = 12; i < 36; i += 2) {
             hHtml += `<th>${headers[i] || ""}</th>`;
-            if (i === 22) hHtml += `<th rowspan="2" style="background:#fffaf0;">上期計</th>`;
+            if (i === 22) hHtml += `<th rowspan="2" class="col-sales-total">上期計</th>`;
             if (i === 34) {
-                hHtml += `<th rowspan="2" style="background:#fffaf0;">下期計</th>`;
-                hHtml += `<th rowspan="2" style="background:#fffaf0;">年間計</th>`;
+                hHtml += `<th rowspan="2" class="col-sales-total">下期計</th>`;
+                hHtml += `<th rowspan="2" class="col-sales-total">年間計</th>`;
             }
         }
         hHtml += "</tr><tr>";
@@ -235,15 +241,12 @@
         }
         hHtml += "</tr>"; head.innerHTML = hHtml;
         
-        // 【修正点】東日本を選択した際、東海と首都圏の内容を合算して表示するロジックを追加
         let filteredRows = rawData.filter(row => {
             if (region === "東日本") {
-                // 東日本の場合：所属が「東海」or「首都圏」、またはそれぞれのBP要員を含める
                 const isTokai = (row[1] === '東海') || (row[1] === 'BP東海' && row[3] === 'BP 要員');
                 const isShitoken = (row[1] === '首都圏') || (row[1] === 'BP首都圏' && row[3] === 'BP 要員');
                 if (!isTokai && !isShitoken) return false;
             } else if (region !== "全国合計") {
-                // 通常の拠点選択（東海、首都圏、西日本など）
                 const isRegionMatch = (row[1] === region);
                 const isBpPersonnelMatch = (row[1] === 'BP' + region && row[3] === 'BP 要員');
                 if (!isRegionMatch && !isBpPersonnelMatch) return false;
@@ -272,7 +275,6 @@
             monthlyTotals.push({ sales: sSum, profit: pSum });
         }
 
-        // 上下両方のセルに2pxの指定を行うことで確実に表示
         const border2pxTop = "border-bottom: 2px solid black !important;";
         const border2pxBottom = "border-top: 2px solid black !important;";
 
@@ -281,7 +283,6 @@
         // 総合計行
         bHtml += "<tr><td colspan='3' rowspan='2' class='text-center' style='font-weight:bold;'>総合計</td>";
         let gH1S = 0, gH1P = 0, gH2S = 0, gH2P = 0;
-        // 総合計上段
         monthlyTotals.forEach((t, idx) => {
             bHtml += `<td class="text-right" style="font-weight:bold; ${border2pxTop}">${t.sales.toLocaleString()}</td>`;
             if (idx < 6) gH1S += t.sales; else gH2S += t.sales;
@@ -292,7 +293,6 @@
             }
         });
         bHtml += "</tr><tr>";
-        // 総合計下段
         monthlyTotals.forEach((t, idx) => {
             bHtml += `<td class="text-right" style="font-weight:bold; ${border2pxBottom}">${t.profit.toLocaleString()}</td>`;
             if (idx < 6) gH1P += t.profit; else gH2P += t.profit;
@@ -304,22 +304,18 @@
         });
         bHtml += "</tr>";
 
-        // 個人データ行
         filteredRows.forEach(row => {
             const h1 = calcTotal(row, 12, 22), h2 = calcTotal(row, 24, 34);
-            
-            // 所属の表記変更：東海・首都圏のBP対応
             let affDisplay = row[1] || "";
             if ((affDisplay === '東海' || affDisplay === '首都圏') && row[2] === 'BP') {
                 affDisplay = 'BP' + affDisplay;
             }
 
-            // 上段行
             bHtml += "<tr>";
-            bHtml += `<td rowspan="2" class="text-center">${affDisplay}</td>`;
-            bHtml += `<td class="text-center" style="${border2pxTop}">${row[4] || ""}</td>`;
+            bHtml += `<td rowspan="2" class="text-center col-sales-aff">${affDisplay}</td>`;
+            bHtml += `<td class="text-center col-sales-name" style="${border2pxTop}">${row[4] || ""}</td>`;
             const sal = (typeof row[10] === 'number') ? row[10].toLocaleString() : (row[10] || "-");
-            bHtml += `<td class="text-right" style="${border2pxTop}">${sal}</td>`;
+            bHtml += `<td class="text-right col-sales-info" style="${border2pxTop}">${sal}</td>`;
             for (let i = 12; i < 36; i += 2) {
                 const s = (typeof row[i] === 'number') ? row[i].toLocaleString() : "-";
                 bHtml += `<td class="text-right" style="${border2pxTop}">${s}</td>`;
@@ -331,19 +327,18 @@
             }
             bHtml += "</tr>";
 
-            // 下段行
             bHtml += "<tr>";
-            bHtml += `<td class="text-center" style="${border2pxBottom}">${row[3] || ""}</td>`;
+            bHtml += `<td class="text-center col-sales-name" style="${border2pxBottom}">${row[3] || ""}</td>`;
             const cos = (typeof row[11] === 'number') ? Math.floor(row[11]).toLocaleString() : (row[11] || "-");
-            bHtml += `<td class="text-right" style="${border2pxBottom}">${cos}</td>`;
+            bHtml += `<td class="text-right col-sales-info" style="${border2pxBottom}">${cos}</td>`;
             for (let i = 12; i < 36; i += 2) {
                 let p = "-";
                 if (typeof row[i] === 'number' && typeof row[i+1] === 'number') p = Math.floor(row[i] - row[i+1]).toLocaleString();
                 bHtml += `<td class="text-right" style="${border2pxBottom}">${p}</td>`;
-                if (i === 22) bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0;">${h1.profit.toLocaleString()}</td>`;
+                if (i === 22) bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0; ${border2pxBottom}">${h1.profit.toLocaleString()}</td>`;
                 if (i === 34) {
-                    bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0;">${h2.profit.toLocaleString()}</td>`;
-                    bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0;">${(h1.profit+h2.profit).toLocaleString()}</td>`;
+                    bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0; ${border2pxBottom}">${h2.profit.toLocaleString()}</td>`;
+                    bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0; ${border2pxBottom}">${(h1.profit+h2.profit).toLocaleString()}</td>`;
                 }
             }
             bHtml += "</tr>";
