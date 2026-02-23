@@ -17,32 +17,34 @@
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
         /* --- 実績管理セクション：完全固定 --- */
-        table.perf-table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; min-width: 2140px; table-layout: fixed; }
-        table.perf-table th, table.perf-table td { border: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 12px 6px; overflow: hidden; }
+        table.perf-table { border-collapse: separate; border-spacing: 0; background: white; border: 4px solid black !important; font-size: 1.1rem; width: 2140px; table-layout: fixed; }
+        table.perf-table th, table.perf-table td { border: 1px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
         table.perf-table th { background: #edf2f7; border-bottom: 4px solid black !important; }
         
-        /* 列幅の設定：6月と7月を含め全ての月を120pxで統一 */
+        /* 列幅：6月と7月を含む全ての月次列を120pxで統一 */
         .col-item { width: 180px; }
         .col-type { width: 100px; }
         .col-month { width: 120px; }
         .col-total { width: 140px; background: #fffaf0 !important; font-weight: bold; }
 
-        .cat-header { background: #ebf8ff !important; font-weight: bold; text-align: center; border-bottom: 4px solid black !important; }
+        .cat-header { background: #ebf8ff !important; font-weight: bold; text-align: center; }
         tr.bb-4px td { border-bottom: 4px solid black !important; }
         tr.bb-3px td { border-bottom: 3px solid black !important; }
 
-        /* 固定列：指示通り「区分」の左側に4px線を描画 */
+        /* 固定列：枠線問題を解決するための設定 */
         .sticky-left { 
             position: sticky; left: 0; z-index: 30; 
             background: #ebf8ff !important; 
-            box-shadow: inset -4px 0 0 0 black; 
+            border-right: 4px solid black !important; /* 「区分」の左側の枠線を4pxに固定 */
         }
         .sticky-left-2 { 
             position: sticky; left: 180px; z-index: 30; 
             background: white !important; 
-            /* 区分列の左側（項目との境界）を4pxに設定 */
-            box-shadow: inset 4px 0 0 0 black !important; 
+            border-right: 4px solid black !important; /* 「6月実績」の左側の枠線を4pxに固定 */
         }
+
+        /* 下期実績の開始列に4px左線を追加 */
+        .dec-col { border-left: 4px solid black !important; }
 
         /* --- 営業推進管理表 --- */
         table.sales-raw-table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: auto; min-width: 100%; }
@@ -86,8 +88,8 @@
                             <th class="col-total">年間計</th>
                         </tr>
                         <tr>
-                            <th class="col-month">6月</th><th class="col-month">7月</th><th class="col-month">8月</th><th class="col-month">9月</th><th class="col-month">10月</th><th class="col-month" style="border-right:4px solid black !important;">11月</th><th class="col-total">計</th>
-                            <th class="col-month" style="border-left:4px solid black !important;">12月</th><th class="col-month">1月</th><th class="col-month">2月</th><th class="col-month">3月</th><th class="col-month">4月</th><th class="col-month" style="border-right:4px solid black !important;">5月</th><th class="col-total">計</th>
+                            <th class="col-month">6月</th><th class="col-month">7月</th><th class="col-month">8月</th><th class="col-month">9月</th><th class="col-month">10月</th><th class="col-month">11月</th><th class="col-total">計</th>
+                            <th class="col-month">12月</th><th class="col-month">1月</th><th class="col-month">2月</th><th class="col-month">3月</th><th class="col-month">4月</th><th class="col-month">5月</th><th class="col-total">計</th>
                             <th class="col-total">合計</th>
                         </tr>
                     </thead>
@@ -190,7 +192,7 @@
                 const tot = (type==='達成率'||item.k==='待機率') ? (sum(bD)===0?0:(sum(aD)/sum(bD))*100) : h1+h2;
                 for(let i=0;i<6;i++) html += `<td class="text-right">${formatVal(data[i],item.k,type)}</td>`;
                 html += `<td class="text-right col-total">${formatVal(h1,item.k,type)}</td>`;
-                for(let i=6;i<12;i++) html += `<td class="text-right" style="${i===6?'border-left:4px solid black !important;':''}">${formatVal(data[i],item.k,type)}</td>`;
+                for(let i=6;i<12;i++) html += `<td class="text-right ${i===6?'dec-col':''}">${formatVal(data[i],item.k,type)}</td>`;
                 html += `<td class="text-right col-total">${formatVal(h2,item.k,type)}</td>`;
                 html += `<td class="text-right col-total">${formatVal(tot,item.k,type)}</td>`;
                 tr.innerHTML = html; tbody.appendChild(tr);
