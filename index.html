@@ -170,7 +170,7 @@
             item.t.forEach((type, idx) => {
                 const tr = document.createElement('tr'); if(idx===item.t.length-1) tr.className='bb-4px'; else if(['売上','稼働原価','A利益','プロパー(稼働)','エンジニア総数'].includes(item.n)&&type==='実績') tr.className='bb-3px';
                 let html = idx===0?`<td rowspan="${item.t.length}" class="cat-header sticky-left">${item.n}</td>` : '';
-                html += `<td class="text-center sticky-left-2">${type}</td>`;
+                html += `<td class="text-center sticky-left-2" style="background:white;">${type}</td>`;
                 const data = getPerfVal(region, item.k, type), sum = (arr)=>arr.reduce((a,b)=>a+(b||0),0);
                 const bD = getPerfVal(region, (type==='達成率'?item.k:'エンジニア総数'), (type==='達成率'?'予算':'実績')), aD = getPerfVal(region, (type==='達成率'?item.k:'プロパー(待機)'), '実績');
                 const h1 = (type==='達成率'||item.k==='待機率') ? (sum(bD.slice(0,6))===0?0:(sum(aD.slice(0,6))/sum(bD.slice(0,6)))*100) : sum(data.slice(0,6));
@@ -220,6 +220,7 @@
 </script>
 </body>
 </html>
+
 
 
 
