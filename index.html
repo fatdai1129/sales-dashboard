@@ -421,7 +421,7 @@
     }
 
     /* =========================================
-       3. 売込状況一覧 ロジック（修正版）
+       3. 売込状況一覧 ロジック（日付フォーマット修正版）
     ========================================= */
     function renderStatus() {
         const tbody = document.getElementById('status-body');
@@ -432,7 +432,7 @@
         statusRows.slice(1).forEach(row => {
             if (!row[0] && !row[1]) return; 
             
-            // 拠点フィルター（東日本は東海+首都圏。スプレッドシートB列=row[1]が所属列）
+            // 拠点フィルター（スプレッドシートB列=row[1]が所属列）
             if (region === "東日本") {
                 const isTokai = (row[1] === '東海') || (row[1] === 'BP東海');
                 const isShitoken = (row[1] === '首都圏') || (row[1] === 'BP首都圏');
@@ -477,15 +477,28 @@
         });
     }
 
+    // 日付フォーマットの修正（ISO文字列対応）
     function formatStatusDate(val) {
-        if (!val) return "-";
+        if (!val || val === "-") return "-";
+        
+        let date;
+        // スプレッドシートのシリアル値（数値）の場合
         if (typeof val === 'number') {
-            const date = new Date((val - 25569) * 86400 * 1000);
+            date = new Date((val - 25569) * 86400 * 1000);
+        } 
+        // GASから "2025-06-30T15:00:00.000Z" のような文字列で来た場合
+        else {
+            date = new Date(val);
+        }
+
+        // 有効な日付かチェックしてフォーマット
+        if (!isNaN(date.getTime())) {
             const y = date.getFullYear();
             const m = String(date.getMonth() + 1).padStart(2, '0');
             const d = String(date.getDate()).padStart(2, '0');
             return `${y}/${m}/${d}`; 
         }
+        
         return val;
     }
 
