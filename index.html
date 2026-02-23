@@ -20,14 +20,14 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* 共通テーブル設定：PC版太枠デザイン */
+        /* 太枠デザインの完全復元 */
         table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; }
         th, td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
         th { background: #edf2f7; font-weight: bold; }
         .text-right { text-align: right !important; padding-right: 12px !important; }
         .text-center { text-align: center !important; }
 
-        /* 実績管理表の特殊枠線 */
+        /* 実績表の特殊枠線 */
         .perf-table { width: 100%; min-width: 1800px; table-layout: fixed; }
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
@@ -49,7 +49,7 @@
         .col-sales-name { width: 220px !important; }
         .col-sales-info { width: 150px !important; }
 
-        /* 売込状況一覧：列幅固定バランス */
+        /* 売込状況一覧 */
         .status-table { width: 100%; min-width: 1400px; table-layout: fixed; font-size: 1.25rem; }
         .status-table th, .status-table td { padding: 18px 12px; }
         .col-status-aff { width: 160px; }
@@ -60,18 +60,15 @@
         .col-status-date { width: 200px; }
         .col-status-period { width: 160px; }
         
-        /* 塗りつぶし色 */
         .status-wait { color: #c53030 !important; font-weight: bold; background-color: #fff5f5 !important; }
         .status-active { color: #2b6cb0 !important; font-weight: bold; background-color: #ffffe0 !important; }
 
         .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
         .chart-box { background: white; padding: 20px; border-radius: 12px; height: 350px; }
 
-        /* スマホ対応（PCの太枠を壊さないように設計） */
         @media (max-width: 768px) {
             .nav-bar { flex-wrap: wrap; height: auto; }
             .nav-item { padding: 12px 5px; flex: 1; text-align: center; font-size: 0.85rem; height: auto; line-height: 1.2; }
-            .container { padding: 10px; }
             .card > div:first-child { flex-direction: column; align-items: flex-start !important; }
             select, input[type="text"] { width: 100% !important; margin: 10px 0 !important; }
             .sticky-left, .sticky-left-2 { position: static !important; }
@@ -149,7 +146,7 @@
                 <div style="display:flex; align-items:center; margin-bottom:25px;">
                     <h2 style="margin:0; border-left:6px solid #ed8936; padding-left:20px; margin-right: 30px; font-size:1.6rem;">売込状況一覧</h2>
                     <select id="status-region-select" style="padding:12px 25px; border-radius:8px; font-size:1.2rem; cursor:pointer; border: 2px solid #ed8936;" onchange="renderStatus()">
-                        <option value="全国">全国</option><option value="東海">東海</option><option value="首都圏">首都圏</option><option value="東日本">東東日本</option><option value="西日本">西日本</option>
+                        <option value="全国">全国</option><option value="東海">東海</option><option value="首都圏">首都圏</option><option value="東日本">東日本</option><option value="西日本">西日本</option>
                     </select>
                     <span id="status-update-date" style="margin-left: 30px; font-size: 1.2rem; font-weight: bold; color: #4a5568;"></span>
                 </div>
@@ -196,17 +193,24 @@
 
     async function fetchAll() {
         try {
-            const [rP, rS, rSt] = await Promise.all([
+            const [rP, rS] = await Promise.all([
                 fetch(`${GAS_URL}?p=freeeks2022&s=実績データ`),
-                fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表`),
-                fetch(`${GAS_URL}?p=freeeks2022&s=売込状況`)
+                fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表`)
             ]);
             
+            // 安全なシート名判別
+            let rSt = await fetch(`${GAS_URL}?p=freeeks2022&s=売込状況一覧`);
+            let stData = await rSt.json();
+            if (!stData || stData.length <= 1 || stData.error) {
+                const rStFallback = await fetch(`${GAS_URL}?p=freeeks2022&s=売込状況`);
+                stData = await rStFallback.json();
+            }
+
             const rowsP = await rP.json(); perfMap = {};
             rowsP.slice(1).forEach(r => { perfMap[`${r[0]}-${r[1]}-${r[2]}`] = r.slice(3, 15).map(v => (v===""||v==null)?null:parseFloat(String(v).replace(/,/g,''))||0); });
             
             salesRows = await rS.json();
-            statusRows = await rSt.json();
+            statusRows = stData;
             
             localStorage.setItem('f_perf', JSON.stringify(perfMap)); 
             localStorage.setItem('f_sales', JSON.stringify(salesRows));
@@ -223,9 +227,6 @@
         if (document.getElementById('section-status').style.display !== 'none') renderStatus();
     }
 
-    /* =========================================
-       1. 実績管理
-    ========================================= */
     function getPerfVal(region, itemK, type) {
         if (type === '達成率') {
             const b = getPerfVal(region, itemK, '予算'), a = getPerfVal(region, itemK, '実績');
@@ -267,15 +268,16 @@
                 let html = idx===0?`<td rowspan="${item.t.length}" class="cat-header sticky-left">${item.n}</td>` : '';
                 html += `<td class="text-center sticky-left-2">${type}</td>`;
                 
-                const data = getPerfVal(region, item.k, type);
                 const sumF = (arr) => {
                     let hasVal = false;
                     let s = arr.reduce((a,b) => { if(b !== null) hasVal = true; return a + (b || 0); }, 0);
                     return hasVal ? s : null;
                 };
 
+                const data = getPerfVal(region, item.k, type);
                 const bD = getPerfVal(region, (type==='達成率'?item.k:'エンジニア総数'), (type==='達成率'?'予算':'実績'));
                 const aD = getPerfVal(region, (type==='達成率'?item.k:'プロパー(待機)'), '実績');
+                
                 const h1 = (type==='達成率'||item.k==='待機率') ? (sumF(bD.slice(0,6))===0?0:(sumF(aD.slice(0,6))/sumF(bD.slice(0,6)))*100) : sumF(data.slice(0,6));
                 const h2 = (type==='達成率'||item.k==='待機率') ? (sumF(bD.slice(6,12))===0?0:(sumF(aD.slice(6,12))/sumF(bD.slice(6,12)))*100) : sumF(data.slice(6,12));
                 const tot = (type==='達成率'||item.k==='待機率') ? (sumF(bD)===0?0:(sumF(aD)/sumF(bD))*100) : sumF(data);
@@ -300,9 +302,6 @@
         return Math.round(v).toLocaleString(); 
     }
 
-    /* =========================================
-       2. 営業推進管理表
-    ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value, kw = document.getElementById('sales-search').value.toLowerCase();
@@ -336,9 +335,6 @@
         body.innerHTML = bHtml;
     }
 
-    /* =========================================
-       3. 売込状況一覧
-    ========================================= */
     function renderStatus() {
         const tbody = document.getElementById('status-body'), reg = document.getElementById('status-region-select').value;
         tbody.innerHTML = '';
@@ -347,31 +343,27 @@
 
         let filtered = statusRows.slice(1).filter(r => {
             if (reg === "全国") return true;
-            const search = String(r[0]||"") + String(r[1]||"");
-            const map = {
-                "東海": ["東海", "静岡"],
-                "首都圏": ["首都圏", "東京本社"],
-                "東日本": ["東海", "静岡", "首都圏", "東京本社"],
-                "西日本": ["西日本", "大阪"]
-            };
+            const search = (String(r[0]||"") + String(r[1]||"")).trim();
+            const map = { "東海": ["東海", "静岡"], "首都圏": ["首都圏", "東京本社", "本店"], "東日本": ["東海", "静岡", "首都圏", "東京本社", "本店"], "西日本": ["西日本", "大阪"] };
             const targets = map[reg] || [reg];
             return targets.some(t => search.includes(t));
         });
 
         const order = { "待機中": 1, "休業中": 2, "休職中": 3, "稼働中": 4 };
-        filtered.sort((a, b) => (order[a[2]]||99) - (order[b[2]]||99));
+        filtered.sort((a, b) => (order[String(a[2]).trim()]||99) - (order[String(b[2]).trim()]||99));
 
         filtered.forEach(row => {
             const tr = document.createElement('tr');
-            if (row[2] === "待機中") tr.classList.add('status-wait');
-            else if (row[2] === "稼働中") tr.classList.add('status-active');
+            const st = String(row[2] || "").trim();
+            if (st === "待機中") tr.classList.add('status-wait');
+            else if (st === "稼働中") tr.classList.add('status-active');
             
             const c0 = String(row[0]||""), c1 = String(row[1]||"");
             let aff = c1, name = c0;
-            const known = ['東海', '静岡', '首都圏', '本社', '西日本', '大阪'];
+            const known = ['東海', '静岡', '首都圏', '本社', '本店', '西日本', '大阪'];
             if (known.some(v => c0.includes(v))) { aff = c0; name = c1; }
 
-            tr.innerHTML = `<td class="text-center">${aff}</td><td class="text-center" style="font-weight:bold;">${name}</td><td class="text-center">${(row[6]||0).toLocaleString()}</td><td class="text-center">${row[2]||""}</td><td class="text-center">${row[3]||""}</td><td class="text-center">${formatStatusDate(row[4])}</td><td class="text-center">${row[5]||0}ヶ月</td>`;
+            tr.innerHTML = `<td class="text-center">${aff}</td><td class="text-center" style="font-weight:bold;">${name}</td><td class="text-center">${(row[6]||0).toLocaleString()}</td><td class="text-center">${st}</td><td class="text-center">${row[3]||""}</td><td class="text-center">${formatStatusDate(row[4])}</td><td class="text-center">${row[5]||0}ヶ月</td>`;
             tbody.appendChild(tr);
         });
     }
@@ -385,9 +377,11 @@
 
     function updateCharts(region) {
         const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
-        if (charts.s) charts.s.destroy(); charts.s = new Chart(document.getElementById('salesChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ label: '実績', data: getPerfVal(region, '売上', '実績'), backgroundColor: '#3182ce' },{ label: '予算', data: getPerfVal(region, '売上', '予算'), type: 'line', borderColor: '#e53e3e' }]}, options: { responsive: true, maintainAspectRatio: false } });
-        if (charts.e) charts.e.destroy(); charts.e = new Chart(document.getElementById('engChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ label: '稼働', data: getPerfVal(region, 'プロパー(稼働)', '実績'), backgroundColor: '#4299e1' },{ label: 'BP', data: getPerfVal(region, 'BP', '実績'), backgroundColor: '#ed64a6' }]}, options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } } });
-        if (charts.w) charts.w.destroy(); charts.w = new Chart(document.getElementById('waitCostChart').getContext('2d'), { type: 'line', data: { labels, datasets: [{ label: '待機原価', data: getPerfVal(region, '待機原価', '実績'), borderColor: '#ed8936', fill: true, backgroundColor: 'rgba(237,137,54,0.1)' }]}, options: { responsive: true, maintainAspectRatio: false } });
+        const opt = (title) => ({ responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: title, font: { size: 18, weight: 'bold' }, color: '#2d3748', padding: { bottom: 10 } } } });
+        
+        if (charts.s) charts.s.destroy(); charts.s = new Chart(document.getElementById('salesChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ label: '実績', data: getPerfVal(region, '売上', '実績'), backgroundColor: '#3182ce' },{ label: '予算', data: getPerfVal(region, '売上', '予算'), type: 'line', borderColor: '#e53e3e', pointBackgroundColor: '#e53e3e' }]}, options: opt('売上推移') });
+        if (charts.e) charts.e.destroy(); charts.e = new Chart(document.getElementById('engChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ label: '稼働', data: getPerfVal(region, 'プロパー(稼働)', '実績'), backgroundColor: '#4299e1' },{ label: 'BP', data: getPerfVal(region, 'BP', '実績'), backgroundColor: '#ed64a6' }]}, options: { ...opt('エンジニア内訳'), scales: { x: { stacked: true }, y: { stacked: true } } } });
+        if (charts.w) charts.w.destroy(); charts.w = new Chart(document.getElementById('waitCostChart').getContext('2d'), { type: 'line', data: { labels, datasets: [{ label: '待機原価', data: getPerfVal(region, '待機原価', '実績'), borderColor: '#ed8936', pointBackgroundColor: '#ed8936', fill: true, backgroundColor: 'rgba(237,137,54,0.1)' }]}, options: opt('待機原価推移') });
     }
 </script>
 </body>
