@@ -51,7 +51,7 @@
         .col-sales-info { width: 150px !important; }
         .col-sales-total { width: 160px !important; background: #fffaf0 !important; font-weight: bold; }
 
-        /* 売込状況一覧（固定幅でバランス調整） */
+        /* 売込状況一覧 */
         .status-table { width: 100%; min-width: 1400px; table-layout: fixed; font-size: 1.25rem; }
         .status-table th, .status-table td { padding: 18px 12px; }
         .col-status-aff { width: 160px; }
@@ -62,12 +62,41 @@
         .col-status-date { width: 200px; }
         .col-status-period { width: 160px; }
         
-        /* 稼働状況に応じた行の塗りつぶし色設定 */
         .status-wait { color: #c53030; font-weight: bold; background-color: #fff5f5 !important; }
         .status-active { color: #2b6cb0; font-weight: bold; background-color: #ffffe0 !important; }
 
         .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
         .chart-box { background: white; padding: 20px; border-radius: 12px; height: 350px; }
+
+        /* スマホ用レスポンシブデザイン */
+        @media (max-width: 768px) {
+            body { font-size: 14px; }
+            .nav-bar { flex-wrap: wrap; height: auto; }
+            .nav-item { padding: 10px 10px; height: auto; line-height: 1.5; flex: 1; text-align: center; font-size: 0.9rem; }
+            #sync_status { width: 100%; text-align: center; padding: 5px 0; background: #1a202c; margin: 0; }
+            .container { padding: 10px; }
+            .card { padding: 15px; }
+            
+            .card > div:first-child { flex-direction: column; align-items: flex-start !important; }
+            .card h2 { font-size: 1.3rem !important; margin-bottom: 10px !important; }
+            select, input[type="text"] { width: 100% !important; margin-left: 0 !important; margin-top: 10px; box-sizing: border-box; }
+            #status-update-date { margin-left: 0 !important; margin-top: 10px; display: block; font-size: 1rem !important; }
+            
+            .card > div[style*="overflow-x: auto"] { -webkit-overflow-scrolling: touch; }
+            
+            .col-item { width: 100px; font-size: 0.9rem; padding: 8px 4px; }
+            .col-type { width: 80px; font-size: 0.9rem; padding: 8px 4px; }
+            .sticky-left-2 { left: 100px; }
+            
+            .sales-raw-table th, .sales-raw-table td { font-size: 0.9rem; padding: 8px 4px; }
+            .col-sales-aff { width: 100px !important; }
+            .col-sales-name { width: 120px !important; }
+            
+            .status-table { font-size: 1rem; }
+            .status-table th, .status-table td { padding: 10px 6px; }
+            
+            .charts-container { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -89,6 +118,8 @@
     <div class="container">
         <div id="section-perf">
             <div class="card">
+                <div style="font-size: 1.4rem; font-weight: bold; color: #2d3748; margin-bottom: 15px;">2025年6月期</div>
+                
                 <div style="display:flex; align-items:center; margin-bottom:20px;">
                     <h2 style="margin:0; border-left:5px solid #3182ce; padding-left:15px; margin-right: 25px;">拠点別実績・予算</h2>
                     <select id="region-select" style="padding:10px 20px; border-radius:6px; font-size:1.1rem; cursor:pointer;" onchange="renderPerf()">
@@ -240,11 +271,6 @@
             const w = getPerfVal(region, 'プロパー(待機)', '実績'), t = getPerfVal(region, 'エンジニア総数', '実績');
             return w.map((v, i) => (t[i]==null||v==null)?null:(t[i]===0?0:(v/t[i])*100));
         }
-        if (region === '全国') {
-            let sum = new Array(12).fill(null);
-            ['東海','首都圏','西日本'].forEach(reg => { getPerfVal(reg, itemK, type).forEach((v,i) => { if(v!==null) sum[i]=(sum[i]||0)+v; }); });
-            return sum;
-        }
         if (itemK === '稼働エンジニア数') {
             const p = getPerfVal(region, 'プロパー(稼働)', type), b = getPerfVal(region, 'BP', '実績');
             return type==='予算'?p:p.map((v,i)=>(v===null&&b[i]===null)?null:(v||0)+(b[i]||0));
@@ -253,7 +279,10 @@
             const wk = getPerfVal(region, '稼働エンジニア数', type), wt = getPerfVal(region, 'プロパー(待機)', type);
             return wk.map((v,i)=>(v===null&&wt[i]===null)?null:(v||0)+(wt[i]||0));
         }
-        return perfMap[`${region}-${itemK}-${type}`] || new Array(12).fill(null);
+
+        let val = perfMap[`${region}-${itemK}-${type}`];
+        if (!val && region === '全国') val = perfMap[`全国合計-${itemK}-${type}`];
+        return val || new Array(12).fill(null);
     }
 
     function renderPerf() {
@@ -276,11 +305,34 @@
                 }
                 let html = idx===0?`<td rowspan="${item.t.length}" class="cat-header sticky-left">${item.n}</td>` : '';
                 html += `<td class="text-center sticky-left-2">${type}</td>`;
-                const data = getPerfVal(region, item.k, type), sum = (arr)=>arr.reduce((a,b)=>a+(b||0),0);
+                
+                // 未来の月（全てnull）の合計を0ではなくnull(-)にするための改良sum関数
+                const sum = (arr) => {
+                    let hasVal = false;
+                    let s = arr.reduce((a,b) => { if(b !== null) hasVal = true; return a + (b || 0); }, 0);
+                    return hasVal ? s : null;
+                };
+
+                const data = getPerfVal(region, item.k, type);
                 const bD = getPerfVal(region, (type==='達成率'?item.k:'エンジニア総数'), (type==='達成率'?'予算':'実績')), aD = getPerfVal(region, (type==='達成率'?item.k:'プロパー(待機)'), '実績');
-                const h1 = (type==='達成率'||item.k==='待機率') ? (sum(bD.slice(0,6))===0?0:(sum(aD.slice(0,6))/sum(bD.slice(0,6)))*100) : sum(data.slice(0,6));
-                const h2 = (type==='達成率'||item.k==='待機率') ? (sum(bD.slice(6,12))===0?0:(sum(aD.slice(6,12))/sum(bD.slice(6,12)))*100) : sum(data.slice(6,12));
-                const tot = (type==='達成率'||item.k==='待機率') ? (sum(bD)===0?0:(sum(aD)/sum(bD))*100) : h1+h2;
+                
+                const sumB1 = sum(bD.slice(0,6)), sumA1 = sum(aD.slice(0,6));
+                const sumB2 = sum(bD.slice(6,12)), sumA2 = sum(aD.slice(6,12));
+                const sumBT = sum(bD), sumAT = sum(aD);
+
+                const getPct = (a, b) => (a === null || b === null) ? null : (b === 0 ? 0 : (a / b) * 100);
+
+                let h1, h2, tot;
+                if (type === '達成率' || item.k === '待機率') {
+                    h1 = getPct(sumA1, sumB1);
+                    h2 = getPct(sumA2, sumB2);
+                    tot = getPct(sumAT, sumBT);
+                } else {
+                    h1 = sum(data.slice(0,6));
+                    h2 = sum(data.slice(6,12));
+                    tot = sum(data);
+                }
+
                 for(let i=0;i<6;i++) {
                     const borderClass = (i < 5 ? 'br-3px ' : '') + (i > 0 ? 'bl-3px ' : '');
                     html += `<td class="text-right ${borderClass}">${formatVal(data[i],item.k,type)}</td>`;
@@ -466,7 +518,11 @@
             if (region === "全国") {
                 return true; 
             } else if (region === "東日本") {
-                return searchTargetText.includes('東海') || searchTargetText.includes('首都圏');
+                return searchTargetText.includes('東海') || searchTargetText.includes('首都圏') || searchTargetText.includes('静岡オフィス') || searchTargetText.includes('東京本社');
+            } else if (region === "東海") {
+                return searchTargetText.includes('東海') || searchTargetText.includes('静岡オフィス');
+            } else if (region === "首都圏") {
+                return searchTargetText.includes('首都圏') || searchTargetText.includes('東京本社');
             } else if (region === "西日本") {
                 return searchTargetText.includes('西日本') || searchTargetText.includes('大阪オフィス');
             } else {
@@ -508,7 +564,7 @@
             const c0 = String(row[0] || "").trim();
             const c1 = String(row[1] || "").trim();
             let aff = c1, name = c0;
-            const knownAffs = ['東海', 'BP東海', '首都圏', 'BP首都圏', '西日本', 'BP西日本', '大阪オフィス', 'BP大阪オフィス'];
+            const knownAffs = ['東海', 'BP東海', '首都圏', 'BP首都圏', '西日本', 'BP西日本', '大阪オフィス', 'BP大阪オフィス', '静岡オフィス', 'BP静岡オフィス', '東京本社', 'BP東京本社'];
             if (knownAffs.includes(c0)) { aff = c0; name = c1; }
             else if (knownAffs.includes(c1)) { aff = c1; name = c0; }
 
@@ -545,7 +601,12 @@
         return val; 
     }
 
-    function formatVal(v, k, t) { if (v === null || (v === 0 && k !== '待機率' && t !== '達成率')) return '-'; if (k === '待機率' || t === '達成率') return v.toFixed(1) + '%'; return Math.round(v).toLocaleString(); }
+    // 0の場合は0と表示し、nullや未入力の場合のみ「-」にする修正
+    function formatVal(v, k, t) { 
+        if (v === null || v === undefined || v === "") return '-'; 
+        if (k === '待機率' || t === '達成率') return (v || 0).toFixed(1) + '%'; 
+        return Math.round(v).toLocaleString(); 
+    }
     
     function updateCharts(region) {
         const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
