@@ -11,7 +11,7 @@
         #main_content { display: none; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 枠線：固定（一切の変更禁止） --- */
+        /* --- 枠線デザイン：固定 --- */
         table { width: 100%; border-collapse: collapse; background: white; border: 4px solid black !important; table-layout: fixed; }
         th, td { border-top: 1px solid black; border-bottom: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 8px 4px; font-size: 0.85rem; word-break: break-all; }
         th { background: #edf2f7; text-align: center; border-bottom: 4px solid black !important; }
@@ -24,6 +24,7 @@
         .text-center { text-align: center !important; }
         .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
         .chart-box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); height: 350px; }
+        #sync_status { font-size: 12px; color: #718096; margin-left: 15px; }
     </style>
 </head>
 <body class="notranslate">
@@ -49,8 +50,8 @@
                 <option value="東日本">東日本</option>
                 <option value="西日本">西日本</option>
             </select>
+            <span id="sync_status">データ確認中...</span>
         </div>
-        <div id="loading" style="display:none; font-weight:bold; color:#3182ce;">データ読み込み中...</div>
         <table id="sales-table">
             <thead>
                 <tr>
@@ -81,32 +82,50 @@
     let dataMap = {};
     let charts = {};
 
+    // ページ読み込みと同時に「バックグラウンド」で通信開始
+    window.onload = () => {
+        loadCache(); // まずキャッシュを読み込む
+        fetchData(); // 裏で最新データを獲りに行く
+    };
+
+    function loadCache() {
+        const cached = localStorage.getItem('freeeks_data_cache');
+        if (cached) {
+            dataMap = JSON.parse(cached);
+            document.getElementById('sync_status').innerText = '保存済みデータを表示中（バックグラウンド更新中...）';
+        }
+    }
+
     function checkPW() {
         if (document.getElementById('pass_val').value === "freeeks2022") {
             document.getElementById('pw_screen').style.display = 'none';
             document.getElementById('main_content').style.display = 'block';
-            fetchData();
+            renderAll(); // ログインした瞬間に（キャッシュがあれば）描画
         } else {
             document.getElementById('err_msg').style.display = 'block';
         }
     }
 
     async function fetchData() {
-        const loading = document.getElementById('loading');
-        loading.style.display = 'block';
         try {
             const response = await fetch(`${GAS_URL}?p=freeeks2022`);
             const rows = await response.json();
-            dataMap = {};
+            const newDataMap = {};
             rows.slice(1).forEach(r => {
                 const key = `${r[0]}-${r[1]}-${r[2]}`;
-                dataMap[key] = r.slice(3, 15).map(v => (v === "" || v == null) ? null : parseFloat(String(v).replace(/,/g,'')) || 0);
+                newDataMap[key] = r.slice(3, 15).map(v => (v === "" || v == null) ? null : parseFloat(String(v).replace(/,/g,'')) || 0);
             });
-            renderAll();
+            
+            dataMap = newDataMap;
+            localStorage.setItem('freeeks_data_cache', JSON.stringify(dataMap)); // キャッシュに保存
+            document.getElementById('sync_status').innerText = '最新データに更新されました';
+            
+            // すでにログイン後の画面なら、自動で最新に書き換える
+            if (document.getElementById('main_content').style.display === 'block') {
+                renderAll();
+            }
         } catch (e) {
-            alert('データ連携に失敗しました。');
-        } finally {
-            loading.style.display = 'none';
+            document.getElementById('sync_status').innerText = 'オフライン表示中（最新データの取得に失敗）';
         }
     }
 
@@ -153,7 +172,6 @@
         const region = document.getElementById('region-select').value;
         const tbody = document.getElementById('table-body');
         tbody.innerHTML = '';
-
         const items = [
             { n: '売上', k: '売上', t: ['予算', '実績', '達成率'] },
             { n: '稼働原価', k: '稼働原価', t: ['予算', '実績', '達成率'] },
@@ -172,52 +190,33 @@
                 const tr = document.createElement('tr');
                 if (idx === item.t.length - 1) tr.className = 'bb-4px';
                 else if (['売上', '稼働原価', 'A利益', 'プロパー(稼働)', 'エンジニア総数'].includes(item.n) && type === '実績') tr.className = 'bb-3px';
-
                 let html = idx === 0 ? `<td rowspan="${item.t.length}" class="cat-header">${item.n}</td>` : '';
                 html += `<td class="type-col">${type}</td>`;
-
                 const data = getMonthlyValues(region, item.k, type);
-                
-                // 月次データの表示
                 data.forEach((v, i) => {
                     const disp = formatVal(v, item.k, type);
                     const borderR = (i === 5 || i === 11) ? 'style="border-right:4px solid black !important;"' : '';
                     const borderL = (i === 6) ? 'style="border-left:4px solid black !important;"' : '';
                     html += `<td class="${disp === '-' ? 'text-center' : 'text-right'}" ${borderR} ${borderL}>${disp}</td>`;
                 });
-
-                // --- 合計列の算出ロジック（修正：率は再計算） ---
                 let h1Val, h2Val, totalVal;
-                
                 if (type === '達成率' || item.k === '待機率') {
-                    // 率の合計は (実績計 / 予算計) で出す
                     const budK = (type === '達成率') ? item.k : 'エンジニア総数';
                     const actK = (type === '達成率') ? item.k : 'プロパー(待機)';
-                    const budT = (type === '達成率') ? '予算' : '実績';
-                    const actT = '実績';
-
-                    const budData = getMonthlyValues(region, budK, budT);
-                    const actData = getMonthlyValues(region, actK, actT);
-
+                    const bData = getMonthlyValues(region, budK, (type === '達成率' ? '予算' : '実績'));
+                    const aData = getMonthlyValues(region, actK, '実績');
                     const sum = (arr) => arr.reduce((a, b) => a + (b || 0), 0);
-                    const b1 = sum(budData.slice(0, 6)), a1 = sum(actData.slice(0, 6));
-                    const b2 = sum(budData.slice(6, 12)), a2 = sum(actData.slice(6, 12));
-
-                    h1Val = b1 === 0 ? 0 : (a1 / b1) * 100;
-                    h2Val = b2 === 0 ? 0 : (a2 / b2) * 100;
+                    const b1 = sum(bData.slice(0, 6)), a1 = sum(aData.slice(0, 6));
+                    const b2 = sum(bData.slice(6, 12)), a2 = sum(aData.slice(6, 12));
+                    h1Val = b1 === 0 ? 0 : (a1 / b1) * 100; h2Val = b2 === 0 ? 0 : (a2 / b2) * 100;
                     totalVal = (b1 + b2) === 0 ? 0 : ((a1 + a2) / (b1 + b2)) * 100;
                 } else {
-                    // 通常の数値は単純足し算
                     const sum = (arr) => arr.reduce((a, b) => a + (b || 0), 0);
-                    h1Val = sum(data.slice(0, 6));
-                    h2Val = sum(data.slice(6, 12));
-                    totalVal = h1Val + h2Val;
+                    h1Val = sum(data.slice(0, 6)); h2Val = sum(data.slice(6, 12)); totalVal = h1Val + h2Val;
                 }
-
                 html += `<td class="total-col ${formatVal(h1Val, item.k, type) === '-' ? 'text-center' : 'text-right'}">${formatVal(h1Val, item.k, type)}</td>`;
                 html += `<td class="total-col ${formatVal(h2Val, item.k, type) === '-' ? 'text-center' : 'text-right'}">${formatVal(h2Val, item.k, type)}</td>`;
                 html += `<td class="total-col ${formatVal(totalVal, item.k, type) === '-' ? 'text-center' : 'text-right'}">${formatVal(totalVal, item.k, type)}</td>`;
-                
                 tr.innerHTML = html; tbody.appendChild(tr);
             });
         });
