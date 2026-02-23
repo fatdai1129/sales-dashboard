@@ -11,7 +11,7 @@
         #main_content { display: none; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* --- 枠線：固定 --- */
+        /* --- 枠線：固定（一切の変更禁止） --- */
         table { width: 100%; border-collapse: collapse; background: white; border: 4px solid black !important; table-layout: fixed; }
         th, td { border-top: 1px solid black; border-bottom: 1px solid black; border-left: 4px solid black !important; border-right: 4px solid black !important; padding: 8px 4px; font-size: 0.85rem; word-break: break-all; }
         th { background: #edf2f7; text-align: center; border-bottom: 4px solid black !important; }
@@ -78,8 +78,8 @@
 </div>
 
 <script>
-    // --- セキュリティ強化：GASのURLを使用 ---
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwjEXoVHeeFmFB9I90Q6-5DEZMXRTduaFpDe91eEFghZoclcmndRs7mlEQ2fJYI9jg0jw/exec';
+    // --- 最新のGAS URLに更新 ---
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbzLPhdnyAo1D7SH-T3uv0EOb5aWekcfnFRtReGhsnkQ5_sLbi36fTc6o5eVYukeliVJIA/exec';
     let rawRows = [];
     let charts = {};
 
@@ -95,11 +95,10 @@
 
     async function fetchData() {
         document.getElementById('loading').style.display = 'block';
-        // パスワードをパラメータとしてGASに送信
         const url = `${GAS_URL}?p=freeeks2022`;
         try {
             const response = await fetch(url);
-            rawRows = await response.json(); // GASからJSON形式で取得
+            rawRows = await response.json();
             renderAll();
         } catch (e) {
             alert('データ連携に失敗しました。GASの公開設定を確認してください。');
@@ -177,7 +176,6 @@
     }
 
     function getMonthlyValues(region, itemK, type) {
-        // エンジニア数系の特殊計算（プロパー＋BPなど）は維持
         if (itemK === '稼働エンジニア数') {
             if (type === '予算') return getMonthlyValues(region, 'プロパー(稼働)', '予算');
             if (type === '実績') {
@@ -193,19 +191,25 @@
         }
 
         let res = new Array(12).fill(null);
-        // 達成率の計算
         if (type === '達成率') {
             const bud = getMonthlyValues(region, itemK, '予算');
             const act = getMonthlyValues(region, itemK, '実績');
             return act.map((v, i) => (bud[i] === null || act[i] === null) ? null : (bud[i] === 0 ? 0 : (v / bud[i]) * 100));
         }
 
-        // --- シンプルになったデータ取得 ---
         rawRows.slice(1).forEach(r => {
-            const rN = (r[0] || '').trim(); // 拠点
-            const iN = (r[1] || '').trim(); // 項目
-            const tN = (r[2] || '').trim(); // 区分
-            let match = (region === '全体合計') ? true : (rN === region);
+            const rN = (r[0] || '').trim();
+            const iN = (r[1] || '').trim();
+            const tN = (r[2] || '').trim();
+            
+            // 全体合計の時は二重計上を防ぐため、元の3拠点のみを足す
+            let match = false;
+            if (region === '全体合計') {
+                if (rN === '東海' || rN === '首都圏' || rN === '西日本') match = true;
+            } else {
+                if (rN === region) match = true;
+            }
+
             if (match && iN === itemK && tN === type) {
                 for (let i = 0; i < 12; i++) {
                     let cellVal = r[i+3];
