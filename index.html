@@ -231,30 +231,34 @@
         let n = parseFloat(String(v).replace(/,/g, ''));
         return isNaN(n) ? 0 : n;
     };
+    const safeArr = (arr) => (Array.isArray(arr) && arr.length >= 12) ? arr : new Array(12).fill(null);
 
     /* =========================================
        1. 実績管理 (一切触れていません)
     ========================================= */
     function getPerfVal(region, itemK, type) {
         if (type === '達成率') {
-            const b = getPerfVal(region, itemK, '予算'), a = getPerfVal(region, itemK, '実績');
+            const b = safeArr(getPerfVal(region, itemK, '予算')), a = safeArr(getPerfVal(region, itemK, '実績'));
             return a.map((v, i) => (b[i]==null||v==null)?null:(b[i]===0?0:(v/b[i])*100));
         }
         if (itemK === '待機率') {
-            const w = getPerfVal(region, 'プロパー(待機)', '実績'), t = getPerfVal(region, 'エンジニア総数', '実績');
+            const w = safeArr(getPerfVal(region, 'プロパー(待機)', '実績')), t = safeArr(getPerfVal(region, 'エンジニア総数', '実績'));
             return w.map((v, i) => (t[i]==null||v==null)?null:(t[i]===0?0:(v/t[i])*100));
         }
         if (itemK === '稼働エンジニア数') {
-            const p = getPerfVal(region, 'プロパー(稼働)', type), b = getPerfVal(region, 'BP', '実績');
+            const p = safeArr(getPerfVal(region, 'プロパー(稼働)', type)), b = safeArr(getPerfVal(region, 'BP', '実績'));
             return type==='予算'?p:p.map((v,i)=>(v===null&&b[i]===null)?null:(v||0)+(b[i]||0));
         }
         if (itemK === 'エンジニア総数') {
-            const wk = getPerfVal(region, '稼働エンジニア数', type), wt = getPerfVal(region, 'プロパー(待機)', type);
+            const wk = safeArr(getPerfVal(region, '稼働エンジニア数', type)), wt = safeArr(getPerfVal(region, 'プロパー(待機)', type));
             return wk.map((v,i)=>(v===null&&wt[i]===null)?null:(v||0)+(wt[i]||0));
         }
         let val = perfMap[`${region}-${itemK}-${type}`];
-        if (!val && region === '全国') val = perfMap[`全国合計-${itemK}-${type}`];
-        return (Array.isArray(val) && val.length >= 12) ? val : new Array(12).fill(null);
+        if (!val && region === '全国') {
+            val = perfMap[`全国合計-${itemK}-${type}`];
+            if (!val) val = perfMap[`全国-${itemK}-${type}`];
+        }
+        return safeArr(val);
     }
 
     function renderPerf() {
@@ -307,24 +311,25 @@
     }
 
     /* =========================================
-       2. 営業推進管理表 (修正ポイント)
+       2. 営業推進管理表 (描画バグ修正版)
     ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value, kw = document.getElementById('sales-search').value.toLowerCase();
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
-        const allData = salesRows, headers = allData[9], rawData = allData.slice(10);
+        const all = salesRows.slice(9), headers = all[0], raw = all.slice(1);
         
+        // ヘッダー作成時の innerHTML 追加バグを修正
         let hHtml = `<tr><th rowspan="2" class="col-sales-aff">${headers[1]}</th><th rowspan="2" class="col-sales-name">${headers[4]}</th><th rowspan="2" class="col-sales-info">コスト</th>`;
         for (let i=12;i<36;i+=2) { hHtml += `<th>${headers[i]}</th>`; if(i===22) hHtml += `<th rowspan="2" class="col-total">上期計</th>`; if(i===34) hHtml += `<th rowspan="2" class="col-total">下期計</th><th rowspan="2" class="col-total">年間</th>`; }
-        head.innerHTML = hHtml + "</tr><tr>";
-        for (let i=12;i<36;i+=2) head.innerHTML += `<th>売上/利</th>`;
+        hHtml += "</tr><tr>";
+        for (let i=12;i<36;i+=2) hHtml += `<th>売上/利</th>`;
+        hHtml += "</tr>";
+        head.innerHTML = hHtml;
 
-        // 強力なキーワードフィルターで空行と集計行を排除
-        let filteredRows = rawData.filter(row => {
-            const aff = String(row[1] || "").trim();
+        let filteredRows = raw.filter(row => {
             const name = String(row[4] || "").trim();
-            // 従業員名が入っていない行や、見出し行、集計行はすべてスキップ
+            const aff = String(row[1] || "").trim();
             if (!name || name === "" || name === "技術者名" || name === "0" || name === "総合計") return false;
             if (aff === "売上/利" || aff.includes("売上") || aff.includes("原価") || name.includes("売上")) return false;
 
@@ -337,7 +342,6 @@
             return targets.some(t => searchStr.includes(t));
         });
 
-        // 総合計の正確な計算
         let monthlyTotals = [];
         for (let i = 12; i < 36; i += 2) {
             let sSum = 0, pSum = 0;
@@ -347,6 +351,7 @@
             });
             monthlyTotals.push({ s: sSum, p: pSum });
         }
+
         let totalSal = 0, totalCos = 0;
         filteredRows.forEach(row => { totalSal += parseNum(row[10]); totalCos += parseNum(row[11]); });
 
@@ -368,20 +373,19 @@
         });
         bHtml += "</tr>";
 
-        // 各個人のデータ行
         filteredRows.forEach(row => {
             let aff = row[1] || ""; if ((aff === '東海' || aff === '首都圏') && row[2] === 'BP') aff = 'BP' + aff;
             bHtml += `<tr><td rowspan="2" class="text-center col-sales-aff">${aff}</td><td class="text-center col-sales-name" style="${b2T}">${row[4] || ""}</td>`;
-            const sal = parseNum(row[10]); bHtml += `<td class="text-right col-sales-info" style="${b2T}">${(row[10]===null||row[10]==="") ? "-" : sal.toLocaleString()}</td>`;
+            const sal = parseNum(row[10]); bHtml += `<td class="text-right col-sales-info" style="${b2T}">${sal === 0 && !row[10] ? "-" : sal.toLocaleString()}</td>`;
             let s1=0, s2=0;
             for (let i = 12; i < 36; i += 2) {
-                const ns = parseNum(row[i]); bHtml += `<td class="text-right" style="${b2T}">${(row[i]===null||row[i]==="") ? "-" : ns.toLocaleString()}</td>`;
+                const ns = parseNum(row[i]); bHtml += `<td class="text-right" style="${b2T}">${(row[i]===null||row[i]===undefined||row[i]==="") ? "-" : ns.toLocaleString()}</td>`;
                 if (i <= 22) s1 += ns; else s2 += ns;
                 if (i === 22) bHtml += `<td class="text-right col-total" style="${b2T}">${s1.toLocaleString()}</td>`;
                 if (i === 34) bHtml += `<td class="text-right col-total" style="${b2T}">${s2.toLocaleString()}</td><td class="text-right col-total" style="${b2T}">${(s1+s2).toLocaleString()}</td>`;
             }
             bHtml += `</tr><tr><td class="text-center col-sales-name" style="${b2B}">${row[3] || ""}</td>`;
-            const cos = parseNum(row[11]); bHtml += `<td class="text-right col-sales-info" style="${b2B}">${(row[11]===null||row[11]==="") ? "-" : cos.toLocaleString()}</td>`;
+            const cos = parseNum(row[11]); bHtml += `<td class="text-right col-sales-info" style="${b2B}">${cos === 0 && !row[11] ? "-" : cos.toLocaleString()}</td>`;
             let p1=0, p2=0;
             for (let i = 12; i < 36; i += 2) {
                 const np = parseNum(row[i]) - parseNum(row[i+1]);
@@ -404,6 +408,7 @@
         tbody.innerHTML = '';
         if (!statusRows || statusRows.length <= 1) { tbody.innerHTML = '<tr><td colspan="7" class="text-center">データ取得中...</td></tr>'; return; }
         document.getElementById('status-update-date').innerText = "更新日: " + (formatStatusDate(statusRows[0][8]) || "-");
+
         let filtered = statusRows.slice(1).filter(r => {
             const rowText = (String(r[0]||"") + String(r[1]||"")).trim();
             if (!rowText || rowText.includes("所属") || rowText.includes("従業員")) return false;
@@ -412,15 +417,20 @@
             const targets = map[reg] || [reg];
             return targets.some(t => rowText.includes(t));
         });
+
         const order = { "待機中": 1, "休業中": 2, "休職中": 3, "稼働中": 4 };
         filtered.sort((a, b) => (order[String(a[2]).trim()]||99) - (order[String(b[2]).trim()]||99));
+
         filtered.forEach(row => {
             const tr = document.createElement('tr');
             const st = String(row[2] || "").trim();
-            if (st === "待機中") tr.classList.add('status-wait'); else if (st === "稼働中") tr.classList.add('status-active');
+            if (st === "待機中") tr.classList.add('status-wait');
+            else if (st === "稼働中") tr.classList.add('status-active');
+            
             let aff = String(row[1]||""), name = String(row[0]||"");
             const known = ['東海', '静岡', '首都圏', '本社', '本店', '東京', '西日本', '大阪'];
             if (known.some(v => name.includes(v))) { aff = name; name = String(row[1]||""); }
+
             const sal = parseNum(row[6]);
             tr.innerHTML = `<td class="text-center">${aff}</td><td class="text-center" style="font-weight:bold;">${name}</td><td class="text-center">${sal === 0 && !row[6] ? "-" : sal.toLocaleString()}</td><td class="text-center">${st}</td><td class="text-center">${row[3]||""}</td><td class="text-center">${formatStatusDate(row[4])}</td><td class="text-center">${row[5]||0}ヶ月</td>`;
             tbody.appendChild(tr);
@@ -444,6 +454,7 @@
 </script>
 </body>
 </html>
+
 
 
 
