@@ -20,12 +20,15 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
+        /* 共通テーブル設定 */
         table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: 100%; }
         th, td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
         th { background: #edf2f7; font-weight: bold; }
         .text-right { text-align: right !important; padding-right: 12px !important; }
+        .text-left { text-align: left !important; padding-left: 12px !important; } /* 営業推進管理表の左揃え用追加 */
         .text-center { text-align: center !important; }
 
+        /* 実績表の特殊枠線 */
         .perf-table { min-width: 1800px; table-layout: fixed; }
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
@@ -41,14 +44,13 @@
         .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; border-right: 4px solid black !important; }
         .sticky-left-2 { position: sticky; left: 220px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
 
-        /* --- 営業推進管理表 (1画面に収まるよう幅を縮小) --- */
-        .sales-raw-table { width: 100%; min-width: 1200px; table-layout: fixed; font-size: 0.95rem; }
-        .sales-raw-table th, .sales-raw-table td { padding: 6px 4px; }
-        .col-sales-aff { width: 70px !important; }
-        .col-sales-name { width: 130px !important; }
-        .col-sales-info { width: 80px !important; }
-        .col-sales-total { width: 90px !important; background: #fffaf0 !important; font-weight: bold; }
+        /* 営業推進管理表 (数字が収まるように幅を大幅に拡大) */
+        .sales-raw-table { min-width: 2600px; table-layout: fixed; }
+        .col-sales-aff { width: 150px !important; }
+        .col-sales-name { width: 220px !important; }
+        .col-sales-info { width: 150px !important; }
 
+        /* 売込状況一覧 */
         .status-table { min-width: 1400px; table-layout: fixed; font-size: 1.25rem; }
         .status-table th, .status-table td { padding: 18px 12px; }
         .col-status-aff { width: 160px; }
@@ -225,6 +227,9 @@
         try { if (document.getElementById('section-status').style.display !== 'none') renderStatus(); } catch(e){}
     }
 
+    /* ----------------------------------------------------
+       共通：数値変換
+    ---------------------------------------------------- */
     const parseNum = (v) => {
         if (typeof v === 'number') return v;
         if (!v || String(v).trim() === "") return 0;
@@ -311,111 +316,164 @@
     }
 
     /* =========================================
-       2. 営業推進管理表 (小数切り捨て ＆ 列幅調整)
+       2. 営業推進管理表 (修正対象)
     ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
-        const region = document.getElementById('sales-region-select').value, kw = document.getElementById('sales-search').value.toLowerCase();
+        const region = document.getElementById('sales-region-select').value;
+        const searchKeyword = document.getElementById('sales-search').value.toLowerCase(); 
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
-        const all = salesRows.slice(9), headers = all[0], raw = all.slice(1);
+        const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
         
-        // ヘッダー作成 (無駄な幅を取らないよう2段組みに変更)
-        let hHtml = `<tr><th rowspan="2" class="col-sales-aff">${headers[1]||"所属"}</th><th rowspan="2" class="col-sales-name">${headers[4]||"技術者名"}<br>${headers[3]||"技術者№"}</th><th rowspan="2" class="col-sales-info">給料<br>コスト</th>`;
-        for (let i=12;i<36;i+=2) { hHtml += `<th>${headers[i]}</th>`; if(i===22) hHtml += `<th rowspan="2" class="col-sales-total">上期計</th>`; if(i===34) hHtml += `<th rowspan="2" class="col-sales-total">下期計</th><th rowspan="2" class="col-sales-total">年間</th>`; }
+        let hHtml = "<tr>";
+        hHtml += `<th rowspan="2" class="col-sales-aff">${headers[1] || ""}</th>`;
+        hHtml += `<th rowspan="2" class="col-sales-name">${headers[4] || ""}<br>${headers[3] || ""}</th>`;
+        hHtml += `<th rowspan="2" class="col-sales-info">給料<br>コスト</th>`;
+        for (let i = 12; i < 36; i += 2) {
+            hHtml += `<th>${headers[i] || ""}</th>`;
+            if (i === 22) hHtml += `<th rowspan="2" class="col-total">上期計</th>`;
+            if (i === 34) {
+                hHtml += `<th rowspan="2" class="col-total">下期計</th>`;
+                hHtml += `<th rowspan="2" class="col-total">年間計</th>`;
+            }
+        }
         hHtml += "</tr><tr>";
-        for (let i=12;i<36;i+=2) hHtml += `<th>売上<br>利益</th>`;
-        hHtml += "</tr>";
-        head.innerHTML = hHtml;
-
-        let filteredRows = raw.filter(row => {
+        for (let i = 12; i < 36; i += 2) { hHtml += `<th>売上<br>利益</th>`; }
+        hHtml += "</tr>"; head.innerHTML = hHtml;
+        
+        let filteredRows = rawData.filter(row => {
             const name = String(row[4] || "").trim();
-            const aff = String(row[1] || "").trim();
-            if (!name || name === "" || name === "技術者名" || name === "0" || name === "総合計") return false;
-            if (aff === "売上/利" || aff.includes("売上") || aff.includes("原価") || name.includes("売上")) return false;
-
-            if (kw && !row.join('').toLowerCase().includes(kw)) return false;
-            if (region === "全国") return true;
+            const aff1 = String(row[1] || "").trim();
+            const aff2 = String(row[2] || "").trim();
             
-            const searchStr = (String(row[0]||"") + aff).trim();
-            const map = { "東海": ["東海", "静岡"], "首都圏": ["首都圏", "東京", "本社", "本店"], "東日本": ["東海", "静岡", "首都圏", "東京", "本社", "本店"], "西日本": ["西日本", "大阪"] };
-            const targets = map[region] || [region];
-            return targets.some(t => searchStr.includes(t));
+            if (!name || name === "技術者名" || name === "0" || name === "総合計") return false;
+            if (aff1.includes("売上") || aff1.includes("原価") || aff1.includes("利益") || aff1.includes("計")) return false;
+            if (aff2.includes("売上") || aff2.includes("原価") || aff2.includes("利益") || aff2.includes("計")) return false;
+
+            if (region !== "全国") {
+                const searchStr = (String(row[0]||"") + aff1 + aff2).trim();
+                const map = { 
+                    "東海": ["東海", "静岡"], 
+                    "首都圏": ["首都圏", "東京", "本社", "本店"], 
+                    "東日本": ["東海", "静岡", "首都圏", "東京", "本社", "本店"], 
+                    "西日本": ["西日本", "大阪"] 
+                };
+                const targets = map[region] || [region];
+                if (!targets.some(t => searchStr.includes(t))) return false;
+            }
+
+            if (searchKeyword && !row.join('').toLowerCase().includes(searchKeyword)) return false;
+            return true;
         });
 
+        // 総合計の計算 (売上がない月の利益は加算しない)
         let monthlyTotals = [];
         for (let i = 12; i < 36; i += 2) {
             let sSum = 0, pSum = 0;
             filteredRows.forEach(row => {
-                // 小数点以下を完全に切り捨て
-                const s = Math.floor(parseNum(row[i]));
-                const c = Math.floor(parseNum(row[i+1]));
-                sSum += s; 
-                pSum += (s - c);
+                let sRaw = row[i];
+                let cRaw = row[i+1];
+                if (sRaw !== null && sRaw !== undefined && String(sRaw).trim() !== "") {
+                    const s = Math.floor(parseNum(sRaw));
+                    const c = Math.floor(parseNum(cRaw));
+                    sSum += s;
+                    pSum += (s - c);
+                }
             });
-            monthlyTotals.push({ s: sSum, p: pSum });
+            monthlyTotals.push({ sales: sSum, profit: pSum });
         }
 
         let totalSal = 0, totalCos = 0;
-        filteredRows.forEach(row => { 
-            totalSal += Math.floor(parseNum(row[10])); 
-            totalCos += Math.floor(parseNum(row[11])); 
+        filteredRows.forEach(row => {
+            totalSal += Math.floor(parseNum(row[10]));
+            totalCos += Math.floor(parseNum(row[11]));
         });
 
-        const b2T = "border-bottom: 2px solid black !important;", b2B = "border-top: 2px solid black !important;";
-        let bHtml = `<tr><td colspan='2' rowspan='2' class='text-center col-sales-aff' style='font-weight:bold;'>総合計</td><td class="text-right col-sales-info" style="font-weight:bold; ${b2T}">${totalSal.toLocaleString()}</td>`;
-        let h1S=0, h1P=0, h2S=0, h2P=0;
+        const border2pxTop = "border-bottom: 2px solid black !important;";
+        const border2pxBottom = "border-top: 2px solid black !important;";
+
+        let bHtml = "";
+
+        // 総合計行 (すべて左揃えに変更)
+        bHtml += "<tr><td colspan='2' rowspan='2' class='text-center col-sales-aff' style='font-weight:bold;'>総合計</td>";
+        bHtml += `<td class="text-left col-sales-info" style="font-weight:bold; ${border2pxTop}">${totalSal.toLocaleString()}</td>`;
+        let gH1S = 0, gH1P = 0, gH2S = 0, gH2P = 0;
         monthlyTotals.forEach((t, idx) => {
-            bHtml += `<td class="text-right" style="font-weight:bold; ${b2T}">${t.s.toLocaleString()}</td>`;
-            if (idx < 6) h1S += t.s; else h2S += t.s;
-            if (idx === 5) bHtml += `<td class="text-right col-sales-total" style="${b2T}">${h1S.toLocaleString()}</td>`;
-            if (idx === 11) { bHtml += `<td class="text-right col-sales-total" style="${b2T}">${h2S.toLocaleString()}</td><td class="text-right col-sales-total" style="${b2T}">${(h1S+h2S).toLocaleString()}</td>`; }
+            bHtml += `<td class="text-left" style="font-weight:bold; ${border2pxTop}">${t.sales.toLocaleString()}</td>`;
+            if (idx < 6) gH1S += t.sales; else gH2S += t.sales;
+            if (idx === 5) bHtml += `<td class="text-left col-total" style="${border2pxTop}">${gH1S.toLocaleString()}</td>`;
+            if (idx === 11) {
+                bHtml += `<td class="text-left col-total" style="${border2pxTop}">${gH2S.toLocaleString()}</td>`;
+                bHtml += `<td class="text-left col-total" style="${border2pxTop}">${(gH1S+gH2S).toLocaleString()}</td>`;
+            }
         });
-        bHtml += `</tr><tr><td class="text-right col-sales-info" style="font-weight:bold; ${b2B}">${totalCos.toLocaleString()}</td>`;
+        bHtml += "</tr><tr>";
+        bHtml += `<td class="text-left col-sales-info" style="font-weight:bold; ${border2pxBottom}">${totalCos.toLocaleString()}</td>`;
         monthlyTotals.forEach((t, idx) => {
-            bHtml += `<td class="text-right" style="font-weight:bold; ${b2B}">${t.p.toLocaleString()}</td>`;
-            if (idx < 6) h1P += t.p; else h2P += t.p;
-            if (idx === 5) bHtml += `<td class="text-right col-sales-total" style="${b2B}">${h1P.toLocaleString()}</td>`;
-            if (idx === 11) { bHtml += `<td class="text-right col-sales-total" style="${b2B}">${h2P.toLocaleString()}</td><td class="text-right col-sales-total" style="${b2B}">${(h1P+h2P).toLocaleString()}</td>`; }
+            bHtml += `<td class="text-left" style="font-weight:bold; ${border2pxBottom}">${t.profit.toLocaleString()}</td>`;
+            if (idx < 6) gH1P += t.profit; else gH2P += t.profit;
+            if (idx === 5) bHtml += `<td class="text-left col-total" style="${border2pxBottom}">${gH1P.toLocaleString()}</td>`;
+            if (idx === 11) {
+                bHtml += `<td class="text-left col-total" style="${border2pxBottom}">${gH2P.toLocaleString()}</td>`;
+                bHtml += `<td class="text-left col-total" style="${border2pxBottom}">${(gH1P+gH2P).toLocaleString()}</td>`;
+            }
         });
         bHtml += "</tr>";
 
+        // 各個人のデータ行 (すべて左揃えに変更 & 売上空欄時の利益計算停止)
         filteredRows.forEach(row => {
-            let aff = row[1] || ""; if ((aff === '東海' || aff === '首都圏') && row[2] === 'BP') aff = 'BP' + aff;
-            bHtml += `<tr><td rowspan="2" class="text-center col-sales-aff">${aff}</td><td class="text-center col-sales-name" style="${b2T}">${row[4] || ""}</td>`;
+            let affDisplay = row[1] || "";
+            if ((affDisplay === '東海' || affDisplay === '首都圏') && row[2] === 'BP') affDisplay = 'BP' + affDisplay;
+
+            bHtml += "<tr>";
+            bHtml += `<td rowspan="2" class="text-center col-sales-aff">${affDisplay}</td>`;
+            bHtml += `<td class="text-center col-sales-name" style="${border2pxTop}">${row[4] || ""}</td>`;
             
-            // 給料の小数切り捨て
-            const sal = Math.floor(parseNum(row[10])); 
-            bHtml += `<td class="text-right col-sales-info" style="${b2T}">${sal === 0 && !row[10] ? "-" : sal.toLocaleString()}</td>`;
+            const sal = Math.floor(parseNum(row[10]));
+            bHtml += `<td class="text-left col-sales-info" style="${border2pxTop}">${(sal === 0 && !row[10]) ? "-" : sal.toLocaleString()}</td>`;
             
             let s1=0, s2=0;
             for (let i = 12; i < 36; i += 2) {
-                // 売上の小数切り捨て
-                const ns = Math.floor(parseNum(row[i])); 
-                bHtml += `<td class="text-right" style="${b2T}">${(row[i]===null||row[i]===undefined||row[i]==="") ? "-" : ns.toLocaleString()}</td>`;
-                if (i <= 22) s1 += ns; else s2 += ns;
-                if (i === 22) bHtml += `<td class="text-right col-sales-total" style="${b2T}">${s1.toLocaleString()}</td>`;
+                let sRaw = row[i];
+                let sStr = "-";
+                let ns = 0;
+                if (sRaw !== null && sRaw !== undefined && String(sRaw).trim() !== "") {
+                    ns = Math.floor(parseNum(sRaw));
+                    sStr = ns.toLocaleString();
+                    if (i <= 22) s1 += ns; else s2 += ns;
+                }
+                bHtml += `<td class="text-left" style="${border2pxTop}">${sStr}</td>`;
+                if (i === 22) bHtml += `<td class="text-left col-total" style="${border2pxTop}">${s1.toLocaleString()}</td>`;
                 if (i === 34) {
-                    bHtml += `<td class="text-right col-sales-total" style="${b2T}">${s2.toLocaleString()}</td>`;
-                    bHtml += `<td class="text-right col-sales-total" style="${b2T}">${(s1+s2).toLocaleString()}</td>`;
+                    bHtml += `<td class="text-left col-total" style="${border2pxTop}">${s2.toLocaleString()}</td>`;
+                    bHtml += `<td class="text-left col-total" style="${border2pxTop}">${(s1+s2).toLocaleString()}</td>`;
                 }
             }
-            bHtml += `</tr><tr><td class="text-center col-sales-name" style="${b2B}">${row[3] || ""}</td>`;
+            bHtml += "</tr><tr>";
+            bHtml += `<td class="text-center col-sales-name" style="${border2pxBottom}">${row[3] || ""}</td>`;
             
-            // コストの小数切り捨て
-            const cos = Math.floor(parseNum(row[11])); 
-            bHtml += `<td class="text-right col-sales-info" style="${b2B}">${cos === 0 && !row[11] ? "-" : cos.toLocaleString()}</td>`;
+            const cos = Math.floor(parseNum(row[11]));
+            bHtml += `<td class="text-left col-sales-info" style="${border2pxBottom}">${(cos === 0 && !row[11]) ? "-" : cos.toLocaleString()}</td>`;
             
             let p1=0, p2=0;
             for (let i = 12; i < 36; i += 2) {
-                // 利益の小数切り捨て
-                const np = Math.floor(parseNum(row[i])) - Math.floor(parseNum(row[i+1]));
-                let pStr = (row[i]==="" && row[i+1]==="") ? "-" : np.toLocaleString();
-                bHtml += `<td class="text-right" style="${b2B}">${pStr}</td>`;
-                if (i <= 22) p1 += np; else p2 += np;
-                if (i === 22) bHtml += `<td class="text-right col-sales-total" style="${b2B}">${p1.toLocaleString()}</td>`;
+                let sRaw = row[i];
+                let cRaw = row[i+1];
+                let pStr = "-";
+                let np = 0;
+                // 売上が入力されている場合のみ利益を計算する
+                if (sRaw !== null && sRaw !== undefined && String(sRaw).trim() !== "") {
+                    let ns = Math.floor(parseNum(sRaw));
+                    let nc = Math.floor(parseNum(cRaw));
+                    np = ns - nc;
+                    pStr = np.toLocaleString();
+                    if (i <= 22) p1 += np; else p2 += np;
+                }
+                bHtml += `<td class="text-left" style="${border2pxBottom}">${pStr}</td>`;
+                if (i === 22) bHtml += `<td class="text-left col-total" style="${border2pxBottom}">${p1.toLocaleString()}</td>`;
                 if (i === 34) {
-                    bHtml += `<td class="text-right col-sales-total" style="${b2B}">${p2.toLocaleString()}</td>`;
-                    bHtml += `<td class="text-right col-sales-total" style="${b2B}">${(p1+p2).toLocaleString()}</td>`;
+                    bHtml += `<td class="text-left col-total" style="${border2pxBottom}">${p2.toLocaleString()}</td>`;
+                    bHtml += `<td class="text-left col-total" style="${border2pxBottom}">${(p1+p2).toLocaleString()}</td>`;
                 }
             }
             bHtml += "</tr>";
@@ -471,6 +529,7 @@
 </script>
 </body>
 </html>
+
 
 
 
