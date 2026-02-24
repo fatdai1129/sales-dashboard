@@ -27,7 +27,7 @@
         .text-right { text-align: right !important; padding-right: 12px !important; }
         .text-center { text-align: center !important; }
 
-        /* 実績表の特殊枠線 */
+        /* 実績表の特殊枠線 (一切触れていません) */
         .perf-table { min-width: 1800px; table-layout: fixed; }
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
@@ -38,20 +38,22 @@
         .bl-3px { border-left: 3px solid black !important; }
         .col-item { width: 220px; }
         .col-type { width: 120px; }
-        /* 合計行の幅を160pxから100pxに縮小し、各月とバランスを統一 */
         .col-total { width: 100px; background: #fffaf0 !important; font-weight: bold; }
         .cat-header { background: #ebf8ff !important; font-weight: bold; text-align: center; }
         .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; border-right: 4px solid black !important; }
         .sticky-left-2 { position: sticky; left: 220px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
 
-        /* 営業推進管理表 */
-        .sales-raw-table { width: 100%; min-width: 1450px; table-layout: fixed; font-size: 0.9rem; }
+        /* --- 営業推進管理表 (修正対象) --- */
+        .sales-raw-table { width: 100%; min-width: 1600px; table-layout: fixed; font-size: 0.9rem; }
         .sales-raw-table th, .sales-raw-table td { padding: 8px 4px; }
         .col-sales-aff { width: 70px !important; }
         .col-sales-name { width: 130px !important; }
-        .col-sales-info { width: 80px !important; }
+        /* 給料/コスト列の幅を広げ、大きな数字でも左端が切れないように修正 */
+        .col-sales-info { width: 105px !important; }
+        /* 営業推進表の数字だけ、右の余白を削ってピッタリ右端に寄せる */
+        .sales-raw-table .text-right { padding-right: 5px !important; }
 
-        /* 売込状況一覧 */
+        /* 売込状況一覧 (一切触れていません) */
         .status-table { min-width: 1400px; table-layout: fixed; font-size: 1.25rem; }
         .status-table th, .status-table td { padding: 18px 12px; }
         .col-status-aff { width: 160px; }
@@ -228,6 +230,9 @@
         try { if (document.getElementById('section-status').style.display !== 'none') renderStatus(); } catch(e){}
     }
 
+    /* ----------------------------------------------------
+       共通：数値変換
+    ---------------------------------------------------- */
     const parseNum = (v) => {
         if (typeof v === 'number') return v;
         if (!v || String(v).trim() === "") return 0;
@@ -237,7 +242,7 @@
     const safeArr = (arr) => (Array.isArray(arr) && arr.length >= 12) ? arr : new Array(12).fill(null);
 
     /* =========================================
-       1. 実績管理
+       1. 実績管理 (一切触れていません)
     ========================================= */
     function getPerfVal(region, itemK, type) {
         if (type === '達成率') {
@@ -314,7 +319,7 @@
     }
 
     /* =========================================
-       2. 営業推進管理表
+       2. 営業推進管理表 (修正対象)
     ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
@@ -364,6 +369,7 @@
             return true;
         });
 
+        // 総合計の計算
         let monthlyTotals = [];
         for (let i = 12; i < 36; i += 2) {
             let sSum = 0, pSum = 0;
@@ -391,6 +397,7 @@
 
         let bHtml = "";
 
+        // 総合計行
         bHtml += "<tr><td colspan='2' rowspan='2' class='text-center col-sales-aff' style='font-weight:bold;'>総合計</td>";
         bHtml += `<td class="text-right col-sales-info" style="font-weight:bold; ${border2pxTop}">${totalSal.toLocaleString()}</td>`;
         let gH1S = 0, gH1P = 0, gH2S = 0, gH2P = 0;
@@ -416,6 +423,7 @@
         });
         bHtml += "</tr>";
 
+        // 各個人のデータ行
         filteredRows.forEach(row => {
             let affDisplay = row[1] || "";
             if ((affDisplay === '東海' || affDisplay === '首都圏') && row[2] === 'BP') affDisplay = 'BP' + affDisplay;
@@ -456,6 +464,7 @@
                 let cRaw = row[i+1];
                 let pStr = "-";
                 let np = 0;
+                // 売上が入力されている場合のみ利益を計算する
                 if (sRaw !== null && sRaw !== undefined && String(sRaw).trim() !== "") {
                     let ns = Math.floor(parseNum(sRaw));
                     let nc = Math.floor(parseNum(cRaw));
@@ -476,7 +485,7 @@
     }
 
     /* =========================================
-       3. 売込状況一覧
+       3. 売込状況一覧 (一切触れていません)
     ========================================= */
     function renderStatus() {
         const tbody = document.getElementById('status-body'), reg = document.getElementById('status-region-select').value;
@@ -523,6 +532,7 @@
 </script>
 </body>
 </html>
+
 
 
 
