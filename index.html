@@ -25,10 +25,9 @@
         th, td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
         th { background: #edf2f7; font-weight: bold; }
         .text-right { text-align: right !important; padding-right: 12px !important; }
-        .text-left { text-align: left !important; padding-left: 12px !important; } /* 営業推進管理表の左揃え用追加 */
         .text-center { text-align: center !important; }
 
-        /* 実績表の特殊枠線 */
+        /* 実績表の特殊枠線 (一切触れていません) */
         .perf-table { min-width: 1800px; table-layout: fixed; }
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
@@ -44,13 +43,14 @@
         .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; border-right: 4px solid black !important; }
         .sticky-left-2 { position: sticky; left: 220px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
 
-        /* 営業推進管理表 (数字が収まるように幅を大幅に拡大) */
-        .sales-raw-table { min-width: 2600px; table-layout: fixed; }
-        .col-sales-aff { width: 150px !important; }
-        .col-sales-name { width: 220px !important; }
-        .col-sales-info { width: 150px !important; }
+        /* 営業推進管理表 (1画面に収まるよう幅を縮小・最適化) */
+        .sales-raw-table { width: 100%; min-width: 1450px; table-layout: fixed; font-size: 0.9rem; }
+        .sales-raw-table th, .sales-raw-table td { padding: 8px 4px; }
+        .col-sales-aff { width: 70px !important; }
+        .col-sales-name { width: 130px !important; }
+        .col-sales-info { width: 80px !important; }
 
-        /* 売込状況一覧 */
+        /* 売込状況一覧 (一切触れていません) */
         .status-table { min-width: 1400px; table-layout: fixed; font-size: 1.25rem; }
         .status-table th, .status-table td { padding: 18px 12px; }
         .col-status-aff { width: 160px; }
@@ -316,7 +316,7 @@
     }
 
     /* =========================================
-       2. 営業推進管理表 (修正対象)
+       2. 営業推進管理表 (修正対象：右詰め、幅最適化)
     ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
@@ -326,8 +326,8 @@
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
         
         let hHtml = "<tr>";
-        hHtml += `<th rowspan="2" class="col-sales-aff">${headers[1] || ""}</th>`;
-        hHtml += `<th rowspan="2" class="col-sales-name">${headers[4] || ""}<br>${headers[3] || ""}</th>`;
+        hHtml += `<th rowspan="2" class="col-sales-aff">${headers[1] || "所属"}</th>`;
+        hHtml += `<th rowspan="2" class="col-sales-name">${headers[4] || "技術者名"}<br>${headers[3] || "技術者№"}</th>`;
         hHtml += `<th rowspan="2" class="col-sales-info">給料<br>コスト</th>`;
         for (let i = 12; i < 36; i += 2) {
             hHtml += `<th>${headers[i] || ""}</th>`;
@@ -366,7 +366,7 @@
             return true;
         });
 
-        // 総合計の計算 (売上がない月の利益は加算しない)
+        // 総合計の計算
         let monthlyTotals = [];
         for (let i = 12; i < 36; i += 2) {
             let sSum = 0, pSum = 0;
@@ -394,33 +394,33 @@
 
         let bHtml = "";
 
-        // 総合計行 (すべて左揃えに変更)
+        // 総合計行 (すべて text-right に変更)
         bHtml += "<tr><td colspan='2' rowspan='2' class='text-center col-sales-aff' style='font-weight:bold;'>総合計</td>";
-        bHtml += `<td class="text-left col-sales-info" style="font-weight:bold; ${border2pxTop}">${totalSal.toLocaleString()}</td>`;
+        bHtml += `<td class="text-right col-sales-info" style="font-weight:bold; ${border2pxTop}">${totalSal.toLocaleString()}</td>`;
         let gH1S = 0, gH1P = 0, gH2S = 0, gH2P = 0;
         monthlyTotals.forEach((t, idx) => {
-            bHtml += `<td class="text-left" style="font-weight:bold; ${border2pxTop}">${t.sales.toLocaleString()}</td>`;
+            bHtml += `<td class="text-right" style="font-weight:bold; ${border2pxTop}">${t.sales.toLocaleString()}</td>`;
             if (idx < 6) gH1S += t.sales; else gH2S += t.sales;
-            if (idx === 5) bHtml += `<td class="text-left col-total" style="${border2pxTop}">${gH1S.toLocaleString()}</td>`;
+            if (idx === 5) bHtml += `<td class="text-right col-total" style="${border2pxTop}">${gH1S.toLocaleString()}</td>`;
             if (idx === 11) {
-                bHtml += `<td class="text-left col-total" style="${border2pxTop}">${gH2S.toLocaleString()}</td>`;
-                bHtml += `<td class="text-left col-total" style="${border2pxTop}">${(gH1S+gH2S).toLocaleString()}</td>`;
+                bHtml += `<td class="text-right col-total" style="${border2pxTop}">${gH2S.toLocaleString()}</td>`;
+                bHtml += `<td class="text-right col-total" style="${border2pxTop}">${(gH1S+gH2S).toLocaleString()}</td>`;
             }
         });
         bHtml += "</tr><tr>";
-        bHtml += `<td class="text-left col-sales-info" style="font-weight:bold; ${border2pxBottom}">${totalCos.toLocaleString()}</td>`;
+        bHtml += `<td class="text-right col-sales-info" style="font-weight:bold; ${border2pxBottom}">${totalCos.toLocaleString()}</td>`;
         monthlyTotals.forEach((t, idx) => {
-            bHtml += `<td class="text-left" style="font-weight:bold; ${border2pxBottom}">${t.profit.toLocaleString()}</td>`;
+            bHtml += `<td class="text-right" style="font-weight:bold; ${border2pxBottom}">${t.profit.toLocaleString()}</td>`;
             if (idx < 6) gH1P += t.profit; else gH2P += t.profit;
-            if (idx === 5) bHtml += `<td class="text-left col-total" style="${border2pxBottom}">${gH1P.toLocaleString()}</td>`;
+            if (idx === 5) bHtml += `<td class="text-right col-total" style="${border2pxBottom}">${gH1P.toLocaleString()}</td>`;
             if (idx === 11) {
-                bHtml += `<td class="text-left col-total" style="${border2pxBottom}">${gH2P.toLocaleString()}</td>`;
-                bHtml += `<td class="text-left col-total" style="${border2pxBottom}">${(gH1P+gH2P).toLocaleString()}</td>`;
+                bHtml += `<td class="text-right col-total" style="${border2pxBottom}">${gH2P.toLocaleString()}</td>`;
+                bHtml += `<td class="text-right col-total" style="${border2pxBottom}">${(gH1P+gH2P).toLocaleString()}</td>`;
             }
         });
         bHtml += "</tr>";
 
-        // 各個人のデータ行 (すべて左揃えに変更 & 売上空欄時の利益計算停止)
+        // 各個人のデータ行 (すべて text-right に変更)
         filteredRows.forEach(row => {
             let affDisplay = row[1] || "";
             if ((affDisplay === '東海' || affDisplay === '首都圏') && row[2] === 'BP') affDisplay = 'BP' + affDisplay;
@@ -430,7 +430,7 @@
             bHtml += `<td class="text-center col-sales-name" style="${border2pxTop}">${row[4] || ""}</td>`;
             
             const sal = Math.floor(parseNum(row[10]));
-            bHtml += `<td class="text-left col-sales-info" style="${border2pxTop}">${(sal === 0 && !row[10]) ? "-" : sal.toLocaleString()}</td>`;
+            bHtml += `<td class="text-right col-sales-info" style="${border2pxTop}">${(sal === 0 && !row[10]) ? "-" : sal.toLocaleString()}</td>`;
             
             let s1=0, s2=0;
             for (let i = 12; i < 36; i += 2) {
@@ -442,18 +442,18 @@
                     sStr = ns.toLocaleString();
                     if (i <= 22) s1 += ns; else s2 += ns;
                 }
-                bHtml += `<td class="text-left" style="${border2pxTop}">${sStr}</td>`;
-                if (i === 22) bHtml += `<td class="text-left col-total" style="${border2pxTop}">${s1.toLocaleString()}</td>`;
+                bHtml += `<td class="text-right" style="${border2pxTop}">${sStr}</td>`;
+                if (i === 22) bHtml += `<td class="text-right col-total" style="${border2pxTop}">${s1.toLocaleString()}</td>`;
                 if (i === 34) {
-                    bHtml += `<td class="text-left col-total" style="${border2pxTop}">${s2.toLocaleString()}</td>`;
-                    bHtml += `<td class="text-left col-total" style="${border2pxTop}">${(s1+s2).toLocaleString()}</td>`;
+                    bHtml += `<td class="text-right col-total" style="${border2pxTop}">${s2.toLocaleString()}</td>`;
+                    bHtml += `<td class="text-right col-total" style="${border2pxTop}">${(s1+s2).toLocaleString()}</td>`;
                 }
             }
             bHtml += "</tr><tr>";
             bHtml += `<td class="text-center col-sales-name" style="${border2pxBottom}">${row[3] || ""}</td>`;
             
             const cos = Math.floor(parseNum(row[11]));
-            bHtml += `<td class="text-left col-sales-info" style="${border2pxBottom}">${(cos === 0 && !row[11]) ? "-" : cos.toLocaleString()}</td>`;
+            bHtml += `<td class="text-right col-sales-info" style="${border2pxBottom}">${(cos === 0 && !row[11]) ? "-" : cos.toLocaleString()}</td>`;
             
             let p1=0, p2=0;
             for (let i = 12; i < 36; i += 2) {
@@ -469,11 +469,11 @@
                     pStr = np.toLocaleString();
                     if (i <= 22) p1 += np; else p2 += np;
                 }
-                bHtml += `<td class="text-left" style="${border2pxBottom}">${pStr}</td>`;
-                if (i === 22) bHtml += `<td class="text-left col-total" style="${border2pxBottom}">${p1.toLocaleString()}</td>`;
+                bHtml += `<td class="text-right" style="${border2pxBottom}">${pStr}</td>`;
+                if (i === 22) bHtml += `<td class="text-right col-total" style="${border2pxBottom}">${p1.toLocaleString()}</td>`;
                 if (i === 34) {
-                    bHtml += `<td class="text-left col-total" style="${border2pxBottom}">${p2.toLocaleString()}</td>`;
-                    bHtml += `<td class="text-left col-total" style="${border2pxBottom}">${(p1+p2).toLocaleString()}</td>`;
+                    bHtml += `<td class="text-right col-total" style="${border2pxBottom}">${p2.toLocaleString()}</td>`;
+                    bHtml += `<td class="text-right col-total" style="${border2pxBottom}">${(p1+p2).toLocaleString()}</td>`;
                 }
             }
             bHtml += "</tr>";
@@ -529,8 +529,6 @@
 </script>
 </body>
 </html>
-
-
 
 
 
