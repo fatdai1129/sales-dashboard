@@ -27,7 +27,7 @@
         .text-right { text-align: right !important; padding-right: 12px !important; }
         .text-center { text-align: center !important; }
 
-        /* 実績表：強弱のある枠線 */
+        /* 実績表の特殊枠線 */
         .perf-table { min-width: 1800px; table-layout: fixed; }
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
@@ -227,13 +227,13 @@
     }
 
     function renderAll() {
-        try { if (document.getElementById('section-perf').style.display !== 'none') renderPerf(); } catch(e){ console.error(e); }
-        try { if (document.getElementById('section-sales').style.display !== 'none') renderSales(); } catch(e){ console.error(e); }
-        try { if (document.getElementById('section-status').style.display !== 'none') renderStatus(); } catch(e){ console.error(e); }
+        try { if (document.getElementById('section-perf').style.display !== 'none') renderPerf(); } catch(e){ }
+        try { if (document.getElementById('section-sales').style.display !== 'none') renderSales(); } catch(e){ }
+        try { if (document.getElementById('section-status').style.display !== 'none') renderStatus(); } catch(e){ }
     }
 
     /* ----------------------------------------------------
-       共通：安全な数値・配列関数（絶対にエラーを出さない設計）
+       共通：安全な数値・配列関数
     ---------------------------------------------------- */
     const parseNum = (v) => {
         if (typeof v === 'number') return v;
@@ -265,7 +265,7 @@
         }
         let val = perfMap[`${region}-${itemK}-${type}`];
         if (!val && region === '全国') {
-            val = perfMap[`全国合計-${itemK}-${type}`]; // シート名ゆれ対策
+            val = perfMap[`全国合計-${itemK}-${type}`];
             if (!val) val = perfMap[`全国-${itemK}-${type}`];
         }
         return safeArr(val);
@@ -298,11 +298,9 @@
                 const data = getPerfVal(region, item.k, type);
                 let h1 = null, h2 = null, tot = null;
 
-                // 達成率・待機率の計算（ゼロ除算・null除算を完全に防ぐ安全設計）
                 if (type === '達成率' || item.k === '待機率') {
                     const bD = getPerfVal(region, (type==='達成率'?item.k:'エンジニア総数'), (type==='達成率'?'予算':'実績'));
                     const aD = getPerfVal(region, (type==='達成率'?item.k:'プロパー(待機)'), '実績');
-                    
                     const sumA1 = sumF(aD.slice(0,6)), sumB1 = sumF(bD.slice(0,6));
                     const sumA2 = sumF(aD.slice(6,12)), sumB2 = sumF(bD.slice(6,12));
                     const sumAT = sumF(aD), sumBT = sumF(bD);
@@ -337,7 +335,7 @@
     }
 
     /* =========================================
-       2. 営業推進管理表 (大量の空白行を完全排除)
+       2. 営業推進管理表 (空行の完全ブロック版)
     ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
@@ -350,24 +348,28 @@
         head.innerHTML = hHtml + "</tr><tr>";
         for (let i=12;i<36;i+=2) head.innerHTML += `<th>売上/利</th>`;
 
-        // 厳格なフィルター（見えない空白スペースなどによる誤作動を防止）
+        // 異常な空行を完全に排除する強力なフィルター
         let filteredRows = raw.filter(row => {
-            const name = String(row[4] || "").trim();
-            const aff = String(row[1] || "").trim();
-            const fullStr = row.join('');
+            const aff0 = String(row[0] || "").trim();
+            const aff1 = String(row[1] || "").trim();
+            const name3 = String(row[3] || "").trim();
+            const name4 = String(row[4] || "").trim();
             
-            // 人名が空欄、またはヘッダー文字の場合は即除外
-            if (!name || name === "技術者名" || name === "0") return false;
-            
-            // 所属や名前に「売上」「原価」「利益」が含まれる集計用の行も除外
-            if (aff.includes("売上") || aff.includes("原価") || aff.includes("利益") || fullStr.includes("売上/利")) return false;
-            if (name.includes("売上") || name.includes("原価")) return false;
+            // 【重要】「売上」「原価」「利益」「売上/利」が含まれる行は絶対に読み込まない
+            const badWords = ["売上", "原価", "利益", "計", "売上/利"];
+            if (badWords.some(w => aff0.includes(w) || aff1.includes(w) || name3.includes(w) || name4.includes(w))) {
+                return false;
+            }
 
-            if (kw && !fullStr.toLowerCase().includes(kw)) return false;
+            // 【重要】従業員名が空欄の行は絶対に読み込まない
+            if (!name3 && !name4) return false;
+            if (name4 === "技術者名" || name4 === "0") return false;
+
+            if (kw && !row.join('').toLowerCase().includes(kw)) return false;
 
             if (region === "全国") return true;
             
-            const searchStr = (String(row[0]||"") + aff).trim();
+            const searchStr = aff0 + aff1;
             const map = { 
                 "東海": ["東海", "静岡"], 
                 "首都圏": ["首都圏", "東京", "本社", "本店"], 
@@ -395,7 +397,7 @@
         const border2pxBottom = "border-top: 2px solid black !important;";
         let bHtml = "";
 
-        // 総合計行
+        // 総合計行の描画
         bHtml += "<tr><td colspan='2' rowspan='2' class='text-center col-sales-aff' style='font-weight:bold;'>総合計</td>";
         bHtml += `<td class="text-right col-sales-info" style="font-weight:bold; ${border2pxTop}">${totalSal.toLocaleString()}</td>`;
         let gH1S = 0, gH1P = 0, gH2S = 0, gH2P = 0;
@@ -421,7 +423,7 @@
         });
         bHtml += "</tr>";
 
-        // 各個人のデータ行
+        // 各個人のデータ行描画
         filteredRows.forEach(row => {
             let s1=0, p1=0, s2=0, p2=0;
             for(let i=12; i<36; i+=2) {
@@ -477,24 +479,20 @@
     function renderStatus() {
         const tbody = document.getElementById('status-body'), reg = document.getElementById('status-region-select').value;
         tbody.innerHTML = '';
-        if (!statusRows || statusRows.length <= 1) { tbody.innerHTML = '<tr><td colspan="7" class="text-center">データがありません</td></tr>'; return; }
+        if (!statusRows || statusRows.length <= 1) { tbody.innerHTML = '<tr><td colspan="7" class="text-center">データ取得中...</td></tr>'; return; }
         document.getElementById('status-update-date').innerText = "更新日: " + (formatStatusDate(statusRows[0][8]) || "-");
 
         let filtered = statusRows.slice(1).filter(r => {
-            const rowStr = r.join('');
-            if (!rowStr || rowStr.trim() === "") return false;
-            if (rowStr.includes("所属") || rowStr.includes("従業員名")) return false; // ヘッダ行の混入を防止
+            const c0 = String(r[0]||"").trim();
+            const c1 = String(r[1]||"").trim();
+            if (!c0 && !c1) return false;
+            if (c0.includes("所属") || c1.includes("従業員名")) return false;
 
             if (reg === "全国") return true;
-            
-            const map = { 
-                "東海": ["東海", "静岡"], 
-                "首都圏": ["首都圏", "東京", "本社", "本店"], 
-                "東日本": ["東海", "静岡", "首都圏", "東京", "本社", "本店"], 
-                "西日本": ["西日本", "大阪"] 
-            };
+            const search = c0 + c1;
+            const map = { "東海": ["東海", "静岡"], "首都圏": ["首都圏", "東京", "本社", "本店"], "東日本": ["東海", "静岡", "首都圏", "東京", "本社", "本店"], "西日本": ["西日本", "大阪"] };
             const targets = map[reg] || [reg];
-            return targets.some(t => rowStr.includes(t));
+            return targets.some(t => search.includes(t));
         });
 
         const order = { "待機中": 1, "休業中": 2, "休職中": 3, "稼働中": 4 };
@@ -506,7 +504,6 @@
             if (st === "待機中") tr.classList.add('status-wait');
             else if (st === "稼働中") tr.classList.add('status-active');
             
-            // A列・B列のどちらに所属があるかを自動判別
             let aff = String(row[1]||""), name = String(row[0]||"");
             const known = ['東海', '静岡', '首都圏', '本社', '本店', '東京', '西日本', '大阪'];
             if (known.some(v => name.includes(v))) { aff = name; name = String(row[1]||""); }
@@ -524,9 +521,6 @@
         return val;
     }
 
-    /* =========================================
-       グラフ設定
-    ========================================= */
     function updateCharts(region) {
         const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
         const opt = (title) => ({ responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: title, font: { size: 18, weight: 'bold' }, color: '#2d3748', padding: { bottom: 10 } } } });
@@ -538,6 +532,7 @@
 </script>
 </body>
 </html>
+
 
 
 
