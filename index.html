@@ -27,7 +27,7 @@
         .text-right { text-align: right !important; padding-right: 12px !important; }
         .text-center { text-align: center !important; }
 
-        /* 実績表の特殊枠線 */
+        /* 実績表：強弱のある枠線 */
         .perf-table { min-width: 1800px; table-layout: fixed; }
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
@@ -210,7 +210,9 @@
             }
 
             const rowsP = await rP.json(); perfMap = {};
-            rowsP.slice(1).forEach(r => { perfMap[`${r[0]}-${r[1]}-${r[2]}`] = r.slice(3, 15).map(v => (v===""||v==null)?null:parseFloat(String(v).replace(/,/g,''))||0); });
+            if (rowsP && Array.isArray(rowsP)) {
+                rowsP.slice(1).forEach(r => { perfMap[`${r[0]}-${r[1]}-${r[2]}`] = r.slice(3, 15).map(v => (v===""||v==null)?null:parseFloat(String(v).replace(/,/g,''))||0); });
+            }
             
             salesRows = await rS.json();
             statusRows = stData;
@@ -225,50 +227,60 @@
     }
 
     function renderAll() {
-        if (document.getElementById('section-perf').style.display !== 'none') renderPerf();
-        if (document.getElementById('section-sales').style.display !== 'none') renderSales();
-        if (document.getElementById('section-status').style.display !== 'none') renderStatus();
+        try { if (document.getElementById('section-perf').style.display !== 'none') renderPerf(); } catch(e){ console.error(e); }
+        try { if (document.getElementById('section-sales').style.display !== 'none') renderSales(); } catch(e){ console.error(e); }
+        try { if (document.getElementById('section-status').style.display !== 'none') renderStatus(); } catch(e){ console.error(e); }
     }
 
     /* ----------------------------------------------------
-       共通：安全な数値変換関数（NaNを絶対に出さない）
+       共通：安全な数値・配列関数（絶対にエラーを出さない設計）
     ---------------------------------------------------- */
     const parseNum = (v) => {
         if (typeof v === 'number') return v;
-        if (!v || v === "") return 0;
+        if (!v || String(v).trim() === "") return 0;
         let n = parseFloat(String(v).replace(/,/g, ''));
         return isNaN(n) ? 0 : n;
     };
+    const safeArr = (arr) => (Array.isArray(arr) && arr.length >= 12) ? arr : new Array(12).fill(null);
 
     /* =========================================
        1. 実績管理
     ========================================= */
     function getPerfVal(region, itemK, type) {
         if (type === '達成率') {
-            const b = getPerfVal(region, itemK, '予算'), a = getPerfVal(region, itemK, '実績');
+            const b = safeArr(getPerfVal(region, itemK, '予算')), a = safeArr(getPerfVal(region, itemK, '実績'));
             return a.map((v, i) => (b[i]==null||v==null)?null:(b[i]===0?0:(v/b[i])*100));
         }
         if (itemK === '待機率') {
-            const w = getPerfVal(region, 'プロパー(待機)', '実績'), t = getPerfVal(region, 'エンジニア総数', '実績');
+            const w = safeArr(getPerfVal(region, 'プロパー(待機)', '実績')), t = safeArr(getPerfVal(region, 'エンジニア総数', '実績'));
             return w.map((v, i) => (t[i]==null||v==null)?null:(t[i]===0?0:(v/t[i])*100));
         }
         if (itemK === '稼働エンジニア数') {
-            const p = getPerfVal(region, 'プロパー(稼働)', type), b = getPerfVal(region, 'BP', '実績');
+            const p = safeArr(getPerfVal(region, 'プロパー(稼働)', type)), b = safeArr(getPerfVal(region, 'BP', '実績'));
             return type==='予算'?p:p.map((v,i)=>(v===null&&b[i]===null)?null:(v||0)+(b[i]||0));
         }
         if (itemK === 'エンジニア総数') {
-            const wk = getPerfVal(region, '稼働エンジニア数', type), wt = getPerfVal(region, 'プロパー(待機)', type);
+            const wk = safeArr(getPerfVal(region, '稼働エンジニア数', type)), wt = safeArr(getPerfVal(region, 'プロパー(待機)', type));
             return wk.map((v,i)=>(v===null&&wt[i]===null)?null:(v||0)+(wt[i]||0));
         }
         let val = perfMap[`${region}-${itemK}-${type}`];
-        if (!val && region === '全国') val = perfMap[`全国合計-${itemK}-${type}`];
-        return val || new Array(12).fill(null);
+        if (!val && region === '全国') {
+            val = perfMap[`全国合計-${itemK}-${type}`]; // シート名ゆれ対策
+            if (!val) val = perfMap[`全国-${itemK}-${type}`];
+        }
+        return safeArr(val);
     }
 
     function renderPerf() {
         const region = document.getElementById('region-select').value, tbody = document.getElementById('perf-body'); tbody.innerHTML = '';
         const items = [{n:'売上',k:'売上',t:['予算','実績','達成率']},{n:'稼働原価',k:'稼働原価',t:['予算','実績','達成率']},{n:'A利益',k:'A利益',t:['予算','実績','達成率']},{n:'待機原価',k:'待機原価',t:['実績']},{n:'プロパー(稼働)',k:'プロパー(稼働)',t:['予算','実績','達成率']},{n:'BP',k:'BP',t:['実績']},{n:'稼働エンジニア数',k:'稼働エンジニア数',t:['予算','実績']},{n:'プロパー(待機)',k:'プロパー(待機)',t:['予算','実績']},{n:'待機率',k:'待機率',t:['実績']},{n:'エンジニア総数',k:'エンジニア総数',t:['予算','実績','達成率']}];
         
+        const sumF = (arr) => {
+            let hasVal = false;
+            let s = arr.reduce((a,b) => { if(b !== null && b !== undefined) { hasVal = true; return a + b; } return a; }, 0);
+            return hasVal ? s : null;
+        };
+
         items.forEach(item => {
             item.t.forEach((type, idx) => {
                 const tr = document.createElement('tr');
@@ -283,19 +295,26 @@
                 let html = idx===0?`<td rowspan="${item.t.length}" class="cat-header sticky-left">${item.n}</td>` : '';
                 html += `<td class="text-center sticky-left-2">${type}</td>`;
                 
-                const sumF = (arr) => {
-                    let hasVal = false;
-                    let s = arr.reduce((a,b) => { if(b !== null) hasVal = true; return a + (b || 0); }, 0);
-                    return hasVal ? s : null;
-                };
-
                 const data = getPerfVal(region, item.k, type);
-                const bD = getPerfVal(region, (type==='達成率'?item.k:'エンジニア総数'), (type==='達成率'?'予算':'実績'));
-                const aD = getPerfVal(region, (type==='達成率'?item.k:'プロパー(待機)'), '実績');
-                
-                const h1 = (type==='達成率'||item.k==='待機率') ? (sumF(bD.slice(0,6))===0?0:(sumF(aD.slice(0,6))/sumF(bD.slice(0,6)))*100) : sumF(data.slice(0,6));
-                const h2 = (type==='達成率'||item.k==='待機率') ? (sumF(bD.slice(6,12))===0?0:(sumF(aD.slice(6,12))/sumF(bD.slice(6,12)))*100) : sum(data.slice(6,12));
-                const tot = (type==='達成率'||item.k==='待機率') ? (sumF(bD)===0?0:(sumF(aD)/sumF(bD))*100) : sumF(data);
+                let h1 = null, h2 = null, tot = null;
+
+                // 達成率・待機率の計算（ゼロ除算・null除算を完全に防ぐ安全設計）
+                if (type === '達成率' || item.k === '待機率') {
+                    const bD = getPerfVal(region, (type==='達成率'?item.k:'エンジニア総数'), (type==='達成率'?'予算':'実績'));
+                    const aD = getPerfVal(region, (type==='達成率'?item.k:'プロパー(待機)'), '実績');
+                    
+                    const sumA1 = sumF(aD.slice(0,6)), sumB1 = sumF(bD.slice(0,6));
+                    const sumA2 = sumF(aD.slice(6,12)), sumB2 = sumF(bD.slice(6,12));
+                    const sumAT = sumF(aD), sumBT = sumF(bD);
+
+                    h1 = sumB1 ? (sumA1 / sumB1) * 100 : (sumB1 === 0 ? 0 : null);
+                    h2 = sumB2 ? (sumA2 / sumB2) * 100 : (sumB2 === 0 ? 0 : null);
+                    tot = sumBT ? (sumAT / sumBT) * 100 : (sumBT === 0 ? 0 : null);
+                } else {
+                    h1 = sumF(data.slice(0,6));
+                    h2 = sumF(data.slice(6,12));
+                    tot = sumF(data);
+                }
 
                 for(let i=0;i<12;i++) {
                     const bCls = (i < 5 || (i >= 6 && i < 11)) ? 'br-3px ' : '';
@@ -318,7 +337,7 @@
     }
 
     /* =========================================
-       2. 営業推進管理表 (強力フィルター化)
+       2. 営業推進管理表 (大量の空白行を完全排除)
     ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
@@ -331,55 +350,52 @@
         head.innerHTML = hHtml + "</tr><tr>";
         for (let i=12;i<36;i+=2) head.innerHTML += `<th>売上/利</th>`;
 
-        // 不要な行（見出し・集計行・空行）を完全に排除
+        // 厳格なフィルター（見えない空白スペースなどによる誤作動を防止）
         let filteredRows = raw.filter(row => {
-            const aff = String(row[1] || "").trim();
             const name = String(row[4] || "").trim();
+            const aff = String(row[1] || "").trim();
+            const fullStr = row.join('');
             
-            // 従業員名が空、または「技術者名」などの見出し行は除外
-            if (!name || name === "" || name === "技術者名") return false;
-            // 「売上」「原価」「利益」「計」が含まれる集計行は除外
-            if (aff.includes("売上") || aff.includes("原価") || aff.includes("利益") || aff.includes("計")) return false;
-            if (name.includes("売上") || name.includes("原価") || name.includes("利益") || name.includes("計")) return false;
+            // 人名が空欄、またはヘッダー文字の場合は即除外
+            if (!name || name === "技術者名" || name === "0") return false;
+            
+            // 所属や名前に「売上」「原価」「利益」が含まれる集計用の行も除外
+            if (aff.includes("売上") || aff.includes("原価") || aff.includes("利益") || fullStr.includes("売上/利")) return false;
+            if (name.includes("売上") || name.includes("原価")) return false;
 
-            if (kw && !row.join('').toLowerCase().includes(kw)) return false;
+            if (kw && !fullStr.toLowerCase().includes(kw)) return false;
+
             if (region === "全国") return true;
             
             const searchStr = (String(row[0]||"") + aff).trim();
             const map = { 
                 "東海": ["東海", "静岡"], 
-                "首都圏": ["首都圏", "東京本社", "本店"], 
-                "東日本": ["東海", "静岡", "首都圏", "東京本社", "本店"], 
+                "首都圏": ["首都圏", "東京", "本社", "本店"], 
+                "東日本": ["東海", "静岡", "首都圏", "東京", "本社", "本店"], 
                 "西日本": ["西日本", "大阪"] 
             };
             const targets = map[region] || [region];
             return targets.some(t => searchStr.includes(t));
         });
 
-        // 総合計の計算
         let monthlyTotals = [];
         for (let i = 12; i < 36; i += 2) {
             let sSum = 0, pSum = 0;
             filteredRows.forEach(row => {
-                const sVal = parseNum(row[i]);
-                const cVal = parseNum(row[i+1]);
-                sSum += sVal;
-                pSum += (sVal - cVal);
+                const s = parseNum(row[i]), c = parseNum(row[i+1]);
+                sSum += s; pSum += (s - c);
             });
             monthlyTotals.push({ sales: sSum, profit: pSum });
         }
 
         let totalSal = 0, totalCos = 0;
-        filteredRows.forEach(row => {
-            totalSal += parseNum(row[10]);
-            totalCos += parseNum(row[11]);
-        });
+        filteredRows.forEach(row => { totalSal += parseNum(row[10]); totalCos += parseNum(row[11]); });
 
         const border2pxTop = "border-bottom: 2px solid black !important;";
         const border2pxBottom = "border-top: 2px solid black !important;";
         let bHtml = "";
 
-        // 総合計行の描画
+        // 総合計行
         bHtml += "<tr><td colspan='2' rowspan='2' class='text-center col-sales-aff' style='font-weight:bold;'>総合計</td>";
         bHtml += `<td class="text-right col-sales-info" style="font-weight:bold; ${border2pxTop}">${totalSal.toLocaleString()}</td>`;
         let gH1S = 0, gH1P = 0, gH2S = 0, gH2P = 0;
@@ -405,14 +421,12 @@
         });
         bHtml += "</tr>";
 
-        // 個人のデータ行描画
+        // 各個人のデータ行
         filteredRows.forEach(row => {
             let s1=0, p1=0, s2=0, p2=0;
             for(let i=12; i<36; i+=2) {
-                let s = parseNum(row[i]);
-                let c = parseNum(row[i+1]);
-                let p = s - c;
-                if(i <= 22) { s1 += s; p1 += p; } else { s2 += s; p2 += p; }
+                let s = parseNum(row[i]), p = s - parseNum(row[i+1]);
+                if(i<=22){s1+=s; p1+=p;} else {s2+=s; p2+=p;}
             }
 
             let affDisplay = row[1] || "";
@@ -422,13 +436,12 @@
             bHtml += `<td rowspan="2" class="text-center col-sales-aff">${affDisplay}</td>`;
             bHtml += `<td class="text-center col-sales-name" style="${border2pxTop}">${row[4] || ""}</td>`;
             const sal = parseNum(row[10]);
-            bHtml += `<td class="text-right col-sales-info" style="${border2pxTop}">${(sal === 0 && !row[10]) ? "-" : sal.toLocaleString()}</td>`;
+            bHtml += `<td class="text-right col-sales-info" style="${border2pxTop}">${sal === 0 && !row[10] ? "-" : sal.toLocaleString()}</td>`;
             
             let tempS1=0, tempS2=0;
             for (let i = 12; i < 36; i += 2) {
                 const numS = parseNum(row[i]);
-                const sStr = (row[i] === null || row[i] === undefined || row[i] === "") ? "-" : numS.toLocaleString();
-                bHtml += `<td class="text-right" style="${border2pxTop}">${sStr}</td>`;
+                bHtml += `<td class="text-right" style="${border2pxTop}">${(row[i]===null||row[i]===undefined||row[i]==="") ? "-" : numS.toLocaleString()}</td>`;
                 if (i <= 22) tempS1 += numS; else tempS2 += numS;
                 if (i === 22) bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0; ${border2pxTop}">${tempS1.toLocaleString()}</td>`;
                 if (i === 34) {
@@ -439,18 +452,12 @@
             bHtml += "</tr><tr>";
             bHtml += `<td class="text-center col-sales-name" style="${border2pxBottom}">${row[3] || ""}</td>`;
             const cos = parseNum(row[11]);
-            bHtml += `<td class="text-right col-sales-info" style="${border2pxBottom}">${(cos === 0 && !row[11]) ? "-" : cos.toLocaleString()}</td>`;
+            bHtml += `<td class="text-right col-sales-info" style="${border2pxBottom}">${cos === 0 && !row[11] ? "-" : cos.toLocaleString()}</td>`;
             
             let tempP1=0, tempP2=0;
             for (let i = 12; i < 36; i += 2) {
-                const numS = parseNum(row[i]);
-                const numC = parseNum(row[i+1]);
-                let numP = numS - numC;
-                let pStr = "-";
-                if ((row[i] !== null && row[i] !== undefined && row[i] !== "") || 
-                    (row[i+1] !== null && row[i+1] !== undefined && row[i+1] !== "")) {
-                    pStr = numP.toLocaleString();
-                }
+                const numP = parseNum(row[i]) - parseNum(row[i+1]);
+                let pStr = (row[i]==="" && row[i+1]==="") ? "-" : numP.toLocaleString();
                 bHtml += `<td class="text-right" style="${border2pxBottom}">${pStr}</td>`;
                 if (i <= 22) tempP1 += numP; else tempP2 += numP;
                 if (i === 22) bHtml += `<td class="text-right" style="font-weight:bold; background:#fffaf0; ${border2pxBottom}">${tempP1.toLocaleString()}</td>`;
@@ -470,21 +477,24 @@
     function renderStatus() {
         const tbody = document.getElementById('status-body'), reg = document.getElementById('status-region-select').value;
         tbody.innerHTML = '';
-        if (!statusRows || statusRows.length <= 1) { tbody.innerHTML = '<tr><td colspan="7" class="text-center">データ取得中...</td></tr>'; return; }
+        if (!statusRows || statusRows.length <= 1) { tbody.innerHTML = '<tr><td colspan="7" class="text-center">データがありません</td></tr>'; return; }
         document.getElementById('status-update-date').innerText = "更新日: " + (formatStatusDate(statusRows[0][8]) || "-");
 
         let filtered = statusRows.slice(1).filter(r => {
-            const c0 = String(r[0]||"").trim();
-            const c1 = String(r[1]||"").trim();
-            // 完全な空白行や見出し行を除外
-            if (!c0 && !c1) return false;
-            if (c0.includes("所属") || c1.includes("従業員名")) return false;
+            const rowStr = r.join('');
+            if (!rowStr || rowStr.trim() === "") return false;
+            if (rowStr.includes("所属") || rowStr.includes("従業員名")) return false; // ヘッダ行の混入を防止
 
             if (reg === "全国") return true;
-            const search = c0 + c1;
-            const map = { "東海": ["東海", "静岡"], "首都圏": ["首都圏", "東京本社", "本店"], "東日本": ["東海", "静岡", "首都圏", "東京本社", "本店"], "西日本": ["西日本", "大阪"] };
+            
+            const map = { 
+                "東海": ["東海", "静岡"], 
+                "首都圏": ["首都圏", "東京", "本社", "本店"], 
+                "東日本": ["東海", "静岡", "首都圏", "東京", "本社", "本店"], 
+                "西日本": ["西日本", "大阪"] 
+            };
             const targets = map[reg] || [reg];
-            return targets.some(t => search.includes(t));
+            return targets.some(t => rowStr.includes(t));
         });
 
         const order = { "待機中": 1, "休業中": 2, "休職中": 3, "稼働中": 4 };
@@ -496,10 +506,10 @@
             if (st === "待機中") tr.classList.add('status-wait');
             else if (st === "稼働中") tr.classList.add('status-active');
             
-            const c0 = String(row[0]||""), c1 = String(row[1]||"");
-            let aff = c1, name = c0;
-            const known = ['東海', '静岡', '首都圏', '本社', '本店', '西日本', '大阪'];
-            if (known.some(v => c0.includes(v))) { aff = c0; name = c1; }
+            // A列・B列のどちらに所属があるかを自動判別
+            let aff = String(row[1]||""), name = String(row[0]||"");
+            const known = ['東海', '静岡', '首都圏', '本社', '本店', '東京', '西日本', '大阪'];
+            if (known.some(v => name.includes(v))) { aff = name; name = String(row[1]||""); }
 
             const sal = parseNum(row[6]);
             tr.innerHTML = `<td class="text-center">${aff}</td><td class="text-center" style="font-weight:bold;">${name}</td><td class="text-center">${sal === 0 && !row[6] ? "-" : sal.toLocaleString()}</td><td class="text-center">${st}</td><td class="text-center">${row[3]||""}</td><td class="text-center">${formatStatusDate(row[4])}</td><td class="text-center">${row[5]||0}ヶ月</td>`;
@@ -514,6 +524,9 @@
         return val;
     }
 
+    /* =========================================
+       グラフ設定
+    ========================================= */
     function updateCharts(region) {
         const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
         const opt = (title) => ({ responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: title, font: { size: 18, weight: 'bold' }, color: '#2d3748', padding: { bottom: 10 } } } });
@@ -525,6 +538,7 @@
 </script>
 </body>
 </html>
+
 
 
 
