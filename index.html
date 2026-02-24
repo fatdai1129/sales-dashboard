@@ -20,12 +20,14 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
+        /* 共通テーブル設定 */
         table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: 100%; }
         th, td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
         th { background: #edf2f7; font-weight: bold; }
-        .text-right { text-align: right !important; padding-right: 12px !important; }
+        .text-right { text-align: right !important; padding-right: 5px !important; }
         .text-center { text-align: center !important; }
 
+        /* 実績表の特殊枠線 */
         .perf-table { min-width: 1800px; table-layout: fixed; }
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
@@ -41,15 +43,16 @@
         .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; border-right: 4px solid black !important; }
         .sticky-left-2 { position: sticky; left: 220px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
 
-        /* 営業推進管理表 */
+        /* 営業推進管理表 (今回の修正：枠線太さの適用) */
         .sales-raw-table { width: 100%; min-width: 1600px; table-layout: fixed; font-size: 0.9rem; }
         .sales-raw-table th, .sales-raw-table td { padding: 8px 4px; }
         .col-sales-aff { width: 70px !important; }
         .col-sales-name { width: 130px !important; }
         .col-sales-info { width: 105px !important; }
-        .sales-raw-table .text-right { padding-right: 5px !important; }
+        /* 6月～10月と12月～4月の右枠を3pxに指定 */
         .br-3px-sales { border-right: 3px solid black !important; }
 
+        /* 売込状況一覧 */
         .status-table { min-width: 1400px; table-layout: fixed; font-size: 1.25rem; }
         .status-table th, .status-table td { padding: 18px 12px; }
         .col-status-aff { width: 160px; }
@@ -317,14 +320,17 @@
         
         let hHtml = "<tr><th rowspan='2' class='col-sales-aff'>所属</th><th rowspan='2' class='col-sales-name'>氏名<br>No</th><th rowspan='2' class='col-sales-info'>給/コ</th>";
         for (let i = 12; i < 36; i += 2) {
-            const cls = (i < 22 || (i >= 24 && i < 34)) ? "br-3px-sales" : "";
+            // 6月(12)-10月(20) および 12月(24)-4月(32) の右枠を3pxにするクラス
+            const isTargetMonth = (i <= 20 || (i >= 24 && i <= 32));
+            const cls = isTargetMonth ? "br-3px-sales" : "";
             hHtml += `<th class="${cls}">${headers[i] || ""}</th>`;
             if (i === 22) hHtml += `<th rowspan="2" class="col-total">上期</th>`;
             if (i === 34) hHtml += `<th rowspan="2" class="col-total">下期</th><th rowspan="2" class="col-total">年間</th>`;
         }
         hHtml += "</tr><tr>";
         for (let i = 12; i < 36; i += 2) { 
-            const cls = (i < 22 || (i >= 24 && i < 34)) ? "br-3px-sales" : "";
+            const isTargetMonth = (i <= 20 || (i >= 24 && i <= 32));
+            const cls = isTargetMonth ? "br-3px-sales" : "";
             hHtml += `<th class="${cls}">売/利</th>`; 
         }
         hHtml += "</tr>"; head.innerHTML = hHtml;
@@ -361,19 +367,25 @@
         let bHtml = `<tr><td colspan='2' rowspan='2' class='text-center col-sales-aff' style='font-weight:bold;'>総合計</td><td class="text-right col-sales-info" style="font-weight:bold; ${b2T}">${totalSal.toLocaleString()}</td>`;
         let gH1S=0, gH1P=0, gH2S=0, gH2P=0;
         monthlyTotals.forEach((t, idx) => {
-            const cls = (idx < 5 || (idx >= 6 && idx < 11)) ? "br-3px-sales" : "";
+            const isTargetMonthIdx = (idx <= 4 || (idx >= 6 && idx <= 10)); // 6-10月 および 12-4月
+            const cls = isTargetMonthIdx ? "br-3px-sales" : "";
             bHtml += `<td class="text-right ${cls}" style="font-weight:bold; ${b2T}">${t.sales.toLocaleString()}</td>`;
             if (idx < 6) gH1S += t.sales; else gH2S += t.sales;
             if (idx === 5) bHtml += `<td class="text-right col-total" style="${b2T}">${gH1S.toLocaleString()}</td>`;
-            if (idx === 11) bHtml += `<td class="text-right col-total" style="${b2T}">${gH2S.toLocaleString()}</td><td class="text-right col-total" style="${b2T}">${(gH1S+gH2S).toLocaleString()}</td>`;
+            if (idx === 11) {
+                bHtml += `<td class="text-right col-total" style="${b2T}">${gH2S.toLocaleString()}</td><td class="text-right col-total" style="${b2T}">${(gH1S+gH2S).toLocaleString()}</td>`;
+            }
         });
         bHtml += `</tr><tr><td class="text-right col-sales-info" style="font-weight:bold; ${b2B}">${totalCos.toLocaleString()}</td>`;
         monthlyTotals.forEach((t, idx) => {
-            const cls = (idx < 5 || (idx >= 6 && idx < 11)) ? "br-3px-sales" : "";
+            const isTargetMonthIdx = (idx <= 4 || (idx >= 6 && idx <= 10));
+            const cls = isTargetMonthIdx ? "br-3px-sales" : "";
             bHtml += `<td class="text-right ${cls}" style="font-weight:bold; ${b2B}">${t.profit.toLocaleString()}</td>`;
             if (idx < 6) gH1P += t.profit; else gH2P += t.profit;
             if (idx === 5) bHtml += `<td class="text-right col-total" style="${b2B}">${gH1P.toLocaleString()}</td>`;
-            if (idx === 11) bHtml += `<td class="text-right col-total" style="${b2B}">${gH2P.toLocaleString()}</td><td class="text-right col-total" style="${b2B}">${(gH1P+gH2P).toLocaleString()}</td>`;
+            if (idx === 11) {
+                bHtml += `<td class="text-right col-total" style="${b2B}">${gH2P.toLocaleString()}</td><td class="text-right col-total" style="${b2B}">${(gH1P+gH2P).toLocaleString()}</td>`;
+            }
         });
         bHtml += "</tr>";
 
@@ -383,7 +395,8 @@
             const sal = Math.floor(parseNum(row[10])); bHtml += `<td class="text-right col-sales-info" style="${b2T}">${sal === 0 && !row[10] ? "-" : sal.toLocaleString()}</td>`;
             let s1=0, s2=0;
             for (let i = 12; i < 36; i += 2) {
-                let ns = 0; let sStr = "-"; const cls = (i < 22 || (i >= 24 && i < 34)) ? "br-3px-sales" : "";
+                let ns = 0; let sStr = "-"; const isTargetMonthCell = (i <= 20 || (i >= 24 && i <= 32));
+                const cls = isTargetMonthCell ? "br-3px-sales" : "";
                 if (String(row[i]||"").trim()!=="") { ns=Math.floor(parseNum(row[i])); sStr=ns.toLocaleString(); if(i<=22)s1+=ns; else s2+=ns; }
                 bHtml += `<td class="text-right ${cls}" style="${b2T}">${sStr}</td>`;
                 if(i===22) bHtml += `<td class="text-right col-total" style="${b2T}">${s1.toLocaleString()}</td>`;
@@ -393,7 +406,8 @@
             const cos = Math.floor(parseNum(row[11])); bHtml += `<td class="text-right col-sales-info" style="${b2B}">${cos === 0 && !row[11] ? "-" : cos.toLocaleString()}</td>`;
             let p1=0, p2=0;
             for (let i = 12; i < 36; i += 2) {
-                let pStr = "-"; const cls = (i < 22 || (i >= 24 && i < 34)) ? "br-3px-sales" : "";
+                let pStr = "-"; const isTargetMonthCell = (i <= 20 || (i >= 24 && i <= 32));
+                const cls = isTargetMonthCell ? "br-3px-sales" : "";
                 if (String(row[i]||"").trim()!=="") { let np=Math.floor(parseNum(row[i]))-Math.floor(parseNum(row[i+1])); pStr=np.toLocaleString(); if(i<=22)p1+=np; else p2+=np; }
                 bHtml += `<td class="text-right ${cls}" style="${b2B}">${pStr}</td>`;
                 if(i===22) bHtml += `<td class="text-right col-total" style="${b2B}">${p1.toLocaleString()}</td>`;
