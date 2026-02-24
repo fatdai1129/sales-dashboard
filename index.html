@@ -7,7 +7,8 @@
     <style>
         body { font-family: 'Hiragino Sans', sans-serif; background-color: #f0f4f8; padding: 0; margin: 0; color: #333; }
         #pw_screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a202c; display: flex; justify-content: center; align-items: center; z-index: 10000; }
-        #pw_box { background: white; padding: 80px 60px; border-radius: 16px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.5); transform: scale(1.2); }
+        /* ログイン画面のサイズを現在の70%に縮小 (scaleを1.2から0.84へ変更) */
+        #pw_box { background: white; padding: 80px 60px; border-radius: 16px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.5); transform: scale(0.84); }
         #pass_val { padding: 15px; width: 280px; font-size: 1.2rem; text-align: center; border: 2px solid #cbd5e0; border-radius: 8px; }
         #pw_box h2 { font-size: 2rem; margin-bottom: 30px; }
         #pw_box button { padding: 15px 50px; font-size: 1.2rem; border-radius: 8px; }
@@ -26,7 +27,7 @@
         .text-right { text-align: right !important; padding-right: 5px !important; }
         .text-center { text-align: center !important; }
 
-        /* 実績表の特殊枠線 (一切触れていません) */
+        /* 実績表の特殊枠線 */
         .perf-table { min-width: 1800px; table-layout: fixed; }
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
@@ -49,11 +50,10 @@
         .col-sales-name { width: 130px !important; }
         .col-sales-info { width: 105px !important; }
         .sales-raw-table .text-right { padding-right: 5px !important; }
-        /* 3px枠線用のクラス */
         .br-3px-sales { border-right: 3px solid black !important; }
         .bl-3px-sales { border-left: 3px solid black !important; }
 
-        /* 売込状況一覧 (一切触れていません) */
+        /* 売込状況一覧 */
         .status-table { min-width: 1400px; table-layout: fixed; font-size: 1.25rem; }
         .status-table th, .status-table td { padding: 18px 12px; }
         .col-status-aff { width: 160px; }
@@ -238,9 +238,6 @@
     };
     const safeArr = (arr) => (Array.isArray(arr) && arr.length >= 12) ? arr : new Array(12).fill(null);
 
-    /* =========================================
-       1. 実績管理 (一切触れていません)
-    ========================================= */
     function getPerfVal(region, itemK, type) {
         if (type === '達成率') {
             const b = safeArr(getPerfVal(region, itemK, '予算')), a = safeArr(getPerfVal(region, itemK, '実績'));
@@ -315,9 +312,6 @@
         return Math.round(v).toLocaleString(); 
     }
 
-    /* =========================================
-       2. 営業推進管理表 (今回の修正：左側を3pxに)
-    ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
@@ -328,16 +322,13 @@
         let hHtml = "<tr><th rowspan='2' class='col-sales-aff'>所属</th><th rowspan='2' class='col-sales-name'>氏名<br>No</th><th rowspan='2' class='col-sales-info'>給/コ</th>";
         for (let i = 12; i < 36; i += 2) {
             let cls = "";
-            // 6月(12), 12月(24) -> 右枠を3pxにして境界を作る
             if (i === 12 || i === 24) cls = "br-3px-sales";
-            // 7～10月(14-20), 1～4月(26-32) -> 左右を3pxに
             else if ((i >= 14 && i <= 20) || (i >= 26 && i <= 32)) cls = "bl-3px-sales br-3px-sales";
-            // 11月(22), 5月(34) -> 左枠を3pxに
             else if (i === 22 || i === 34) cls = "bl-3px-sales";
 
             hHtml += `<th class="${cls}">${headers[i] || ""}</th>`;
-            if (i === 22) hHtml += `<th rowspan="2" class="col-total">上期</th>`;
-            if (i === 34) hHtml += `<th rowspan="2" class="col-total">下期</th><th rowspan="2" class="col-total">年間</th>`;
+            if (i === 22) hHtml += `<th rowspan="2" class="col-total bl-3px-sales">上期</th>`;
+            if (i === 34) hHtml += `<th rowspan="2" class="col-total bl-3px-sales">下期</th><th rowspan="2" class="col-total bl-3px-sales">年間</th>`;
         }
         hHtml += "</tr><tr>";
         for (let i = 12; i < 36; i += 2) { 
@@ -388,9 +379,9 @@
 
             bHtml += `<td class="text-right ${cls}" style="font-weight:bold; ${b2T}">${t.sales.toLocaleString()}</td>`;
             if (idx < 6) gH1S += t.sales; else gH2S += t.sales;
-            if (idx === 5) bHtml += `<td class="text-right col-total" style="${b2T}">${gH1S.toLocaleString()}</td>`;
+            if (idx === 5) bHtml += `<td class="text-right col-total bl-3px-sales" style="${b2T}">${gH1S.toLocaleString()}</td>`;
             if (idx === 11) {
-                bHtml += `<td class="text-right col-total" style="${b2T}">${gH2S.toLocaleString()}</td><td class="text-right col-total" style="${b2T}">${(gH1S+gH2S).toLocaleString()}</td>`;
+                bHtml += `<td class="text-right col-total bl-3px-sales" style="${b2T}">${gH2S.toLocaleString()}</td><td class="text-right col-total bl-3px-sales" style="${b2T}">${(gH1S+gH2S).toLocaleString()}</td>`;
             }
         });
         bHtml += `</tr><tr><td class="text-right col-sales-info" style="font-weight:bold; ${b2B}">${totalCos.toLocaleString()}</td>`;
@@ -402,9 +393,9 @@
 
             bHtml += `<td class="text-right ${cls}" style="font-weight:bold; ${b2B}">${t.profit.toLocaleString()}</td>`;
             if (idx < 6) gH1P += t.profit; else gH2P += t.profit;
-            if (idx === 5) bHtml += `<td class="text-right col-total" style="${b2B}">${gH1P.toLocaleString()}</td>`;
+            if (idx === 5) bHtml += `<td class="text-right col-total bl-3px-sales" style="${b2B}">${gH1P.toLocaleString()}</td>`;
             if (idx === 11) {
-                bHtml += `<td class="text-right col-total" style="${b2B}">${gH2P.toLocaleString()}</td><td class="text-right col-total" style="${b2B}">${(gH1P+gH2P).toLocaleString()}</td>`;
+                bHtml += `<td class="text-right col-total bl-3px-sales" style="${b2B}">${gH2P.toLocaleString()}</td><td class="text-right col-total bl-3px-sales" style="${b2B}">${(gH1P+gH2P).toLocaleString()}</td>`;
             }
         });
         bHtml += "</tr>";
@@ -423,8 +414,8 @@
 
                 if (String(row[i]||"").trim()!=="") { ns=Math.floor(parseNum(row[i])); sStr=ns.toLocaleString(); if(i<=22)s1+=ns; else s2+=ns; }
                 bHtml += `<td class="text-right ${cls}" style="${b2T}">${sStr}</td>`;
-                if(i===22) bHtml += `<td class="text-right col-total" style="${b2T}">${s1.toLocaleString()}</td>`;
-                if(i===34) bHtml += `<td class="text-right col-total" style="${b2T}">${s2.toLocaleString()}</td><td class="text-right col-total" style="${b2T}">${(s1+s2).toLocaleString()}</td>`;
+                if(i===22) bHtml += `<td class="text-right col-total bl-3px-sales" style="${b2T}">${s1.toLocaleString()}</td>`;
+                if(i===34) bHtml += `<td class="text-right col-total bl-3px-sales" style="${b2T}">${s2.toLocaleString()}</td><td class="text-right col-total bl-3px-sales" style="${b2T}">${(s1+s2).toLocaleString()}</td>`;
             }
             bHtml += `</tr><tr><td class="text-center col-sales-name" style="${b2B}">${row[3] || ""}</td>`;
             const cos = Math.floor(parseNum(row[11])); bHtml += `<td class="text-right col-sales-info" style="${b2B}">${cos === 0 && !row[11] ? "-" : cos.toLocaleString()}</td>`;
@@ -438,17 +429,14 @@
 
                 if (String(row[i]||"").trim()!=="") { let np=Math.floor(parseNum(row[i]))-Math.floor(parseNum(row[i+1])); pStr=np.toLocaleString(); if(i<=22)p1+=np; else p2+=np; }
                 bHtml += `<td class="text-right ${cls}" style="${b2B}">${pStr}</td>`;
-                if(i===22) bHtml += `<td class="text-right col-total" style="${b2B}">${p1.toLocaleString()}</td>`;
-                if(i===34) bHtml += `<td class="text-right col-total" style="${b2B}">${p2.toLocaleString()}</td><td class="text-right col-total" style="${b2B}">${(p1+p2).toLocaleString()}</td>`;
+                if(i===22) bHtml += `<td class="text-right col-total bl-3px-sales" style="${b2B}">${p1.toLocaleString()}</td>`;
+                if(i===34) bHtml += `<td class="text-right col-total bl-3px-sales" style="${b2B}">${p2.toLocaleString()}</td><td class="text-right col-total bl-3px-sales" style="${b2B}">${(p1+p2).toLocaleString()}</td>`;
             }
             bHtml += "</tr>";
         });
         body.innerHTML = bHtml;
     }
 
-    /* =========================================
-       3. 売込状況一覧 (一切触れていません)
-    ========================================= */
     function renderStatus() {
         const tbody = document.getElementById('status-body'), reg = document.getElementById('status-region-select').value; tbody.innerHTML = '';
         if (!statusRows || statusRows.length <= 1) { tbody.innerHTML = '<tr><td colspan="7" class="text-center">なし</td></tr>'; return; }
@@ -483,6 +471,7 @@
 </script>
 </body>
 </html>
+
 
 
 
