@@ -20,13 +20,14 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
+        /* 共通テーブル設定 */
         table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: 100%; }
         th, td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
         th { background: #edf2f7; font-weight: bold; }
         .text-right { text-align: right !important; padding-right: 5px !important; }
         .text-center { text-align: center !important; }
 
-        /* 実績表の特殊枠線 (一切触れていません) */
+        /* 実績表の特殊枠線 */
         .perf-table { min-width: 1800px; table-layout: fixed; }
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
@@ -42,7 +43,7 @@
         .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; border-right: 4px solid black !important; }
         .sticky-left-2 { position: sticky; left: 220px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
 
-        /* 営業推進管理表 (一切触れていません) */
+        /* 営業推進管理表 */
         .sales-raw-table { width: 100%; min-width: 1600px; table-layout: fixed; font-size: 0.9rem; }
         .sales-raw-table th, .sales-raw-table td { padding: 8px 4px; }
         .col-sales-aff { width: 70px !important; }
@@ -52,7 +53,7 @@
         .br-3px-sales { border-right: 3px solid black !important; }
         .bl-3px-sales { border-left: 3px solid black !important; }
 
-        /* 売込状況一覧 (今回の修正対象: Noと待機費用の追加に合わせて幅を調整) */
+        /* 売込状況一覧 */
         .status-table { min-width: 1600px; table-layout: fixed; font-size: 1.25rem; }
         .status-table th, .status-table td { padding: 18px 12px; }
         .col-status-no { width: 60px; }
@@ -157,6 +158,7 @@
                         <option value="全国">全国</option><option value="東海">東海</option><option value="首都圏">首都圏</option><option value="東日本">東日本</option><option value="西日本">西日本</option>
                     </select>
                     <span id="status-update-date" style="margin-left: 30px; font-size: 1.2rem; font-weight: bold; color: #4a5568;"></span>
+                    <span id="status-summary" style="margin-left: 40px; font-size: 1.2rem; font-weight: bold; color: #2d3748;"></span>
                 </div>
                 <div style="overflow-x: auto;">
                     <table class="status-table">
@@ -248,7 +250,7 @@
     const safeArr = (arr) => (Array.isArray(arr) && arr.length >= 12) ? arr : new Array(12).fill(null);
 
     /* =========================================
-       1. 実績管理 (一切触れていません)
+       1. 実績管理
     ========================================= */
     function getPerfVal(region, itemK, type) {
         if (type === '達成率') {
@@ -325,7 +327,7 @@
     }
 
     /* =========================================
-       2. 営業推進管理表 (一切触れていません)
+       2. 営業推進管理表 
     ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
@@ -457,18 +459,33 @@
     ========================================= */
     function renderStatus() {
         const tbody = document.getElementById('status-body'), reg = document.getElementById('status-region-select').value; tbody.innerHTML = '';
-        if (!statusRows || statusRows.length <= 1) { tbody.innerHTML = '<tr><td colspan="9" class="text-center">なし</td></tr>'; return; }
+        if (!statusRows || statusRows.length <= 1) { 
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center">なし</td></tr>'; 
+            document.getElementById('status-summary').innerText = "";
+            return; 
+        }
         
         // 更新日はスプレッドシートのI列(8)かJ列(9)にある可能性が高いため、どちらかを取得
         document.getElementById('status-update-date').innerText = "更新日: " + (formatStatusDate(statusRows[0][9]) || formatStatusDate(statusRows[0][8]) || "-");
         
         let filtered = statusRows.slice(1).filter(r => {
+            // スプレッドシートの列が変わり、r[2]が所属、r[1]が氏名になっているズレに対応
             const rowText = (String(r[2]||"") + String(r[1]||"")).trim(); 
             if (!rowText || rowText.includes("所属")) return false;
             if (reg === "全国") return true;
             const map = { "東海": ["東海", "静岡"], "首都圏": ["首都圏", "東京", "本社", "本店"], "東日本": ["東海", "静岡", "首都圏", "東京", "本社", "本店"], "西日本": ["西日本", "大阪"] };
             return (map[reg] || [reg]).some(t => rowText.includes(t));
         });
+
+        // 状態ごとの人数を集計
+        let waitCount = 0, leaveCount = 0, activeCount = 0;
+        filtered.forEach(r => {
+            const st = String(r[3] || "").trim();
+            if (st === "待機中") waitCount++;
+            else if (st === "休業中") leaveCount++;
+            else if (st === "稼働中") activeCount++;
+        });
+        document.getElementById('status-summary').innerText = `待機中：${waitCount}人　休業中：${leaveCount}人　稼働中：${activeCount}人`;
         
         const order = { "待機中": 1, "休業中": 2, "休職中": 3, "稼働中": 4 };
         filtered.sort((a, b) => (order[String(a[3]).trim()]||99) - (order[String(b[3]).trim()]||99));
@@ -505,6 +522,7 @@
 </script>
 </body>
 </html>
+
 
 
 
