@@ -7,8 +7,7 @@
     <style>
         body { font-family: 'Hiragino Sans', sans-serif; background-color: #f0f4f8; padding: 0; margin: 0; color: #333; }
         #pw_screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a202c; display: flex; justify-content: center; align-items: center; z-index: 10000; }
-        /* ログイン画面のサイズを現在の70%に縮小 (scaleを1.2から0.84へ変更) */
-        #pw_box { background: white; padding: 80px 60px; border-radius: 16px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.5); transform: scale(0.84); }
+        #pw_box { background: white; padding: 80px 60px; border-radius: 16px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.5); transform: scale(1.2); }
         #pass_val { padding: 15px; width: 280px; font-size: 1.2rem; text-align: center; border: 2px solid #cbd5e0; border-radius: 8px; }
         #pw_box h2 { font-size: 2rem; margin-bottom: 30px; }
         #pw_box button { padding: 15px 50px; font-size: 1.2rem; border-radius: 8px; }
@@ -27,7 +26,7 @@
         .text-right { text-align: right !important; padding-right: 5px !important; }
         .text-center { text-align: center !important; }
 
-        /* 実績表の特殊枠線 */
+        /* 実績表の特殊枠線 (一切触れていません) */
         .perf-table { min-width: 1800px; table-layout: fixed; }
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
@@ -43,17 +42,20 @@
         .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; border-right: 4px solid black !important; }
         .sticky-left-2 { position: sticky; left: 220px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
 
-        /* 営業推進管理表 */
-        .sales-raw-table { width: 100%; min-width: 1600px; table-layout: fixed; font-size: 0.9rem; }
-        .sales-raw-table th, .sales-raw-table td { padding: 8px 4px; }
+        /* 営業推進管理表 (ノートPC対応の修正) */
+        /* min-widthを1900pxに広げ、セルが潰れないように保護 */
+        .sales-raw-table { width: 100%; min-width: 1900px; table-layout: fixed; font-size: 0.9rem; }
+        /* white-space: nowrap を追加し、数字が絶対に折り返されたり切れたりしないように強制 */
+        .sales-raw-table th, .sales-raw-table td { padding: 8px 4px; white-space: nowrap; }
         .col-sales-aff { width: 70px !important; }
         .col-sales-name { width: 130px !important; }
         .col-sales-info { width: 105px !important; }
         .sales-raw-table .text-right { padding-right: 5px !important; }
+        /* 3px枠線用のクラス */
         .br-3px-sales { border-right: 3px solid black !important; }
         .bl-3px-sales { border-left: 3px solid black !important; }
 
-        /* 売込状況一覧 */
+        /* 売込状況一覧 (一切触れていません) */
         .status-table { min-width: 1400px; table-layout: fixed; font-size: 1.25rem; }
         .status-table th, .status-table td { padding: 18px 12px; }
         .col-status-aff { width: 160px; }
@@ -238,6 +240,9 @@
     };
     const safeArr = (arr) => (Array.isArray(arr) && arr.length >= 12) ? arr : new Array(12).fill(null);
 
+    /* =========================================
+       1. 実績管理
+    ========================================= */
     function getPerfVal(region, itemK, type) {
         if (type === '達成率') {
             const b = safeArr(getPerfVal(region, itemK, '予算')), a = safeArr(getPerfVal(region, itemK, '実績'));
@@ -312,6 +317,9 @@
         return Math.round(v).toLocaleString(); 
     }
 
+    /* =========================================
+       2. 営業推進管理表 
+    ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
@@ -327,7 +335,7 @@
             else if (i === 22 || i === 34) cls = "bl-3px-sales";
 
             hHtml += `<th class="${cls}">${headers[i] || ""}</th>`;
-            if (i === 22) hHtml += `<th rowspan="2" class="col-total bl-3px-sales">上期</th>`;
+            if (i === 22) hHtml += `<th rowspan="2" class="col-total bl-3px-sales">上期</th>`; 
             if (i === 34) hHtml += `<th rowspan="2" class="col-total bl-3px-sales">下期</th><th rowspan="2" class="col-total bl-3px-sales">年間</th>`;
         }
         hHtml += "</tr><tr>";
@@ -437,6 +445,9 @@
         body.innerHTML = bHtml;
     }
 
+    /* =========================================
+       3. 売込状況一覧
+    ========================================= */
     function renderStatus() {
         const tbody = document.getElementById('status-body'), reg = document.getElementById('status-region-select').value; tbody.innerHTML = '';
         if (!statusRows || statusRows.length <= 1) { tbody.innerHTML = '<tr><td colspan="7" class="text-center">なし</td></tr>'; return; }
@@ -471,6 +482,7 @@
 </script>
 </body>
 </html>
+
 
 
 
