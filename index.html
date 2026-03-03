@@ -20,14 +20,12 @@
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
         
-        /* 共通テーブル設定 */
         table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: 100%; }
         th, td { border: 4px solid black; padding: 12px 6px; overflow: hidden; box-sizing: border-box; }
         th { background: #edf2f7; font-weight: bold; }
         .text-right { text-align: right !important; padding-right: 5px !important; }
         .text-center { text-align: center !important; }
 
-        /* 実績表の特殊枠線 */
         .perf-table { min-width: 1800px; table-layout: fixed; }
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
@@ -43,7 +41,6 @@
         .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; border-right: 4px solid black !important; }
         .sticky-left-2 { position: sticky; left: 220px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
 
-        /* 営業推進管理表 */
         .sales-raw-table { width: 100%; min-width: 1600px; table-layout: fixed; font-size: 0.9rem; }
         .sales-raw-table th, .sales-raw-table td { padding: 8px 4px; }
         .col-sales-aff { width: 70px !important; }
@@ -53,7 +50,6 @@
         .br-3px-sales { border-right: 3px solid black !important; }
         .bl-3px-sales { border-left: 3px solid black !important; }
 
-        /* 売込状況一覧 */
         .status-table { min-width: 1600px; table-layout: fixed; font-size: 1.25rem; }
         .status-table th, .status-table td { padding: 18px 12px; }
         .col-status-no { width: 60px; }
@@ -157,8 +153,8 @@
                     <select id="status-region-select" style="padding:12px 25px; border-radius:8px; font-size:1.2rem; cursor:pointer; border: 2px solid #ed8936;" onchange="renderStatus()">
                         <option value="全国">全国</option><option value="東海">東海</option><option value="首都圏">首都圏</option><option value="東日本">東日本</option><option value="西日本">西日本</option>
                     </select>
-                    <span id="status-update-date" style="margin-left: 30px; font-size: 1.2rem; font-weight: bold; color: #4a5568;"></span>
-                    <span id="status-summary" style="margin-left: 40px; font-size: 1.2rem; font-weight: bold; color: #2d3748;"></span>
+                    <span id="status-summary" style="margin-left: 30px; font-size: 1.2rem; font-weight: bold; color: #2d3748;"></span>
+                    <span id="status-update-date" style="margin-left: auto; font-size: 1.2rem; font-weight: bold; color: #4a5568;"></span>
                 </div>
                 <div style="overflow-x: auto;">
                     <table class="status-table">
@@ -465,11 +461,11 @@
             return; 
         }
         
-        // 更新日はスプレッドシートのI列(8)かJ列(9)にある可能性が高いため、どちらかを取得
-        document.getElementById('status-update-date').innerText = "更新日: " + (formatStatusDate(statusRows[0][9]) || formatStatusDate(statusRows[0][8]) || "-");
+        // 更新日の内容をK3セル(インデックス[2][10])から取得するように変更
+        let updateDateVal = (statusRows[2] && statusRows[2][10]) ? statusRows[2][10] : "-";
+        document.getElementById('status-update-date').innerText = "更新日: " + formatStatusDate(updateDateVal);
         
         let filtered = statusRows.slice(1).filter(r => {
-            // スプレッドシートの列が変わり、r[2]が所属、r[1]が氏名になっているズレに対応
             const rowText = (String(r[2]||"") + String(r[1]||"")).trim(); 
             if (!rowText || rowText.includes("所属")) return false;
             if (reg === "全国") return true;
@@ -522,6 +518,7 @@
 </script>
 </body>
 </html>
+
 
 
 
