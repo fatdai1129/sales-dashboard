@@ -26,6 +26,7 @@
         .text-right { text-align: right !important; padding-right: 5px !important; }
         .text-center { text-align: center !important; }
 
+        /* 実績表の特殊枠線 */
         .perf-table { min-width: 1800px; table-layout: fixed; }
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
@@ -41,6 +42,7 @@
         .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; border-right: 4px solid black !important; }
         .sticky-left-2 { position: sticky; left: 220px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
 
+        /* 営業推進管理表 */
         .sales-raw-table { width: 100%; min-width: 1600px; table-layout: fixed; font-size: 0.9rem; }
         .sales-raw-table th, .sales-raw-table td { padding: 8px 4px; }
         .col-sales-aff { width: 70px !important; }
@@ -50,6 +52,7 @@
         .br-3px-sales { border-right: 3px solid black !important; }
         .bl-3px-sales { border-left: 3px solid black !important; }
 
+        /* 売込状況一覧 */
         .status-table { min-width: 1600px; table-layout: fixed; font-size: 1.25rem; }
         .status-table th, .status-table td { padding: 18px 12px; }
         .col-status-no { width: 60px; }
@@ -451,7 +454,7 @@
     }
 
     /* =========================================
-       3. 売込状況一覧 (今回の修正対象)
+       3. 売込状況一覧 (今回の修正対象: K1セル参照へ変更)
     ========================================= */
     function renderStatus() {
         const tbody = document.getElementById('status-body'), reg = document.getElementById('status-region-select').value; tbody.innerHTML = '';
@@ -461,8 +464,8 @@
             return; 
         }
         
-        // 更新日の内容をK3セル(インデックス[2][10])から取得するように変更
-        let updateDateVal = (statusRows[2] && statusRows[2][10]) ? statusRows[2][10] : "-";
+        // 更新日の内容をK1セル(インデックス[0][10])から取得するように変更
+        let updateDateVal = (statusRows[0] && statusRows[0][10]) ? statusRows[0][10] : "-";
         document.getElementById('status-update-date').innerText = "更新日: " + formatStatusDate(updateDateVal);
         
         let filtered = statusRows.slice(1).filter(r => {
@@ -518,6 +521,7 @@
 </script>
 </body>
 </html>
+
 
 
 
