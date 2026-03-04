@@ -388,7 +388,6 @@
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
         
-        // ★ ここを見出し「給料<br>コスト」に変更しました
         let hHtml = "<tr><th rowspan='2' class='col-sales-aff'>所属</th><th rowspan='2' class='col-sales-name'>氏名<br>No</th><th rowspan='2' class='col-sales-info'>給料<br>コスト</th>";
         for (let i = 12; i < 36; i += 2) {
             let cls = "";
@@ -602,12 +601,88 @@
 
     function formatStatusDate(val) { if (!val || val === "-") return "-"; let d = typeof val === 'number' ? new Date((val - 25569) * 86400 * 1000) : new Date(val); return isNaN(d.getTime()) ? val : `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`; }
 
+    // --- ★今回改修したグラフ描画関数（実績管理用） ---
     function updateCharts(region) {
         const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
-        const opt = (title) => ({ responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: title, font: { size: 18, weight: 'bold' } } } });
-        if (charts.s) charts.s.destroy(); charts.s = new Chart(document.getElementById('salesChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ label: '実績', data: getPerfVal(region, '売上', '実績'), backgroundColor: '#3182ce' },{ label: '予算', data: getPerfVal(region, '売上', '予算'), type: 'line', borderColor: '#e53e3e' }]}, options: opt('売上推移') });
-        if (charts.e) charts.e.destroy(); charts.e = new Chart(document.getElementById('engChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ label: 'プロ稼', data: getPerfVal(region, 'プロパー(稼働)', '実績'), backgroundColor: '#3182ce' },{ label: 'BP', data: getPerfVal(region, 'BP', '実績'), backgroundColor: '#ed64a6' },{ label: 'プロ待', data: getPerfVal(region, 'プロパー(待機)', '実績'), backgroundColor: '#a0aec0' }]}, options: { ...opt('エンジニア内訳'), scales: { x: { stacked: true }, y: { stacked: true } } } });
-        if (charts.w) charts.w.destroy(); charts.w = new Chart(document.getElementById('waitCostChart').getContext('2d'), { type: 'line', data: { labels, datasets: [{ label: '待機原価', data: getPerfVal(region, '待機原価', '実績'), borderColor: '#ed8936', fill: true, backgroundColor: 'rgba(237,137,54,0.1)' }]}, options: opt('待機原価推移') });
+        
+        // 表と同じくカンマ区切り、0やnullは非表示にするフォーマット
+        const fmt = (v) => (v === null || v === 0 || v === undefined || isNaN(v)) ? '' : Math.round(v).toLocaleString();
+
+        const commonPlugins = (title) => ({
+            title: { display: true, text: title, font: { size: 18, weight: 'bold' }, padding: { bottom: 15 } },
+            tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + fmt(ctx.raw) } }
+        });
+
+        // 1. 売上推移グラフ
+        if (charts.s) charts.s.destroy(); 
+        charts.s = new Chart(document.getElementById('salesChart').getContext('2d'), { 
+            type: 'bar', 
+            plugins: [ChartDataLabels], // ★数値ラベルプラグイン追加
+            data: { 
+                labels, 
+                datasets: [
+                    { 
+                        label: '実績', data: getPerfVal(region, '売上', '実績'), backgroundColor: '#3182ce',
+                        // 棒の中央に白字で表示
+                        datalabels: { align: 'center', anchor: 'center', color: 'white', font: { weight: 'bold', size: 11 } }
+                    },
+                    { 
+                        label: '予算', data: getPerfVal(region, '売上', '予算'), type: 'line', borderColor: '#e53e3e', backgroundColor: '#e53e3e',
+                        // 線の上に赤字で表示
+                        datalabels: { align: 'top', anchor: 'end', color: '#e53e3e', font: { weight: 'bold', size: 11 } }
+                    }
+                ]
+            }, 
+            options: {
+                responsive: true, maintainAspectRatio: false, layout: { padding: { top: 30 } },
+                plugins: { ...commonPlugins('売上推移'), datalabels: { formatter: fmt } }
+            }
+        });
+
+        // 2. エンジニア内訳グラフ
+        if (charts.e) charts.e.destroy(); 
+        charts.e = new Chart(document.getElementById('engChart').getContext('2d'), { 
+            type: 'bar', 
+            plugins: [ChartDataLabels], // ★数値ラベルプラグイン追加
+            data: { 
+                labels, 
+                datasets: [
+                    { label: 'プロ稼', data: getPerfVal(region, 'プロパー(稼働)', '実績'), backgroundColor: '#3182ce' },
+                    { label: 'BP', data: getPerfVal(region, 'BP', '実績'), backgroundColor: '#ed64a6' },
+                    { label: 'プロ待', data: getPerfVal(region, 'プロパー(待機)', '実績'), backgroundColor: '#a0aec0' }
+                ]
+            }, 
+            options: {
+                responsive: true, maintainAspectRatio: false, layout: { padding: { top: 30 } },
+                plugins: {
+                    ...commonPlugins('エンジニア内訳'),
+                    // 積み上げグラフの中央に白字で表示
+                    datalabels: { anchor: 'center', align: 'center', formatter: fmt, font: { weight: 'bold', size: 11 }, color: 'white' }
+                },
+                scales: { x: { stacked: true }, y: { stacked: true } }
+            }
+        });
+
+        // 3. 待機原価推移グラフ
+        if (charts.w) charts.w.destroy(); 
+        charts.w = new Chart(document.getElementById('waitCostChart').getContext('2d'), { 
+            type: 'line', 
+            plugins: [ChartDataLabels], // ★数値ラベルプラグイン追加
+            data: { 
+                labels, 
+                datasets: [
+                    { 
+                        label: '待機原価', data: getPerfVal(region, '待機原価', '実績'), borderColor: '#ed8936', fill: true, backgroundColor: 'rgba(237,137,54,0.1)',
+                        // 線の上にオレンジ字で表示
+                        datalabels: { align: 'top', anchor: 'end', color: '#ed8936', font: { weight: 'bold', size: 11 } }
+                    }
+                ]
+            }, 
+            options: {
+                responsive: true, maintainAspectRatio: false, layout: { padding: { top: 30 } },
+                plugins: { ...commonPlugins('待機原価推移'), datalabels: { formatter: fmt } }
+            }
+        });
     }
 </script>
 </body>
