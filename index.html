@@ -26,7 +26,6 @@
         .text-right { text-align: right !important; padding-right: 5px !important; }
         .text-center { text-align: center !important; }
 
-        /* 実績表の特殊枠線 */
         .perf-table { min-width: 1800px; table-layout: fixed; }
         tr.bb-2px td:not(.cat-header) { border-bottom: 2px solid black !important; }
         tr.bt-2px td:not(.cat-header) { border-top: 2px solid black !important; }
@@ -42,7 +41,6 @@
         .sticky-left { position: sticky; left: 0; z-index: 30; background: #ebf8ff !important; border-right: 4px solid black !important; }
         .sticky-left-2 { position: sticky; left: 220px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
 
-        /* 営業推進管理表 */
         .sales-raw-table { width: 100%; min-width: 1600px; table-layout: fixed; font-size: 0.9rem; }
         .sales-raw-table th, .sales-raw-table td { padding: 8px 4px; }
         .col-sales-aff { width: 70px !important; }
@@ -52,7 +50,6 @@
         .br-3px-sales { border-right: 3px solid black !important; }
         .bl-3px-sales { border-left: 3px solid black !important; }
 
-        /* 売込状況一覧 */
         .status-table { min-width: 1600px; table-layout: fixed; font-size: 1.25rem; }
         .status-table th, .status-table td { padding: 18px 12px; }
         .col-status-no { width: 60px; }
@@ -146,6 +143,10 @@
                 <div style="overflow-x: auto;">
                     <table class="sales-raw-table"><thead id="sales-head"></thead><tbody id="sales-body"></tbody></table>
                 </div>
+            </div>
+            <div class="charts-container">
+                <div class="chart-box"><canvas id="salesTotalChart"></canvas></div>
+                <div class="chart-box"><canvas id="profitTotalChart"></canvas></div>
             </div>
         </div>
 
@@ -326,7 +327,7 @@
     }
 
     /* =========================================
-       2. 営業推進管理表 
+       2. 営業推進管理表 (グラフ連動の追加)
     ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
@@ -451,10 +452,38 @@
             bHtml += "</tr>";
         });
         body.innerHTML = bHtml;
+        
+        // --- 今回追加したグラフ描画関数の呼び出し ---
+        updateSalesCharts(monthlyTotals);
+    }
+
+    // --- 営業推進管理表用のグラフ描画関数 ---
+    function updateSalesCharts(monthlyTotals) {
+        const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
+        const salesData = monthlyTotals.map(t => t.sales);
+        const profitData = monthlyTotals.map(t => t.profit);
+
+        const opt = (title) => ({ responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: title, font: { size: 18, weight: 'bold' } } } });
+
+        // 左側：売上合計グラフ
+        if (charts.st) charts.st.destroy();
+        charts.st = new Chart(document.getElementById('salesTotalChart').getContext('2d'), {
+            type: 'bar',
+            data: { labels, datasets: [{ label: '売上', data: salesData, backgroundColor: '#3182ce' }] },
+            options: opt('月別売上合計推移')
+        });
+
+        // 右側：利益合計グラフ
+        if (charts.pt) charts.pt.destroy();
+        charts.pt = new Chart(document.getElementById('profitTotalChart').getContext('2d'), {
+            type: 'bar',
+            data: { labels, datasets: [{ label: '利益', data: profitData, backgroundColor: '#48bb78' }] },
+            options: opt('月別利益合計推移')
+        });
     }
 
     /* =========================================
-       3. 売込状況一覧 (今回の修正対象: K1セル参照へ変更)
+       3. 売込状況一覧
     ========================================= */
     function renderStatus() {
         const tbody = document.getElementById('status-body'), reg = document.getElementById('status-region-select').value; tbody.innerHTML = '';
@@ -464,7 +493,6 @@
             return; 
         }
         
-        // 更新日の内容をK1セル(インデックス[0][10])から取得するように変更
         let updateDateVal = (statusRows[0] && statusRows[0][10]) ? statusRows[0][10] : "-";
         document.getElementById('status-update-date').innerText = "更新日: " + formatStatusDate(updateDateVal);
         
@@ -476,7 +504,6 @@
             return (map[reg] || [reg]).some(t => rowText.includes(t));
         });
 
-        // 状態ごとの人数を集計
         let waitCount = 0, leaveCount = 0, activeCount = 0;
         filtered.forEach(r => {
             const st = String(r[3] || "").trim();
@@ -491,18 +518,18 @@
         
         filtered.forEach((row, index) => {
             const tr = document.createElement('tr'); 
-            const st = String(row[3] || "").trim(); // 稼働状況
+            const st = String(row[3] || "").trim(); 
             if (st === "待機中") tr.classList.add('status-wait'); 
             else if (st === "稼働中") tr.classList.add('status-active');
             
-            let no = index + 1; // 連番 (No)
-            let aff = String(row[2]||""); // 所属
-            let name = String(row[1]||""); // 氏名
-            let reason = String(row[4]||""); // 退場理由
-            let date = formatStatusDate(row[5]); // 参画可能日
-            let period = String(row[6]||"0").replace("ヶ月", "").trim(); // 未参画期間
-            let salary = row[7] ? (parseNum(row[7]) === 0 ? "-" : parseNum(row[7]).toLocaleString()) : "-"; // 給料 (右へ移動)
-            let waitCost = row[8] ? (parseNum(row[8]) === 0 ? "-" : parseNum(row[8]).toLocaleString()) : "-"; // 待機費用計 (I列)
+            let no = index + 1;
+            let aff = String(row[2]||""); 
+            let name = String(row[1]||""); 
+            let reason = String(row[4]||""); 
+            let date = formatStatusDate(row[5]); 
+            let period = String(row[6]||"0").replace("ヶ月", "").trim(); 
+            let salary = row[7] ? (parseNum(row[7]) === 0 ? "-" : parseNum(row[7]).toLocaleString()) : "-"; 
+            let waitCost = row[8] ? (parseNum(row[8]) === 0 ? "-" : parseNum(row[8]).toLocaleString()) : "-"; 
             
             tr.innerHTML = `<td class="text-center">${no}</td><td class="text-center">${aff}</td><td class="text-center" style="font-weight:bold;">${name}</td><td class="text-center">${st}</td><td class="text-center">${reason}</td><td class="text-center">${date}</td><td class="text-center">${period}ヶ月</td><td class="text-center">${salary}</td><td class="text-center">${waitCost}</td>`;
             tbody.appendChild(tr);
@@ -521,6 +548,7 @@
 </script>
 </body>
 </html>
+
 
 
 
