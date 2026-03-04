@@ -388,7 +388,8 @@
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
         
-        let hHtml = "<tr><th rowspan='2' class='col-sales-aff'>所属</th><th rowspan='2' class='col-sales-name'>氏名<br>No</th><th rowspan='2' class='col-sales-info'>給/コ</th>";
+        // ★ ここを見出し「給料<br>コスト」に変更しました
+        let hHtml = "<tr><th rowspan='2' class='col-sales-aff'>所属</th><th rowspan='2' class='col-sales-name'>氏名<br>No</th><th rowspan='2' class='col-sales-info'>給料<br>コスト</th>";
         for (let i = 12; i < 36; i += 2) {
             let cls = "";
             if (i === 12 || i === 24) cls = "br-3px-sales";
@@ -499,25 +500,21 @@
             bHtml += "</tr>";
         });
         body.innerHTML = bHtml;
-        
-        // --- 今回改修したグラフ描画関数の呼び出し ---
         updateSalesCharts(monthlyTotals);
     }
 
-    // --- 【改修】営業推進管理表用のグラフ描画関数 ---
     function updateSalesCharts(monthlyTotals) {
         const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
         const salesData = monthlyTotals.map(t => t.sales);
         const profitData = monthlyTotals.map(t => t.profit);
 
-        // 千円単位に変換してカンマ区切りにする関数
         const formatThousand = (val) => Math.round((val || 0) / 1000).toLocaleString();
 
         const opt = (title) => ({
             responsive: true,
             maintainAspectRatio: false,
             layout: {
-                padding: { top: 30 } // グラフ上部にラベル用の余白を確保
+                padding: { top: 30 }
             },
             plugins: {
                 title: { 
@@ -526,7 +523,6 @@
                     font: { size: 18, weight: 'bold' },
                     padding: { bottom: 20 }
                 },
-                // 棒グラフの上の数字ラベル設定
                 datalabels: {
                     anchor: 'end',
                     align: 'top',
@@ -534,7 +530,6 @@
                     font: { weight: 'bold', size: 12 },
                     color: '#4a5568'
                 },
-                // マウスオーバー時のツールチップ設定
                 tooltip: {
                     callbacks: {
                         label: (ctx) => ctx.dataset.label + ': ' + formatThousand(ctx.raw) + ' 千円'
@@ -543,7 +538,6 @@
             },
             scales: {
                 y: {
-                    // Y軸の目盛りも千円単位で表示
                     ticks: {
                         callback: (value) => formatThousand(value)
                     }
@@ -551,20 +545,18 @@
             }
         });
 
-        // 左側：売上合計グラフ
         if (charts.st) charts.st.destroy();
         charts.st = new Chart(document.getElementById('salesTotalChart').getContext('2d'), {
             type: 'bar',
-            plugins: [ChartDataLabels], // ★ラベル表示用のプラグインを有効化
+            plugins: [ChartDataLabels],
             data: { labels, datasets: [{ label: '売上', data: salesData, backgroundColor: '#3182ce' }] },
             options: opt('月別売上合計推移')
         });
 
-        // 右側：利益合計グラフ
         if (charts.pt) charts.pt.destroy();
         charts.pt = new Chart(document.getElementById('profitTotalChart').getContext('2d'), {
             type: 'bar',
-            plugins: [ChartDataLabels], // ★ラベル表示用のプラグインを有効化
+            plugins: [ChartDataLabels],
             data: { labels, datasets: [{ label: '利益', data: profitData, backgroundColor: '#48bb78' }] },
             options: opt('月別利益合計推移')
         });
@@ -620,7 +612,6 @@
 </script>
 </body>
 </html>
-
 
 
 
