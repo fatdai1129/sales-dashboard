@@ -98,7 +98,12 @@
     <div class="container">
         <div id="section-perf">
             <div class="card">
-                <div style="font-size: 1.6rem; font-weight: bold; color: #1a202c; margin-bottom: 15px;">2025年6月期</div>
+                <div style="margin-bottom: 15px;">
+                    <select id="year-select" style="font-size: 1.6rem; font-weight: bold; color: #1a202c; border: 2px solid #cbd5e0; border-radius: 8px; padding: 5px 15px; cursor: pointer; background-color: white; outline: none;" onchange="changeYear()">
+                        <option value="2025">2025年6月期</option>
+                    </select>
+                </div>
+                
                 <div style="display:flex; align-items:center; margin-bottom:20px;">
                     <h2 style="margin:0; border-left:5px solid #3182ce; padding-left:15px; margin-right: 25px;">拠点別実績・予算</h2>
                     <select id="region-select" style="padding:10px 20px; border-radius:6px; font-size:1.1rem; cursor:pointer;" onchange="renderPerf()">
@@ -184,14 +189,63 @@
 </div>
 
 <script>
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbzLPhdnyAo1D7SH-T3uv0EOb5aWekcfnFRtReGhsnkQ5_sLbi36fTc6o5eVYukeliVJIA/exec';
+    // =========================================================================
+    // ★ 公開日時のタイマー設定 (未来の日時なら2026年は表示されません)
+    const RELEASE_DATE = "2099/12/31 00:00:00"; 
+    // =========================================================================
+
+    const URL_2025 = 'https://script.google.com/macros/s/AKfycbzLPhdnyAo1D7SH-T3uv0EOb5aWekcfnFRtReGhsnkQ5_sLbi36fTc6o5eVYukeliVJIA/exec';
+    const URL_2026 = 'https://script.google.com/macros/s/AKfycby5av71J0t1w97mq4FHPNFyWq7Ekrw7P_bcPIOHHnEecGkTLgIleBvegyRAUrMVnjEv/exec';
+    
+    let currentGAS_URL = URL_2025;
     let perfMap = {}, salesRows = [], statusRows = [], charts = {};
 
     window.onload = () => {
-        const cP = localStorage.getItem('f_perf'), cS = localStorage.getItem('f_sales'), cSt = localStorage.getItem('f_status');
-        if(cP) perfMap = JSON.parse(cP); if(cS) salesRows = JSON.parse(cS); if(cSt) statusRows = JSON.parse(cSt);
+        checkReleaseTimer();
+        loadCache();
+        currentGAS_URL = document.getElementById('year-select').value === "2026" ? URL_2026 : URL_2025;
         fetchAll();
     };
+
+    function checkReleaseTimer() {
+        const now = new Date();
+        const releaseTime = new Date(RELEASE_DATE);
+        const yearSelect = document.getElementById('year-select');
+        
+        if (now >= releaseTime && yearSelect.options.length === 1) {
+            const option2026 = document.createElement('option');
+            option2026.value = "2026";
+            option2026.text = "2026年6月期";
+            yearSelect.appendChild(option2026);
+        }
+
+        const savedYear = localStorage.getItem('f_current_year');
+        if (savedYear === "2026" && now >= releaseTime) {
+            yearSelect.value = "2026";
+        } else {
+            yearSelect.value = "2025";
+        }
+    }
+
+    function loadCache() {
+        const year = document.getElementById('year-select').value;
+        const cP = localStorage.getItem('f_perf_' + year);
+        const cS = localStorage.getItem('f_sales_' + year);
+        const cSt = localStorage.getItem('f_status_' + year);
+        perfMap = cP ? JSON.parse(cP) : {};
+        salesRows = cS ? JSON.parse(cS) : [];
+        statusRows = cSt ? JSON.parse(cSt) : [];
+    }
+
+    function changeYear() {
+        const year = document.getElementById('year-select').value;
+        localStorage.setItem('f_current_year', year);
+        currentGAS_URL = year === "2026" ? URL_2026 : URL_2025;
+        document.getElementById('sync_status').innerText = '年度切替：データ取得中...';
+        loadCache();
+        renderAll();
+        fetchAll();
+    }
 
     function checkPW() {
         if (document.getElementById('pass_val').value === "freeeks2022") {
@@ -212,13 +266,13 @@
     async function fetchAll() {
         try {
             const [rP, rS] = await Promise.all([
-                fetch(`${GAS_URL}?p=freeeks2022&s=実績データ`),
-                fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表`)
+                fetch(`${currentGAS_URL}?p=freeeks2022&s=実績データ`),
+                fetch(`${currentGAS_URL}?p=freeeks2022&s=営業推進管理表`)
             ]);
-            let rSt = await fetch(`${GAS_URL}?p=freeeks2022&s=売込状況一覧`);
+            let rSt = await fetch(`${currentGAS_URL}?p=freeeks2022&s=売込状況一覧`);
             let stData = await rSt.json();
             if (!stData || stData.length <= 1 || stData.error) {
-                const rStFallback = await fetch(`${GAS_URL}?p=freeeks2022&s=売込状況`);
+                const rStFallback = await fetch(`${currentGAS_URL}?p=freeeks2022&s=売込状況`);
                 stData = await rStFallback.json();
             }
             const rowsP = await rP.json(); perfMap = {};
@@ -227,9 +281,12 @@
             }
             salesRows = await rS.json();
             statusRows = stData;
-            localStorage.setItem('f_perf', JSON.stringify(perfMap)); 
-            localStorage.setItem('f_sales', JSON.stringify(salesRows));
-            localStorage.setItem('f_status', JSON.stringify(statusRows));
+            
+            const year = document.getElementById('year-select').value;
+            localStorage.setItem('f_perf_' + year, JSON.stringify(perfMap)); 
+            localStorage.setItem('f_sales_' + year, JSON.stringify(salesRows));
+            localStorage.setItem('f_status_' + year, JSON.stringify(statusRows));
+            
             document.getElementById('sync_status').innerText = '最新データ同期完了'; 
             renderAll();
         } catch (e) { document.getElementById('sync_status').innerText = '同期失敗'; }
@@ -249,9 +306,6 @@
     };
     const safeArr = (arr) => (Array.isArray(arr) && arr.length >= 12) ? arr : new Array(12).fill(null);
 
-    /* =========================================
-       1. 実績管理
-    ========================================= */
     function getPerfVal(region, itemK, type) {
         if (type === '達成率') {
             const b = safeArr(getPerfVal(region, itemK, '予算')), a = safeArr(getPerfVal(region, itemK, '実績'));
@@ -326,9 +380,6 @@
         return Math.round(v).toLocaleString(); 
     }
 
-    /* =========================================
-       2. 営業推進管理表 (グラフ連動の追加)
-    ========================================= */
     function renderSales() {
         if (!salesRows || salesRows.length < 10) return;
         const region = document.getElementById('sales-region-select').value;
@@ -342,7 +393,6 @@
             if (i === 12 || i === 24) cls = "br-3px-sales";
             else if ((i >= 14 && i <= 20) || (i >= 26 && i <= 32)) cls = "bl-3px-sales br-3px-sales";
             else if (i === 22 || i === 34) cls = "bl-3px-sales";
-
             hHtml += `<th class="${cls}">${headers[i] || ""}</th>`;
             if (i === 22) hHtml += `<th rowspan="2" class="col-total bl-3px-sales">上期</th>`;
             if (i === 34) hHtml += `<th rowspan="2" class="col-total bl-3px-sales">下期</th><th rowspan="2" class="col-total bl-3px-sales">年間</th>`;
@@ -393,7 +443,6 @@
             if (idx === 0 || idx === 6) cls = "br-3px-sales";
             else if ((idx >= 1 && idx <= 4) || (idx >= 7 && idx <= 10)) cls = "bl-3px-sales br-3px-sales";
             else if (idx === 5 || idx === 11) cls = "bl-3px-sales";
-
             bHtml += `<td class="text-right ${cls}" style="font-weight:bold; ${b2T}">${t.sales.toLocaleString()}</td>`;
             if (idx < 6) gH1S += t.sales; else gH2S += t.sales;
             if (idx === 5) bHtml += `<td class="text-right col-total bl-3px-sales" style="${b2T}">${gH1S.toLocaleString()}</td>`;
@@ -407,7 +456,6 @@
             if (idx === 0 || idx === 6) cls = "br-3px-sales";
             else if ((idx >= 1 && idx <= 4) || (idx >= 7 && idx <= 10)) cls = "bl-3px-sales br-3px-sales";
             else if (idx === 5 || idx === 11) cls = "bl-3px-sales";
-
             bHtml += `<td class="text-right ${cls}" style="font-weight:bold; ${b2B}">${t.profit.toLocaleString()}</td>`;
             if (idx < 6) gH1P += t.profit; else gH2P += t.profit;
             if (idx === 5) bHtml += `<td class="text-right col-total bl-3px-sales" style="${b2B}">${gH1P.toLocaleString()}</td>`;
@@ -428,7 +476,6 @@
                 if (i === 12 || i === 24) cls = "br-3px-sales";
                 else if ((i >= 14 && i <= 20) || (i >= 26 && i <= 32)) cls = "bl-3px-sales br-3px-sales";
                 else if (i === 22 || i === 34) cls = "bl-3px-sales";
-
                 if (String(row[i]||"").trim()!=="") { ns=Math.floor(parseNum(row[i])); sStr=ns.toLocaleString(); if(i<=22)s1+=ns; else s2+=ns; }
                 bHtml += `<td class="text-right ${cls}" style="${b2T}">${sStr}</td>`;
                 if(i===22) bHtml += `<td class="text-right col-total bl-3px-sales" style="${b2T}">${s1.toLocaleString()}</td>`;
@@ -443,7 +490,6 @@
                 if (i === 12 || i === 24) cls = "br-3px-sales";
                 else if ((i >= 14 && i <= 20) || (i >= 26 && i <= 32)) cls = "bl-3px-sales br-3px-sales";
                 else if (i === 22 || i === 34) cls = "bl-3px-sales";
-
                 if (String(row[i]||"").trim()!=="") { let np=Math.floor(parseNum(row[i]))-Math.floor(parseNum(row[i+1])); pStr=np.toLocaleString(); if(i<=22)p1+=np; else p2+=np; }
                 bHtml += `<td class="text-right ${cls}" style="${b2B}">${pStr}</td>`;
                 if(i===22) bHtml += `<td class="text-right col-total bl-3px-sales" style="${b2B}">${p1.toLocaleString()}</td>`;
@@ -452,39 +498,20 @@
             bHtml += "</tr>";
         });
         body.innerHTML = bHtml;
-        
-        // --- 今回追加したグラフ描画関数の呼び出し ---
         updateSalesCharts(monthlyTotals);
     }
 
-    // --- 営業推進管理表用のグラフ描画関数 ---
     function updateSalesCharts(monthlyTotals) {
         const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
         const salesData = monthlyTotals.map(t => t.sales);
         const profitData = monthlyTotals.map(t => t.profit);
-
         const opt = (title) => ({ responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: title, font: { size: 18, weight: 'bold' } } } });
-
-        // 左側：売上合計グラフ
         if (charts.st) charts.st.destroy();
-        charts.st = new Chart(document.getElementById('salesTotalChart').getContext('2d'), {
-            type: 'bar',
-            data: { labels, datasets: [{ label: '売上', data: salesData, backgroundColor: '#3182ce' }] },
-            options: opt('月別売上合計推移')
-        });
-
-        // 右側：利益合計グラフ
+        charts.st = new Chart(document.getElementById('salesTotalChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ label: '売上', data: salesData, backgroundColor: '#3182ce' }] }, options: opt('月別売上合計推移') });
         if (charts.pt) charts.pt.destroy();
-        charts.pt = new Chart(document.getElementById('profitTotalChart').getContext('2d'), {
-            type: 'bar',
-            data: { labels, datasets: [{ label: '利益', data: profitData, backgroundColor: '#48bb78' }] },
-            options: opt('月別利益合計推移')
-        });
+        charts.pt = new Chart(document.getElementById('profitTotalChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ label: '利益', data: profitData, backgroundColor: '#48bb78' }] }, options: opt('月別利益合計推移') });
     }
 
-    /* =========================================
-       3. 売込状況一覧
-    ========================================= */
     function renderStatus() {
         const tbody = document.getElementById('status-body'), reg = document.getElementById('status-region-select').value; tbody.innerHTML = '';
         if (!statusRows || statusRows.length <= 1) { 
@@ -492,10 +519,8 @@
             document.getElementById('status-summary').innerText = "";
             return; 
         }
-        
         let updateDateVal = (statusRows[0] && statusRows[0][10]) ? statusRows[0][10] : "-";
         document.getElementById('status-update-date').innerText = "更新日: " + formatStatusDate(updateDateVal);
-        
         let filtered = statusRows.slice(1).filter(r => {
             const rowText = (String(r[2]||"") + String(r[1]||"")).trim(); 
             if (!rowText || rowText.includes("所属")) return false;
@@ -503,7 +528,6 @@
             const map = { "東海": ["東海", "静岡"], "首都圏": ["首都圏", "東京", "本社", "本店"], "東日本": ["東海", "静岡", "首都圏", "東京", "本社", "本店"], "西日本": ["西日本", "大阪"] };
             return (map[reg] || [reg]).some(t => rowText.includes(t));
         });
-
         let waitCount = 0, leaveCount = 0, activeCount = 0;
         filtered.forEach(r => {
             const st = String(r[3] || "").trim();
@@ -512,26 +536,16 @@
             else if (st === "稼働中") activeCount++;
         });
         document.getElementById('status-summary').innerText = `待機中：${waitCount}人　休業中：${leaveCount}人　稼働中：${activeCount}人`;
-        
         const order = { "待機中": 1, "休業中": 2, "休職中": 3, "稼働中": 4 };
         filtered.sort((a, b) => (order[String(a[3]).trim()]||99) - (order[String(b[3]).trim()]||99));
-        
         filtered.forEach((row, index) => {
             const tr = document.createElement('tr'); 
             const st = String(row[3] || "").trim(); 
-            if (st === "待機中") tr.classList.add('status-wait'); 
-            else if (st === "稼働中") tr.classList.add('status-active');
-            
+            if (st === "待機中") tr.classList.add('status-wait'); else if (st === "稼働中") tr.classList.add('status-active');
             let no = index + 1;
-            let aff = String(row[2]||""); 
-            let name = String(row[1]||""); 
-            let reason = String(row[4]||""); 
-            let date = formatStatusDate(row[5]); 
-            let period = String(row[6]||"0").replace("ヶ月", "").trim(); 
             let salary = row[7] ? (parseNum(row[7]) === 0 ? "-" : parseNum(row[7]).toLocaleString()) : "-"; 
             let waitCost = row[8] ? (parseNum(row[8]) === 0 ? "-" : parseNum(row[8]).toLocaleString()) : "-"; 
-            
-            tr.innerHTML = `<td class="text-center">${no}</td><td class="text-center">${aff}</td><td class="text-center" style="font-weight:bold;">${name}</td><td class="text-center">${st}</td><td class="text-center">${reason}</td><td class="text-center">${date}</td><td class="text-center">${period}ヶ月</td><td class="text-center">${salary}</td><td class="text-center">${waitCost}</td>`;
+            tr.innerHTML = `<td class="text-center">${no}</td><td class="text-center">${row[2]||""}</td><td class="text-center" style="font-weight:bold;">${row[1]||""}</td><td class="text-center">${st}</td><td class="text-center">${row[4]||""}</td><td class="text-center">${formatStatusDate(row[5])}</td><td class="text-center">${String(row[6]||"0").replace("ヶ月","").trim()}ヶ月</td><td class="text-center">${salary}</td><td class="text-center">${waitCost}</td>`;
             tbody.appendChild(tr);
         });
     }
