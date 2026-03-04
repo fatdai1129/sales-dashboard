@@ -100,7 +100,7 @@
             <div class="card">
                 <div style="margin-bottom: 15px;">
                     <select id="year-select" style="font-size: 1.6rem; font-weight: bold; color: #1a202c; border: 2px solid #cbd5e0; border-radius: 8px; padding: 5px 15px; cursor: pointer; background-color: white; outline: none;" onchange="changeYear()">
-                        <option value="2025">2025年6月期</option>
+                        <option value="2025">2025年06月期（第4期）</option>
                     </select>
                 </div>
                 
@@ -190,7 +190,7 @@
 
 <script>
     // =========================================================================
-    // ★ 公開日時のタイマー設定 (未来の日時なら2026年は表示されません)
+    // ★ 公開日時のタイマー設定（2026年4月1日に設定済み）
     const RELEASE_DATE = "2026/04/01 00:00:00"; 
     // =========================================================================
 
@@ -215,7 +215,8 @@
         if (now >= releaseTime && yearSelect.options.length === 1) {
             const option2026 = document.createElement('option');
             option2026.value = "2026";
-            option2026.text = "2026年6月期";
+            // ★ここを 2026年06月期（第5期） に変更しました
+            option2026.text = "2026年06月期（第5期）";
             yearSelect.appendChild(option2026);
         }
 
@@ -562,7 +563,6 @@
 </script>
 </body>
 </html>
-
 
 
 
