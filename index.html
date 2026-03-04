@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>営業管理システム</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <style>
         body { font-family: 'Hiragino Sans', sans-serif; background-color: #f0f4f8; padding: 0; margin: 0; color: #333; }
         #pw_screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a202c; display: flex; justify-content: center; align-items: center; z-index: 10000; }
@@ -215,7 +216,6 @@
         if (now >= releaseTime && yearSelect.options.length === 1) {
             const option2026 = document.createElement('option');
             option2026.value = "2026";
-            // ★ここを 2026年06月期（第5期） に変更しました
             option2026.text = "2026年06月期（第5期）";
             yearSelect.appendChild(option2026);
         }
@@ -499,18 +499,75 @@
             bHtml += "</tr>";
         });
         body.innerHTML = bHtml;
+        
+        // --- 今回改修したグラフ描画関数の呼び出し ---
         updateSalesCharts(monthlyTotals);
     }
 
+    // --- 【改修】営業推進管理表用のグラフ描画関数 ---
     function updateSalesCharts(monthlyTotals) {
         const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
         const salesData = monthlyTotals.map(t => t.sales);
         const profitData = monthlyTotals.map(t => t.profit);
-        const opt = (title) => ({ responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: title, font: { size: 18, weight: 'bold' } } } });
+
+        // 千円単位に変換してカンマ区切りにする関数
+        const formatThousand = (val) => Math.round((val || 0) / 1000).toLocaleString();
+
+        const opt = (title) => ({
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: { top: 30 } // グラフ上部にラベル用の余白を確保
+            },
+            plugins: {
+                title: { 
+                    display: true, 
+                    text: title + ' (単位: 千円)', 
+                    font: { size: 18, weight: 'bold' },
+                    padding: { bottom: 20 }
+                },
+                // 棒グラフの上の数字ラベル設定
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    formatter: (value) => formatThousand(value),
+                    font: { weight: 'bold', size: 12 },
+                    color: '#4a5568'
+                },
+                // マウスオーバー時のツールチップ設定
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ctx.dataset.label + ': ' + formatThousand(ctx.raw) + ' 千円'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    // Y軸の目盛りも千円単位で表示
+                    ticks: {
+                        callback: (value) => formatThousand(value)
+                    }
+                }
+            }
+        });
+
+        // 左側：売上合計グラフ
         if (charts.st) charts.st.destroy();
-        charts.st = new Chart(document.getElementById('salesTotalChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ label: '売上', data: salesData, backgroundColor: '#3182ce' }] }, options: opt('月別売上合計推移') });
+        charts.st = new Chart(document.getElementById('salesTotalChart').getContext('2d'), {
+            type: 'bar',
+            plugins: [ChartDataLabels], // ★ラベル表示用のプラグインを有効化
+            data: { labels, datasets: [{ label: '売上', data: salesData, backgroundColor: '#3182ce' }] },
+            options: opt('月別売上合計推移')
+        });
+
+        // 右側：利益合計グラフ
         if (charts.pt) charts.pt.destroy();
-        charts.pt = new Chart(document.getElementById('profitTotalChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ label: '利益', data: profitData, backgroundColor: '#48bb78' }] }, options: opt('月別利益合計推移') });
+        charts.pt = new Chart(document.getElementById('profitTotalChart').getContext('2d'), {
+            type: 'bar',
+            plugins: [ChartDataLabels], // ★ラベル表示用のプラグインを有効化
+            data: { labels, datasets: [{ label: '利益', data: profitData, backgroundColor: '#48bb78' }] },
+            options: opt('月別利益合計推移')
+        });
     }
 
     function renderStatus() {
@@ -563,6 +620,7 @@
 </script>
 </body>
 </html>
+
 
 
 
