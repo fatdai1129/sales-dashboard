@@ -164,7 +164,10 @@
                         <option value="全国">全国</option><option value="東海">東海</option><option value="首都圏">首都圏</option><option value="東日本">東日本</option><option value="西日本">西日本</option>
                     </select>
                     <span id="status-summary" style="margin-left: 30px; font-size: 1.2rem; font-weight: bold; color: #2d3748;"></span>
-                    <span id="status-update-date" style="margin-left: auto; font-size: 1.2rem; font-weight: bold; color: #4a5568;"></span>
+                    
+                    <span id="status-salary-total" style="margin-left: auto; margin-right: 30px; font-size: 1.2rem; font-weight: bold; color: #2d3748;"></span>
+                    
+                    <span id="status-update-date" style="font-size: 1.2rem; font-weight: bold; color: #4a5568;"></span>
                 </div>
                 <div style="overflow-x: auto;">
                     <table class="status-table">
@@ -512,50 +515,25 @@
         const opt = (title) => ({
             responsive: true,
             maintainAspectRatio: false,
-            layout: {
-                padding: { top: 30 }
-            },
+            layout: { padding: { top: 30 } },
             plugins: {
-                title: { 
-                    display: true, 
-                    text: title + ' (単位: 千円)', 
-                    font: { size: 18, weight: 'bold' },
-                    padding: { bottom: 20 }
-                },
-                datalabels: {
-                    anchor: 'end',
-                    align: 'top',
-                    formatter: (value) => formatThousand(value),
-                    font: { weight: 'bold', size: 12 },
-                    color: '#4a5568'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: (ctx) => ctx.dataset.label + ': ' + formatThousand(ctx.raw) + ' 千円'
-                    }
-                }
+                title: { display: true, text: title + ' (単位: 千円)', font: { size: 18, weight: 'bold' }, padding: { bottom: 20 } },
+                datalabels: { anchor: 'end', align: 'top', formatter: (value) => formatThousand(value), font: { weight: 'bold', size: 12 }, color: '#4a5568' },
+                tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + formatThousand(ctx.raw) + ' 千円' } }
             },
-            scales: {
-                y: {
-                    ticks: {
-                        callback: (value) => formatThousand(value)
-                    }
-                }
-            }
+            scales: { y: { ticks: { callback: (value) => formatThousand(value) } } }
         });
 
         if (charts.st) charts.st.destroy();
         charts.st = new Chart(document.getElementById('salesTotalChart').getContext('2d'), {
-            type: 'bar',
-            plugins: [ChartDataLabels],
+            type: 'bar', plugins: [ChartDataLabels],
             data: { labels, datasets: [{ label: '売上', data: salesData, backgroundColor: '#3182ce' }] },
             options: opt('月別売上合計推移')
         });
 
         if (charts.pt) charts.pt.destroy();
         charts.pt = new Chart(document.getElementById('profitTotalChart').getContext('2d'), {
-            type: 'bar',
-            plugins: [ChartDataLabels],
+            type: 'bar', plugins: [ChartDataLabels],
             data: { labels, datasets: [{ label: '利益', data: profitData, backgroundColor: '#48bb78' }] },
             options: opt('月別利益合計推移')
         });
@@ -566,6 +544,7 @@
         if (!statusRows || statusRows.length <= 1) { 
             tbody.innerHTML = '<tr><td colspan="9" class="text-center">なし</td></tr>'; 
             document.getElementById('status-summary').innerText = "";
+            document.getElementById('status-salary-total').innerText = ""; // 初期化
             return; 
         }
         let updateDateVal = (statusRows[0] && statusRows[0][10]) ? statusRows[0][10] : "-";
@@ -577,14 +556,25 @@
             const map = { "東海": ["東海", "静岡"], "首都圏": ["首都圏", "東京", "本社", "本店"], "東日本": ["東海", "静岡", "首都圏", "東京", "本社", "本店"], "西日本": ["西日本", "大阪"] };
             return (map[reg] || [reg]).some(t => rowText.includes(t));
         });
+        
         let waitCount = 0, leaveCount = 0, activeCount = 0;
+        let totalSalary = 0; // ★給料合計用の変数を追加
+        
         filtered.forEach(r => {
             const st = String(r[3] || "").trim();
             if (st === "待機中") waitCount++;
             else if (st === "休業中") leaveCount++;
             else if (st === "稼働中") activeCount++;
+            
+            // ★給料（7列目）を足し合わせる
+            totalSalary += parseNum(r[7]) || 0;
         });
+        
         document.getElementById('status-summary').innerText = `待機中：${waitCount}人　休業中：${leaveCount}人　稼働中：${activeCount}人`;
+        
+        // ★画面右上に給料合計を表示
+        document.getElementById('status-salary-total').innerText = `給料合計：${Math.floor(totalSalary).toLocaleString()} 円`;
+
         const order = { "待機中": 1, "休業中": 2, "休職中": 3, "稼働中": 4 };
         filtered.sort((a, b) => (order[String(a[3]).trim()]||99) - (order[String(b[3]).trim()]||99));
         filtered.forEach((row, index) => {
@@ -601,49 +591,30 @@
 
     function formatStatusDate(val) { if (!val || val === "-") return "-"; let d = typeof val === 'number' ? new Date((val - 25569) * 86400 * 1000) : new Date(val); return isNaN(d.getTime()) ? val : `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`; }
 
-    // --- ★今回改修したグラフ描画関数（実績管理用） ---
     function updateCharts(region) {
         const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
-        
-        // 表と同じくカンマ区切り、0やnullは非表示にするフォーマット
         const fmt = (v) => (v === null || v === 0 || v === undefined || isNaN(v)) ? '' : Math.round(v).toLocaleString();
-
         const commonPlugins = (title) => ({
             title: { display: true, text: title, font: { size: 18, weight: 'bold' }, padding: { bottom: 15 } },
             tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + fmt(ctx.raw) } }
         });
 
-        // 1. 売上推移グラフ
         if (charts.s) charts.s.destroy(); 
         charts.s = new Chart(document.getElementById('salesChart').getContext('2d'), { 
-            type: 'bar', 
-            plugins: [ChartDataLabels], // ★数値ラベルプラグイン追加
+            type: 'bar', plugins: [ChartDataLabels],
             data: { 
                 labels, 
                 datasets: [
-                    { 
-                        label: '実績', data: getPerfVal(region, '売上', '実績'), backgroundColor: '#3182ce',
-                        // 棒の中央に白字で表示
-                        datalabels: { align: 'center', anchor: 'center', color: 'white', font: { weight: 'bold', size: 11 } }
-                    },
-                    { 
-                        label: '予算', data: getPerfVal(region, '売上', '予算'), type: 'line', borderColor: '#e53e3e', backgroundColor: '#e53e3e',
-                        // 線の上に赤字で表示
-                        datalabels: { align: 'top', anchor: 'end', color: '#e53e3e', font: { weight: 'bold', size: 11 } }
-                    }
+                    { label: '実績', data: getPerfVal(region, '売上', '実績'), backgroundColor: '#3182ce', datalabels: { align: 'center', anchor: 'center', color: 'white', font: { weight: 'bold', size: 11 } } },
+                    { label: '予算', data: getPerfVal(region, '売上', '予算'), type: 'line', borderColor: '#e53e3e', backgroundColor: '#e53e3e', datalabels: { align: 'top', anchor: 'end', color: '#e53e3e', font: { weight: 'bold', size: 11 } } }
                 ]
             }, 
-            options: {
-                responsive: true, maintainAspectRatio: false, layout: { padding: { top: 30 } },
-                plugins: { ...commonPlugins('売上推移'), datalabels: { formatter: fmt } }
-            }
+            options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 30 } }, plugins: { ...commonPlugins('売上推移'), datalabels: { formatter: fmt } } }
         });
 
-        // 2. エンジニア内訳グラフ
         if (charts.e) charts.e.destroy(); 
         charts.e = new Chart(document.getElementById('engChart').getContext('2d'), { 
-            type: 'bar', 
-            plugins: [ChartDataLabels], // ★数値ラベルプラグイン追加
+            type: 'bar', plugins: [ChartDataLabels],
             data: { 
                 labels, 
                 datasets: [
@@ -654,39 +625,25 @@
             }, 
             options: {
                 responsive: true, maintainAspectRatio: false, layout: { padding: { top: 30 } },
-                plugins: {
-                    ...commonPlugins('エンジニア内訳'),
-                    // 積み上げグラフの中央に白字で表示
-                    datalabels: { anchor: 'center', align: 'center', formatter: fmt, font: { weight: 'bold', size: 11 }, color: 'white' }
-                },
+                plugins: { ...commonPlugins('エンジニア内訳'), datalabels: { anchor: 'center', align: 'center', formatter: fmt, font: { weight: 'bold', size: 11 }, color: 'white' } },
                 scales: { x: { stacked: true }, y: { stacked: true } }
             }
         });
 
-        // 3. 待機原価推移グラフ
         if (charts.w) charts.w.destroy(); 
         charts.w = new Chart(document.getElementById('waitCostChart').getContext('2d'), { 
-            type: 'line', 
-            plugins: [ChartDataLabels], // ★数値ラベルプラグイン追加
+            type: 'line', plugins: [ChartDataLabels],
             data: { 
                 labels, 
-                datasets: [
-                    { 
-                        label: '待機原価', data: getPerfVal(region, '待機原価', '実績'), borderColor: '#ed8936', fill: true, backgroundColor: 'rgba(237,137,54,0.1)',
-                        // 線の上にオレンジ字で表示
-                        datalabels: { align: 'top', anchor: 'end', color: '#ed8936', font: { weight: 'bold', size: 11 } }
-                    }
-                ]
+                datasets: [{ label: '待機原価', data: getPerfVal(region, '待機原価', '実績'), borderColor: '#ed8936', fill: true, backgroundColor: 'rgba(237,137,54,0.1)', datalabels: { align: 'top', anchor: 'end', color: '#ed8936', font: { weight: 'bold', size: 11 } } }]
             }, 
-            options: {
-                responsive: true, maintainAspectRatio: false, layout: { padding: { top: 30 } },
-                plugins: { ...commonPlugins('待機原価推移'), datalabels: { formatter: fmt } }
-            }
+            options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 30 } }, plugins: { ...commonPlugins('待機原価推移'), datalabels: { formatter: fmt } } }
         });
     }
 </script>
 </body>
 </html>
+
 
 
 
