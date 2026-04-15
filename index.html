@@ -97,17 +97,14 @@
     </div>
 
     <div class="container">
-        
-        <div style="margin-bottom: 20px; background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); display: flex; align-items: center;">
-            <label style="font-size: 1.2rem; font-weight: bold; margin-right: 15px; color: #2d3748;">対象期を選択：</label>
-            <select id="year-select" style="font-size: 1.4rem; font-weight: bold; color: #1a202c; border: 2px solid #cbd5e0; border-radius: 8px; padding: 8px 15px; cursor: pointer; background-color: white; outline: none; min-width: 280px;" onchange="changeYear()">
-                <option value="2025">2025年06月期（第4期）</option>
-                <option value="2026">2026年06月期（第5期）</option>
-            </select>
-        </div>
-
         <div id="section-perf">
             <div class="card">
+                <div style="margin-bottom: 15px;">
+                    <select id="year-select" style="font-size: 1.6rem; font-weight: bold; color: #1a202c; border: 2px solid #cbd5e0; border-radius: 8px; padding: 5px 15px; cursor: pointer; background-color: white; outline: none;" onchange="changeYear()">
+                        <option value="2025">2025年06月期（第4期）</option>
+                    </select>
+                </div>
+                
                 <div style="display:flex; align-items:center; margin-bottom:20px;">
                     <h2 style="margin:0; border-left:5px solid #3182ce; padding-left:15px; margin-right: 25px;">拠点別実績・予算</h2>
                     <select id="region-select" style="padding:10px 20px; border-radius:6px; font-size:1.1rem; cursor:pointer;" onchange="renderPerf()">
@@ -196,17 +193,43 @@
 </div>
 
 <script>
-    // ★ 変更1：最新のデプロイURL
-    const currentGAS_URL = 'https://script.google.com/macros/s/AKfycbwasiItVpq9f_AVTv5Pe1tpyTmXvRYGOnfbaL4Q_b1Jlq-e-pnE4khUP_dZS1cPGhXVjQ/exec';
+    // =========================================================================
+    // ★ 公開日時のタイマー設定（2026年4月1日に設定済み）
+    const RELEASE_DATE = "2026/04/01 00:00:00"; 
+    // =========================================================================
+
+    const URL_2025 = 'https://script.google.com/macros/s/AKfycbzLPhdnyAo1D7SH-T3uv0EOb5aWekcfnFRtReGhsnkQ5_sLbi36fTc6o5eVYukeliVJIA/exec';
+    const URL_2026 = 'https://script.google.com/macros/s/AKfycby5av71J0t1w97mq4FHPNFyWq7Ekrw7P_bcPIOHHnEecGkTLgIleBvegyRAUrMVnjEv/exec';
     
+    let currentGAS_URL = URL_2025;
     let perfMap = {}, salesRows = [], statusRows = [], charts = {};
 
     window.onload = () => {
-        const savedYear = localStorage.getItem('f_current_year');
-        if (savedYear) { document.getElementById('year-select').value = savedYear; }
+        checkReleaseTimer();
         loadCache();
+        currentGAS_URL = document.getElementById('year-select').value === "2026" ? URL_2026 : URL_2025;
         fetchAll();
     };
+
+    function checkReleaseTimer() {
+        const now = new Date();
+        const releaseTime = new Date(RELEASE_DATE);
+        const yearSelect = document.getElementById('year-select');
+        
+        if (now >= releaseTime && yearSelect.options.length === 1) {
+            const option2026 = document.createElement('option');
+            option2026.value = "2026";
+            option2026.text = "2026年06月期（第5期）";
+            yearSelect.appendChild(option2026);
+        }
+
+        const savedYear = localStorage.getItem('f_current_year');
+        if (savedYear === "2026" && now >= releaseTime) {
+            yearSelect.value = "2026";
+        } else {
+            yearSelect.value = "2025";
+        }
+    }
 
     function loadCache() {
         const year = document.getElementById('year-select').value;
@@ -221,15 +244,8 @@
     function changeYear() {
         const year = document.getElementById('year-select').value;
         localStorage.setItem('f_current_year', year);
+        currentGAS_URL = year === "2026" ? URL_2026 : URL_2025;
         document.getElementById('sync_status').innerText = '年度切替：データ取得中...';
-        
-        // 切り替え時に画面を一旦クリア
-        perfMap = {}; salesRows = []; statusRows = [];
-        document.getElementById('perf-body').innerHTML = '';
-        document.getElementById('sales-head').innerHTML = '';
-        document.getElementById('sales-body').innerHTML = '';
-        document.getElementById('status-body').innerHTML = '';
-
         loadCache();
         renderAll();
         fetchAll();
@@ -253,41 +269,24 @@
 
     async function fetchAll() {
         try {
-            const year = document.getElementById('year-select').value;
-            const tParam = `&t=${year}`; // ★ 変更2：GASに「年」を渡す
-
             const [rP, rS] = await Promise.all([
-                fetch(`${currentGAS_URL}?p=freeeks2022&s=実績データ${tParam}`),
-                fetch(`${currentGAS_URL}?p=freeeks2022&s=営業推進管理表${tParam}`)
+                fetch(`${currentGAS_URL}?p=freeeks2022&s=実績データ`),
+                fetch(`${currentGAS_URL}?p=freeeks2022&s=営業推進管理表`)
             ]);
-            let rSt = await fetch(`${currentGAS_URL}?p=freeeks2022&s=売込状況一覧${tParam}`);
+            let rSt = await fetch(`${currentGAS_URL}?p=freeeks2022&s=売込状況一覧`);
             let stData = await rSt.json();
             if (!stData || stData.length <= 1 || stData.error) {
-                const rStFallback = await fetch(`${currentGAS_URL}?p=freeeks2022&s=売込状況${tParam}`);
+                const rStFallback = await fetch(`${currentGAS_URL}?p=freeeks2022&s=売込状況`);
                 stData = await rStFallback.json();
             }
             const rowsP = await rP.json(); perfMap = {};
             if (rowsP && Array.isArray(rowsP)) {
                 rowsP.slice(1).forEach(r => { perfMap[`${r[0]}-${r[1]}-${r[2]}`] = r.slice(3, 15).map(v => (v===""||v==null)?null:parseFloat(String(v).replace(/,/g,''))||0); });
             }
-            
-            // =========================================================================
-            // ★ 変更3：ここが一番重要です！あなたのオリジナルPGを壊さないための措置
-            // 2026年版はシートの「行と列」がズレているため、ここで2025年と同じ形に整形します。
-            // これにより、下にある renderSales() などの描画処理は一切いじる必要がなくなります。
-            // =========================================================================
-            let rawSales = await rS.json();
-            if (year === "2026" && rawSales && rawSales.length > 10) {
-                // 1. 行ズレ補正：不要な9番目の行を削除し、ヘッダーを同じ位置に上げる
-                rawSales.splice(9, 1);
-                // 2. 列ズレ補正：E列（生年月日:インデックス4）を削除し、列を左に詰める
-                rawSales.forEach(row => {
-                    if (row.length > 4) row.splice(4, 1);
-                });
-            }
-            salesRows = rawSales;
+            salesRows = await rS.json();
             statusRows = stData;
             
+            const year = document.getElementById('year-select').value;
             localStorage.setItem('f_perf_' + year, JSON.stringify(perfMap)); 
             localStorage.setItem('f_sales_' + year, JSON.stringify(salesRows));
             localStorage.setItem('f_status_' + year, JSON.stringify(statusRows));
@@ -302,11 +301,6 @@
         try { if (document.getElementById('section-sales').style.display !== 'none') renderSales(); } catch(e){}
         try { if (document.getElementById('section-status').style.display !== 'none') renderStatus(); } catch(e){}
     }
-
-    // -------------------------------------------------------------------------
-    // これ以降は、あなたが最初に作られたオリジナルコードを1文字も変えずに復元しています。
-    // （※月のラベル部分のバグ修正だけ反映しています）
-    // -------------------------------------------------------------------------
 
     const parseNum = (v) => {
         if (typeof v === 'number') return v;
@@ -398,13 +392,12 @@
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
         
         let hHtml = "<tr><th rowspan='2' class='col-sales-aff'>所属</th><th rowspan='2' class='col-sales-name'>氏名<br>No</th><th rowspan='2' class='col-sales-info'>給料<br>コスト</th>";
-        const monthLabels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
         for (let i = 12; i < 36; i += 2) {
             let cls = "";
             if (i === 12 || i === 24) cls = "br-3px-sales";
             else if ((i >= 14 && i <= 20) || (i >= 26 && i <= 32)) cls = "bl-3px-sales br-3px-sales";
             else if (i === 22 || i === 34) cls = "bl-3px-sales";
-            hHtml += `<th class="${cls}">${monthLabels[(i - 12) / 2]}</th>`;
+            hHtml += `<th class="${cls}">${headers[i] || ""}</th>`;
             if (i === 22) hHtml += `<th rowspan="2" class="col-total bl-3px-sales">上期</th>`;
             if (i === 34) hHtml += `<th rowspan="2" class="col-total bl-3px-sales">下期</th><th rowspan="2" class="col-total bl-3px-sales">年間</th>`;
         }
