@@ -97,14 +97,16 @@
     </div>
 
     <div class="container">
+        
+        <div style="margin-bottom: 20px; background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); display: flex; align-items: center;">
+            <label style="font-size: 1.2rem; font-weight: bold; margin-right: 15px; color: #2d3748;">対象期を選択：</label>
+            <select id="year-select" style="font-size: 1.4rem; font-weight: bold; color: #1a202c; border: 2px solid #cbd5e0; border-radius: 8px; padding: 8px 15px; cursor: pointer; background-color: white; outline: none; min-width: 280px;" onchange="changeYear()">
+                <option value="2025">2025年06月期（第4期）</option>
+            </select>
+        </div>
+
         <div id="section-perf">
             <div class="card">
-                <div style="margin-bottom: 15px;">
-                    <select id="year-select" style="font-size: 1.6rem; font-weight: bold; color: #1a202c; border: 2px solid #cbd5e0; border-radius: 8px; padding: 5px 15px; cursor: pointer; background-color: white; outline: none;" onchange="changeYear()">
-                        <option value="2025">2025年06月期（第4期）</option>
-                    </select>
-                </div>
-                
                 <div style="display:flex; align-items:center; margin-bottom:20px;">
                     <h2 style="margin:0; border-left:5px solid #3182ce; padding-left:15px; margin-right: 25px;">拠点別実績・予算</h2>
                     <select id="region-select" style="padding:10px 20px; border-radius:6px; font-size:1.1rem; cursor:pointer;" onchange="renderPerf()">
@@ -194,7 +196,7 @@
 
 <script>
     // =========================================================================
-    // ★ 公開日時のタイマー設定（2026年4月1日に設定済み）
+    // ★ 公開日時のタイマー設定
     const RELEASE_DATE = "2026/04/01 00:00:00"; 
     // =========================================================================
 
@@ -269,14 +271,18 @@
 
     async function fetchAll() {
         try {
+            // ★ WebからGASへ送るリクエストに「&t=年」のパラメータを追加
+            const year = document.getElementById('year-select').value;
+            const tParam = `&t=${year}`;
+
             const [rP, rS] = await Promise.all([
-                fetch(`${currentGAS_URL}?p=freeeks2022&s=実績データ`),
-                fetch(`${currentGAS_URL}?p=freeeks2022&s=営業推進管理表`)
+                fetch(`${currentGAS_URL}?p=freeeks2022&s=実績データ${tParam}`),
+                fetch(`${currentGAS_URL}?p=freeeks2022&s=営業推進管理表${tParam}`)
             ]);
-            let rSt = await fetch(`${currentGAS_URL}?p=freeeks2022&s=売込状況一覧`);
+            let rSt = await fetch(`${currentGAS_URL}?p=freeeks2022&s=売込状況一覧${tParam}`);
             let stData = await rSt.json();
             if (!stData || stData.length <= 1 || stData.error) {
-                const rStFallback = await fetch(`${currentGAS_URL}?p=freeeks2022&s=売込状況`);
+                const rStFallback = await fetch(`${currentGAS_URL}?p=freeeks2022&s=売込状況${tParam}`);
                 stData = await rStFallback.json();
             }
             const rowsP = await rP.json(); perfMap = {};
@@ -286,7 +292,6 @@
             salesRows = await rS.json();
             statusRows = stData;
             
-            const year = document.getElementById('year-select').value;
             localStorage.setItem('f_perf_' + year, JSON.stringify(perfMap)); 
             localStorage.setItem('f_sales_' + year, JSON.stringify(salesRows));
             localStorage.setItem('f_status_' + year, JSON.stringify(statusRows));
@@ -544,7 +549,7 @@
         if (!statusRows || statusRows.length <= 1) { 
             tbody.innerHTML = '<tr><td colspan="9" class="text-center">なし</td></tr>'; 
             document.getElementById('status-summary').innerText = "";
-            document.getElementById('status-salary-total').innerText = ""; // 初期化
+            document.getElementById('status-salary-total').innerText = ""; 
             return; 
         }
         let updateDateVal = (statusRows[0] && statusRows[0][10]) ? statusRows[0][10] : "-";
@@ -558,7 +563,7 @@
         });
         
         let waitCount = 0, leaveCount = 0, activeCount = 0;
-        let totalSalary = 0; // ★給料合計用の変数を追加
+        let totalSalary = 0; 
         
         filtered.forEach(r => {
             const st = String(r[3] || "").trim();
@@ -566,13 +571,10 @@
             else if (st === "休業中") leaveCount++;
             else if (st === "稼働中") activeCount++;
             
-            // ★給料（7列目）を足し合わせる
             totalSalary += parseNum(r[7]) || 0;
         });
         
         document.getElementById('status-summary').innerText = `待機中：${waitCount}人　休業中：${leaveCount}人　稼働中：${activeCount}人`;
-        
-        // ★画面右上に給料合計を表示
         document.getElementById('status-salary-total').innerText = `給料合計：${Math.floor(totalSalary).toLocaleString()} 円`;
 
         const order = { "待機中": 1, "休業中": 2, "休職中": 3, "稼働中": 4 };
@@ -643,7 +645,3 @@
 </script>
 </body>
 </html>
-
-
-
-
