@@ -19,8 +19,8 @@
         #sync_status { font-size: 12px; color: #cbd5e0; margin-left: auto; padding-right: 20px; }
         .container { padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
-        table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: 100%; }
-        th, td { border: 4px solid black; padding: 12px 6px; }
+        table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.05rem; width: 100%; }
+        th, td { border: 4px solid black; padding: 10px 5px; }
         th { background: #edf2f7; font-weight: bold; }
         .text-right { text-align: right !important; }
         .text-center { text-align: center !important; }
@@ -28,12 +28,10 @@
         .col-total { background: #fffaf0 !important; font-weight: bold; }
         .cat-header { background: #ebf8ff !important; font-weight: bold; text-align: center; position: sticky; left: 0; z-index: 30; border-right: 4px solid black !important; }
         .sticky-left-2 { position: sticky; left: 220px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
-        .sales-raw-table { width: 100%; min-width: 1600px; table-layout: fixed; font-size: 0.9rem; }
-        .status-table { min-width: 1600px; table-layout: fixed; font-size: 1.25rem; }
+        .sales-raw-table { width: 100%; min-width: 1600px; table-layout: fixed; font-size: 0.85rem; }
+        .status-table { min-width: 1600px; table-layout: fixed; font-size: 1.1rem; }
         .status-wait { color: #c53030 !important; font-weight: bold; background-color: #fff5f5 !important; }
         .status-active { color: #2b6cb0 !important; font-weight: bold; background-color: #ffffe0 !important; }
-        .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
-        .chart-box { background: white; padding: 20px; border-radius: 12px; height: 400px; }
     </style>
 </head>
 <body>
@@ -93,7 +91,7 @@
 </div>
 <script>
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbwasiItVpq9f_AVTv5Pe1tpyTmXvRYGOnfbaL4Q_b1Jlq-e-pnE4khUP_dZS1cPGhXVjQ/exec';
-    let perfMap = {}, salesRows = [], statusRows = [], charts = {};
+    let perfRows = [], salesRows = [], statusRows = [], charts = {};
     const months = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
 
     function checkPW() {
@@ -115,16 +113,14 @@
     async function fetchAll() {
         const year = document.getElementById('year-select').value;
         const sync = document.getElementById('sync_status');
-        sync.innerText = '同期中...';
+        sync.innerText = 'データ取得中...';
         try {
             const [rP, rS, rSt] = await Promise.all([
                 fetch(`${GAS_URL}?p=freeeks2022&s=実績データ&t=${year}`),
                 fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表&t=${year}`),
                 fetch(`${GAS_URL}?p=freeeks2022&s=売込状況一覧&t=${year}`)
             ]);
-            perfMap = {};
-            const rowsP = await rP.json();
-            if (Array.isArray(rowsP)) rowsP.slice(1).forEach(r => { perfMap[`${r[0]}-${r[1]}-${r[2]}`] = r.slice(3, 15).map(v => parseFloat(String(v).replace(/,/g,''))||0); });
+            perfRows = await rP.json();
             salesRows = await rS.json();
             statusRows = await rSt.json();
             sync.innerText = '最新データ同期完了';
@@ -135,9 +131,9 @@
     function changeYear() { fetchAll(); }
 
     function renderAll() {
-        if (document.getElementById('section-perf').style.display !== 'none') renderPerf();
-        if (document.getElementById('section-sales').style.display !== 'none') renderSales();
-        if (document.getElementById('section-status').style.display !== 'none') renderStatus();
+        renderPerf();
+        renderSales();
+        renderStatus();
     }
 
     function renderPerf() {
@@ -145,11 +141,15 @@
         const tbody = document.getElementById('perf-body');
         tbody.innerHTML = '';
         document.getElementById('perf-months').innerHTML = months.map(m => `<th>${m}</th>`).join('') + '<th class="col-total">計</th>';
-        const items = [{n:'売上',k:'売上',t:['予算','実績']},{n:'稼働原価',k:'稼働原価',t:['予算','実績']},{n:'A利益',k:'A利益',t:['予算','実績']}];
+        
+        if (!Array.isArray(perfRows)) return;
+        const items = ['売上','稼働原価','A利益'];
         items.forEach(item => {
-            item.t.forEach((type, idx) => {
-                const data = perfMap[`${reg}-${item.k}-${type}`] || new Array(12).fill(0);
-                let row = `<tr>${idx===0?`<td rowspan="${item.t.length}" class="cat-header">${item.n}</td>`:''}<td class="sticky-left-2">${type}</td>`;
+            ['予算','実績'].forEach((type, idx) => {
+                let rowData = perfRows.find(r => String(r[0]).includes(reg) && String(r[1]) === item && String(r[2]) === type);
+                if (!rowData && reg === "全国") rowData = perfRows.find(r => String(r[0]).includes("合計") && String(r[1]) === item && String(r[2]) === type);
+                const data = rowData ? rowData.slice(3, 15).map(v => parseFloat(String(v).replace(/,/g,''))||0) : new Array(12).fill(0);
+                let row = `<tr>${idx===0?`<td rowspan="2" class="cat-header">${item}</td>`:''}<td class="sticky-left-2">${type}</td>`;
                 data.forEach(v => row += `<td class="text-right">${v.toLocaleString()}</td>`);
                 row += `<td class="text-right col-total">${data.reduce((a,b)=>a+b,0).toLocaleString()}</td></tr>`;
                 tbody.innerHTML += row;
@@ -163,12 +163,13 @@
         const reg = document.getElementById('sales-region-select').value;
         const search = document.getElementById('sales-search').value.toLowerCase();
         
-        // 年度による列補正：2026年は「生年月日」列が挿入されたため1列ずれる
+        // 2025年(第4期) vs 2026年(第5期) の列構成の違いを完全に吸収
         const is2026 = (year === "2026");
-        const idxNo   = is2026 ? 2 : 3;
-        const idxName = is2026 ? 3 : 4;
-        const idxSal  = is2026 ? 11 : 10;
-        const idxDataStart = is2026 ? 13 : 12;
+        const idxNo    = is2026 ? 2  : 3;  // 26年:C列(2), 25年:D列(3)
+        const idxName  = is2026 ? 3  : 4;  // 26年:D列(3), 25年:E列(4)
+        const idxSal   = is2026 ? 11 : 10; // 26年:L列(11), 25年:K列(10)
+        const idxCost  = is2026 ? 12 : 11; // 26年:M列(12), 25年:L列(11)
+        const idxStart = is2026 ? 13 : 12; // 26年:N列(13), 25年:M列(12)
 
         const head = document.getElementById('sales-head');
         head.innerHTML = `<tr><th rowspan="2">所属</th><th rowspan="2">氏名/No</th><th rowspan="2">給料</th>${months.map(m=>`<th>${m}</th>`).join('')}<th>年間</th></tr><tr>${months.map(()=>`<th>売/利</th>`).join('')}<th>計</th></tr>`;
@@ -177,18 +178,21 @@
         body.innerHTML = '';
         salesRows.slice(11).forEach(row => {
             const name = String(row[idxName] || "");
-            if (!name || name === "0" || name === "技術者名" || (search && !name.toLowerCase().includes(search))) return;
+            if (!name || name === "0" || name.includes("技術者名") || (search && !name.toLowerCase().includes(search))) return;
             if (reg !== "全国" && !String(row[1]).includes(reg)) return;
 
-            let s1=0;
-            let rowHtml = `<tr><td rowspan="2">${row[1]||""}</td><td>${name}</td><td class="text-right">${(parseFloat(row[idxSal])||0).toLocaleString()}</td>`;
+            let s1=0, p1=0;
+            let rowHtml = `<tr><td rowspan="2">${row[1]||""}</td><td>${name}</td><td class="text-right">${(parseFloat(String(row[idxSal]).replace(/,/g,''))||0).toLocaleString()}</td>`;
+            let rowHtml2 = `<tr><td>${row[idxNo]||""}</td><td class="text-right">${(parseFloat(String(row[idxCost]).replace(/,/g,''))||0).toLocaleString()}</td>`;
+            
             for(let i=0; i<12; i++) {
-                let v = parseFloat(row[idxDataStart + i*2]) || 0;
-                s1 += v;
-                rowHtml += `<td class="text-right">${v.toLocaleString()}</td>`;
+                let sVal = parseFloat(String(row[idxStart + i*2]||0).replace(/,/g,'')) || 0;
+                let cVal = parseFloat(String(row[idxStart + i*2 + 1]||0).replace(/,/g,'')) || 0;
+                s1 += sVal; p1 += (sVal - cVal);
+                rowHtml += `<td class="text-right">${sVal.toLocaleString()}</td>`;
+                rowHtml2 += `<td class="text-right">${(sVal - cVal).toLocaleString()}</td>`;
             }
-            body.innerHTML += rowHtml + `<td class="text-right">${s1.toLocaleString()}</td></tr>`;
-            body.innerHTML += `<tr><td>${row[idxNo]||""}</td><td class="text-right">-</td>` + months.map(()=>`<td class="text-right">-</td>`).join('') + `<td class="text-right">-</td></tr>`;
+            body.innerHTML += rowHtml + `<td class="text-right col-total">${s1.toLocaleString()}</td></tr>` + rowHtml2 + `<td class="text-right col-total">${p1.toLocaleString()}</td></tr>`;
         });
     }
 
@@ -206,7 +210,7 @@
             if (isWait) wait++;
             let s = parseFloat(String(row[7]||"0").replace(/,/g,'')) || 0;
             totalSal += s;
-            tbody.innerHTML += `<tr class="${isWait?'status-wait':''}"><td>${i+1}</td><td>${rowRegion}</td><td>${row[1]||""}</td><td>${status}</td><td>${row[4]||""}</td><td>${row[5]||""}</td><td>${row[6]||""}</td><td class="text-right">${s.toLocaleString()}</td><td class="text-right">${row[8]||""}</td></tr>`;
+            tbody.innerHTML += `<tr class="${isWait?'status-wait':''}"><td>${i+1}</td><td>${rowRegion}</td><td style="font-weight:bold;">${row[1]||""}</td><td>${status}</td><td>${row[4]||""}</td><td>${row[5]||""}</td><td>${row[6]||""}</td><td class="text-right">${s.toLocaleString()}</td><td class="text-right">${row[8]||""}</td></tr>`;
         });
         document.getElementById('status-summary').innerText = `待機中: ${wait}名`;
         document.getElementById('status-salary-total').innerText = `給料合計: ${totalSal.toLocaleString()}円`;
