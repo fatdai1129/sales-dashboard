@@ -1,97 +1,216 @@
-// =========================================================================
-// 営業管理システム 大元プログラム (コード.gs) - 完全版
-// =========================================================================
+<!DOCTYPE html>
+<html lang="ja" class="notranslate">
+<head>
+    <meta charset="UTF-8">
+    <title>営業管理システム</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <style>
+        body { font-family: 'Hiragino Sans', sans-serif; background-color: #f0f4f8; padding: 0; margin: 0; color: #333; }
+        #pw_screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a202c; display: flex; justify-content: center; align-items: center; z-index: 10000; }
+        #pw_box { background: white; padding: 80px 60px; border-radius: 16px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.5); transform: scale(0.84); }
+        #pass_val { padding: 15px; width: 280px; font-size: 1.2rem; text-align: center; border: 2px solid #cbd5e0; border-radius: 8px; }
+        #pw_box h2 { font-size: 2rem; margin-bottom: 30px; }
+        #pw_box button { padding: 15px 50px; font-size: 1.2rem; border-radius: 8px; background:#3182ce; color:white; border:none; cursor:pointer; font-weight:bold; }
+        #main_content { display: none; }
+        .nav-bar { background: #2d3748; display: flex; align-items: center; position: sticky; top: 0; z-index: 1000; height: 60px; }
+        .nav-item { padding: 0 25px; height: 60px; line-height: 60px; color: #a0aec0; cursor: pointer; font-weight: bold; border-bottom: 3px solid transparent; }
+        .nav-item.active { color: white; border-bottom: 3px solid #3182ce; background: rgba(255,255,255,0.05); }
+        #sync_status { font-size: 12px; color: #cbd5e0; margin-left: auto; padding-right: 20px; }
+        .container { padding: 20px; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 25px; }
+        table { border-collapse: collapse; background: white; border: 4px solid black !important; font-size: 1.1rem; width: 100%; }
+        th, td { border: 4px solid black; padding: 12px 6px; }
+        th { background: #edf2f7; font-weight: bold; }
+        .text-right { text-align: right !important; }
+        .text-center { text-align: center !important; }
+        .perf-table { min-width: 1800px; table-layout: fixed; }
+        .col-total { background: #fffaf0 !important; font-weight: bold; }
+        .cat-header { background: #ebf8ff !important; font-weight: bold; text-align: center; position: sticky; left: 0; z-index: 30; border-right: 4px solid black !important; }
+        .sticky-left-2 { position: sticky; left: 220px; z-index: 30; background: white !important; border-left: 4px solid black !important; border-right: 4px solid black !important; }
+        .sales-raw-table { width: 100%; min-width: 1600px; table-layout: fixed; font-size: 0.9rem; }
+        .status-table { min-width: 1600px; table-layout: fixed; font-size: 1.25rem; }
+        .status-wait { color: #c53030 !important; font-weight: bold; background-color: #fff5f5 !important; }
+        .status-active { color: #2b6cb0 !important; font-weight: bold; background-color: #ffffe0 !important; }
+        .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
+        .chart-box { background: white; padding: 20px; border-radius: 12px; height: 400px; }
+    </style>
+</head>
+<body>
+<div id="pw_screen"><div id="pw_box"><h2>営業管理システム</h2><input type="password" id="pass_val" onkeydown="if(event.keyCode==13)checkPW()"><br><br><button onclick="checkPW()">ログイン</button></div></div>
+<div id="main_content">
+    <div class="nav-bar">
+        <div class="nav-item active" id="tab-perf" onclick="switchTab('perf')">実績管理</div>
+        <div class="nav-item" id="tab-sales" onclick="switchTab('sales')">営業推進管理表</div>
+        <div class="nav-item" id="tab-status" onclick="switchTab('status')">売込状況一覧</div>
+        <div id="sync_status">データ同期中...</div>
+    </div>
+    <div class="container">
+        <div style="margin-bottom: 20px; background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); display: flex; align-items: center;">
+            <label style="font-size: 1.2rem; font-weight: bold; margin-right: 15px;">対象期を選択：</label>
+            <select id="year-select" style="font-size: 1.4rem; font-weight: bold; padding: 8px 15px; border-radius: 8px; cursor: pointer;" onchange="changeYear()">
+                <option value="2025">2025年06月期（第4期）</option>
+                <option value="2026">2026年06月期（第5期）</option>
+            </select>
+        </div>
+        <div id="section-perf">
+            <div class="card">
+                <div style="display:flex; align-items:center; margin-bottom:20px;">
+                    <h2 style="margin:0; border-left:5px solid #3182ce; padding-left:15px;">拠点別実績・予算</h2>
+                    <select id="region-select" style="margin-left:25px; padding:10px;" onchange="renderPerf()">
+                        <option value="全国">全国</option><option value="東海">東海</option><option value="首都圏">首都圏</option><option value="東日本">東日本</option><option value="西日本">西日本</option>
+                    </select>
+                </div>
+                <table class="perf-table"><thead><tr><th rowspan="2" class="cat-header">項目</th><th rowspan="2" class="sticky-left-2">区分</th><th colspan="6">上期</th><th class="col-total">計</th><th colspan="6">下期</th><th class="col-total">計</th><th class="col-total">年間</th></tr><tr id="perf-months"></tr></thead><tbody id="perf-body"></tbody></table>
+            </div>
+            <div class="charts-container"><div class="chart-box"><canvas id="salesChart"></canvas></div><div class="chart-box"><canvas id="engChart"></canvas></div><div class="chart-box"><canvas id="waitCostChart"></canvas></div></div>
+        </div>
+        <div id="section-sales" style="display:none;">
+            <div class="card">
+                <div style="display:flex; align-items:center; margin-bottom:20px;">
+                    <h2 style="margin:0; border-left:5px solid #48bb78; padding-left:15px;">営業推進管理表</h2>
+                    <select id="sales-region-select" style="margin-left:25px; padding:10px;" onchange="renderSales()">
+                        <option value="全国">全国</option><option value="東海">東海</option><option value="首都圏">首都圏</option><option value="東日本">東日本</option><option value="西日本">西日本</option>
+                    </select>
+                    <input type="text" id="sales-search" placeholder="氏名検索..." style="margin-left:auto; padding:10px; width:300px;" oninput="renderSales()">
+                </div>
+                <table class="sales-raw-table"><thead id="sales-head"></thead><tbody id="sales-body"></tbody></table>
+            </div>
+        </div>
+        <div id="section-status" style="display:none;">
+            <div class="card">
+                <div style="display:flex; align-items:center; margin-bottom:20px;">
+                    <h2 style="margin:0; border-left:6px solid #ed8936; padding-left:20px;">売込状況一覧</h2>
+                    <select id="status-region-select" style="margin-left:30px; padding:12px;" onchange="renderStatus()">
+                        <option value="全国">全国</option><option value="東海">東海</option><option value="首都圏">首都圏</option><option value="東日本">東日本</option><option value="西日本">西日本</option>
+                    </select>
+                    <span id="status-summary" style="margin-left:30px; font-weight:bold;"></span>
+                    <span id="status-salary-total" style="margin-left:auto; font-weight:bold;"></span>
+                </div>
+                <table class="status-table"><thead><tr><th>No</th><th>所属</th><th>従業員名</th><th>稼働状況</th><th>退場理由</th><th>参画可能日</th><th>未参画期間</th><th>給料</th><th>待機費用</th></tr></thead><tbody id="status-body"></tbody></table>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    // ★ ご提示いただいた最新のデプロイURLです
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwasiItVpq9f_AVTv5Pe1tpyTmXvRYGOnfbaL4Q_b1Jlq-e-pnE4khUP_dZS1cPGhXVjQ/exec';
+    let perfMap = {}, salesRows = [], statusRows = [], charts = {};
+    const months = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
 
-const ID_2025 = '1LRVwKu-YXWJvRgSophqF0V1ORS5_dcjztSvfz95Qe_E'; 
-const ID_2026 = '1MbErlR3FJShUkWDPujAiSju2tmH8BljNRzoz8x2q8ps'; 
-const AUTH_PASSWORD = 'freeeks2022';
-
-function doGet(e) {
-  const pass = e.parameter.p;
-  const sheetName = e.parameter.s || '実績データ'; 
-  const term = e.parameter.t || ''; 
-
-  if (pass !== AUTH_PASSWORD) {
-    return ContentService.createTextOutput(JSON.stringify({error: '認証失敗'}))
-                         .setMimeType(ContentService.MimeType.JSON);
-  }
-
-  // 選択された「期」に基づいて接続先を切り替え
-  let targetId = (term.includes('2026') || term.includes('第5期')) ? ID_2026 : ID_2025;
-
-  try {
-    const ss = SpreadsheetApp.openById(targetId);
-    let sheet = ss.getSheetByName(sheetName);
-
-    if (!sheet && sheetName.includes('売込状況')) {
-      sheet = ss.getSheetByName('売込状況一覧') || ss.getSheetByName('売込状況');
+    function checkPW() {
+        if (document.getElementById('pass_val').value === "freeeks2022") {
+            document.getElementById('pw_screen').style.display = 'none';
+            document.getElementById('main_content').style.display = 'block';
+            fetchAll();
+        } else { document.getElementById('err_msg').style.display = 'block'; }
     }
 
-    if (!sheet) {
-      return ContentService.createTextOutput(JSON.stringify({error: 'シートなし'}))
-                           .setMimeType(ContentService.MimeType.JSON);
+    function switchTab(tab) {
+        ['perf', 'sales', 'status'].forEach(t => {
+            document.getElementById(`section-${t}`).style.display = (t === tab) ? 'block' : 'none';
+            document.getElementById(`tab-${t}`).className = 'nav-item' + (t === tab ? ' active' : '');
+        });
+        renderAll();
     }
 
-    const values = sheet.getDataRange().getValues();
-    return ContentService.createTextOutput(JSON.stringify(values))
-                         .setMimeType(ContentService.MimeType.JSON);
-    
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({error: '通信失敗'}))
-                         .setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-function onOpen() {
-  SpreadsheetApp.getUi().createMenu('⚙️システム連携').addItem('PDFから実績データを自動入力', 'importPDFtoSheet').addToUi();
-}
-
-function importPDFtoSheet() {
-  const FOLDER_ID = '1HC4miyMDWYb9C82fnBKuLOMR3Rxkj1fy';
-  const SHEET_NAME = '実績データ'; 
-  const folder = DriveApp.getFolderById(FOLDER_ID);
-  const files = folder.getFilesByType(MimeType.PDF);
-  if (!files.hasNext()) { Browser.msgBox('PDFなし'); return; }
-  const file = files.next();
-  const docFile = Drive.Files.create({ name: 'temp', mimeType: MimeType.GOOGLE_DOCS }, file.getBlob());
-  const doc = DocumentApp.openById(docFile.id);
-  const text = doc.getBody().getText();
-  DriveApp.getFileById(docFile.id).setTrashed(true); 
-  const monthMatch = text.match(/202\d年(\d{1,2})月/);
-  if (!monthMatch) { Browser.msgBox('月不明'); return; }
-  const targetMonth = monthMatch[1] + '月';
-  let cleanText = text.replace(/首都圈/g, '首都圏').replace(/\b(it)\b/gi, '計').replace(/[:：;；|｜]/g, ' ').replace(/▲\s*/g, '-');
-  let tokens = cleanText.split(/\s+/);
-  let matches = [];
-  let regionOrder = ['西日本', '東海', '首都圏', '計'];
-  for (let i = 0; i < tokens.length; i++) {
-    if (regionOrder.includes(tokens[i])) {
-      let nums = [];
-      for (let j = i + 1; j < i + 15 && j < tokens.length; j++) {
-        let cleanT = tokens[j].replace(/,/g, '').replace(/▲/, '-');
-        if (/^-?\d+$/.test(cleanT)) nums.push(parseInt(cleanT, 10));
-        if (nums.length === 2) break; 
-      }
-      if (nums.length === 2) matches.push({ region: tokens[i] === '計' ? '全国' : tokens[i], val: nums[1] });
+    async function fetchAll() {
+        const year = document.getElementById('year-select').value;
+        const sync = document.getElementById('sync_status');
+        sync.innerText = '同期中...';
+        try {
+            const [rP, rS, rSt] = await Promise.all([
+                fetch(`${GAS_URL}?p=freeeks2022&s=実績データ&t=${year}`),
+                fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表&t=${year}`),
+                fetch(`${GAS_URL}?p=freeeks2022&s=売込状況一覧&t=${year}`)
+            ]);
+            perfMap = {};
+            const rowsP = await rP.json();
+            if (Array.isArray(rowsP)) rowsP.slice(1).forEach(r => { perfMap[`${r[0]}-${r[1]}-${r[2]}`] = r.slice(3, 15).map(v => parseFloat(String(v).replace(/,/g,''))||0); });
+            salesRows = await rS.json();
+            statusRows = await rSt.json();
+            sync.innerText = '最新データ同期完了';
+            renderAll();
+        } catch (e) { sync.innerText = '同期失敗'; }
     }
-  }
-  let data = { '売上': {}, '稼働原価': {}, 'A利益': {}, '待機原価': {}, 'B利益': {}, '稼働エンジニア総数': {}, 'プロパー(待機)': {} };
-  let categories = ['売上', '稼働原価', 'A利益', '待機原価', 'B利益', '稼働エンジニア総数', 'プロパー(待機)'];
-  let blockIndex = -1;
-  for (let m of matches) {
-    if (m.region === '西日本') blockIndex++;
-    if (blockIndex >= 0 && blockIndex < categories.length) data[categories[blockIndex]][m.region] = m.val;
-  }
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  let colIndex = -1;
-  for (let i = 0; i < headers.length; i++) if (String(headers[i]).replace(/\s/g,'') === targetMonth) colIndex = i + 1;
-  if (colIndex === -1) { Browser.msgBox('月列なし'); return; }
-  const rowHeaders = sheet.getRange(2, 1, sheet.getLastRow()-1, 3).getValues();
-  for (let i = 0; i < rowHeaders.length; i++) {
-    let r = rowHeaders[i][0], it = rowHeaders[i][1], t = rowHeaders[i][2];
-    if (t === '実績' && data[it] && data[it][r] !== undefined) sheet.getRange(i + 2, colIndex).setValue(data[it][r]);
-  }
-  file.setTrashed(true);
-  Browser.msgBox('同期完了');
-}
+
+    function changeYear() { fetchAll(); }
+
+    function renderAll() {
+        if (document.getElementById('section-perf').style.display !== 'none') renderPerf();
+        if (document.getElementById('section-sales').style.display !== 'none') renderSales();
+        if (document.getElementById('section-status').style.display !== 'none') renderStatus();
+    }
+
+    function renderPerf() {
+        const reg = document.getElementById('region-select').value;
+        const tbody = document.getElementById('perf-body');
+        tbody.innerHTML = '';
+        document.getElementById('perf-months').innerHTML = months.map(m => `<th>${m}</th>`).join('') + '<th class="col-total">計</th>';
+        const items = [{n:'売上',k:'売上',t:['予算','実績']},{n:'稼働原価',k:'稼働原価',t:['予算','実績']},{n:'A利益',k:'A利益',t:['予算','実績']}];
+        items.forEach(item => {
+            item.t.forEach((type, idx) => {
+                const data = perfMap[`${reg}-${item.k}-${type}`] || new Array(12).fill(0);
+                let row = `<tr>${idx===0?`<td rowspan="${item.t.length}" class="cat-header">${item.n}</td>`:''}<td class="sticky-left-2">${type}</td>`;
+                data.forEach(v => row += `<td class="text-right">${v.toLocaleString()}</td>`);
+                row += `<td class="text-right col-total">${data.reduce((a,b)=>a+b,0).toLocaleString()}</td></tr>`;
+                tbody.innerHTML += row;
+            });
+        });
+    }
+
+    function renderSales() {
+        if (!salesRows || salesRows.length < 10) return;
+        const year = document.getElementById('year-select').value;
+        const reg = document.getElementById('sales-region-select').value;
+        const search = document.getElementById('sales-search').value.toLowerCase();
+        
+        // 年度による列構成の違いを吸収
+        const is2026 = year === "2026";
+        const idxNo = is2026 ? 2 : 3;
+        const idxName = is2026 ? 3 : 4;
+        const idxSal = is2026 ? 11 : 10;
+        const idxStart = 12 + (is2026 ? 1 : 0);
+
+        const head = document.getElementById('sales-head');
+        head.innerHTML = `<tr><th rowspan="2">所属</th><th rowspan="2">氏名/No</th><th rowspan="2">給料</th>${months.map(m=>`<th>${m}</th>`).join('')}<th>年間</th></tr><tr>${months.map(()=>`<th>売/利</th>`).join('')}<th>計</th></tr>`;
+
+        const body = document.getElementById('sales-body');
+        body.innerHTML = '';
+        salesRows.slice(11).forEach(row => {
+            const name = String(row[idxName] || "");
+            if (!name || name === "0" || (search && !name.toLowerCase().includes(search))) return;
+            if (reg !== "全国" && !String(row[1]).includes(reg)) return;
+
+            let s1=0;
+            let rowHtml = `<tr><td rowspan="2">${row[1]||""}</td><td>${name}</td><td class="text-right">${(parseFloat(row[idxSal])||0).toLocaleString()}</td>`;
+            for(let i=0; i<12; i++) {
+                let v = parseFloat(row[idxStart + i*2]) || 0;
+                s1 += v;
+                rowHtml += `<td class="text-right">${v.toLocaleString()}</td>`;
+            }
+            body.innerHTML += rowHtml + `<td class="text-right">${s1.toLocaleString()}</td></tr>`;
+            body.innerHTML += `<tr><td>${row[idxNo]||""}</td><td class="text-right">-</td>` + months.map(()=>`<td class="text-right">-</td>`).join('') + `<td class="text-right">-</td></tr>`;
+        });
+    }
+
+    function renderStatus() {
+        const tbody = document.getElementById('status-body');
+        const reg = document.getElementById('status-region-select').value;
+        tbody.innerHTML = '';
+        if (!Array.isArray(statusRows)) return;
+        let wait = 0, totalSal = 0;
+        statusRows.slice(1).forEach((row, i) => {
+            if (reg !== "全国" && !String(row[2]).includes(reg)) return;
+            const isWait = String(row[3]).includes("待機");
+            if (isWait) wait++;
+            let s = parseFloat(String(row[7]).replace(/,/g,'')) || 0;
+            totalSal += s;
+            tbody.innerHTML += `<tr class="${isWait?'status-wait':''}"><td>${i+1}</td><td>${row[2]||""}</td><td>${row[1]||""}</td><td>${row[3]||""}</td><td>${row[4]||""}</td><td>${row[5]||""}</td><td>${row[6]||""}</td><td class="text-right">${s.toLocaleString()}</td><td class="text-right">${row[8]||""}</td></tr>`;
+        });
+        document.getElementById('status-summary').innerText = `待機中: ${wait}名`;
+        document.getElementById('status-salary-total').innerText = `給料合計: ${totalSal.toLocaleString()}円`;
+    }
+</script>
+</body>
+</html>
