@@ -193,8 +193,7 @@
 
 <script>
     // =========================================================================
-    // ★ 修正：2つに分かれていたURLを、先ほど更新した大元のGAS 1つに統一します
-    // ※必ずご自身の「デプロイを管理」画面からコピーしたURLに書き換えてください！
+    // ★ ここを、ご自身の「デプロイを管理」のウェブアプリURLに書き換えてください！
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbwjExOVHeeFmFB9I90Q6-5dEZMXRTduaFpDe91eEFghZoclcmnDRs7mlEQ2fJY/exec'; 
     // =========================================================================
 
@@ -268,7 +267,6 @@
             const year = document.getElementById('year-select').value;
             const tParam = `&t=${year}`;
 
-            // URLをGAS_URLに統一してリクエスト
             const [rP, rS] = await Promise.all([
                 fetch(`${GAS_URL}?p=freeeks2022&s=実績データ${tParam}`),
                 fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表${tParam}`)
@@ -390,22 +388,24 @@
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
         
-        // ★追加：2026年に「生年月日」列が追加されたことによる列ズレを吸収する設定
         const year = document.getElementById('year-select').value;
         const is2026 = year.includes("2026");
-        const idxNo   = is2026 ? 2 : 3;  // 技術者Noの列
-        const idxName = is2026 ? 3 : 4;  // 技術者名の列
-        const idxSal  = is2026 ? 11 : 10; // 給料の列
-        const idxCos  = is2026 ? 12 : 11; // 原価の列
-        const colOff  = is2026 ? 1 : 0;  // 6月以降の列のズレ幅
+        const idxNo   = is2026 ? 2 : 3;
+        const idxName = is2026 ? 3 : 4;
+        const idxSal  = is2026 ? 11 : 10;
+        const idxCos  = is2026 ? 12 : 11;
+        const colOff  = is2026 ? 1 : 0;
 
         let hHtml = "<tr><th rowspan='2' class='col-sales-aff'>所属</th><th rowspan='2' class='col-sales-name'>氏名<br>No</th><th rowspan='2' class='col-sales-info'>給料<br>コスト</th>";
+        
+        // ★修正ポイント：「6月〜5月」の文字を固定化
+        const monthLabels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
         for (let i = 12; i < 36; i += 2) {
             let cls = "";
             if (i === 12 || i === 24) cls = "br-3px-sales";
             else if ((i >= 14 && i <= 20) || (i >= 26 && i <= 32)) cls = "bl-3px-sales br-3px-sales";
             else if (i === 22 || i === 34) cls = "bl-3px-sales";
-            hHtml += `<th class="${cls}">${headers[i + colOff] || ""}</th>`;
+            hHtml += `<th class="${cls}">${monthLabels[(i - 12) / 2]}</th>`;
             if (i === 22) hHtml += `<th rowspan="2" class="col-total bl-3px-sales">上期</th>`;
             if (i === 34) hHtml += `<th rowspan="2" class="col-total bl-3px-sales">下期</th><th rowspan="2" class="col-total bl-3px-sales">年間</th>`;
         }
