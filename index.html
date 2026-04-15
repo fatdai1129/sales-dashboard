@@ -61,9 +61,8 @@
                         <option value="全国">全国</option><option value="東海">東海</option><option value="首都圏">首都圏</option><option value="東日本">東日本</option><option value="西日本">西日本</option>
                     </select>
                 </div>
-                <table class="perf-table"><thead><tr><th rowspan="2" class="cat-header">項目</th><th rowspan="2" class="sticky-left-2">区分</th><th colspan="6">上期</th><th class="col-total">計</th><th colspan="6">下期</th><th class="col-total">計</th><th class="col-total">年間</th></tr><tr id="perf-months"></tr></thead><tbody id="perf-body"></tbody></table>
+                <table class="perf-table"><thead><tr><th rowspan="2" class="cat-header">項目</th><th rowspan="2" class="sticky-left-2">区分</th><th colspan="6">上期実績</th><th class="col-total">計</th><th colspan="6">下期実績</th><th class="col-total">計</th><th class="col-total">年間</th></tr><tr id="perf-months"></tr></thead><tbody id="perf-body"></tbody></table>
             </div>
-            <div class="charts-container"><div class="chart-box"><canvas id="salesChart"></canvas></div><div class="chart-box"><canvas id="engChart"></canvas></div><div class="chart-box"><canvas id="waitCostChart"></canvas></div></div>
         </div>
         <div id="section-sales" style="display:none;">
             <div class="card">
@@ -93,7 +92,6 @@
     </div>
 </div>
 <script>
-    // ★ いただいた最新のデプロイURLを埋め込み済みです
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbwasiItVpq9f_AVTv5Pe1tpyTmXvRYGOnfbaL4Q_b1Jlq-e-pnE4khUP_dZS1cPGhXVjQ/exec';
     let perfMap = {}, salesRows = [], statusRows = [], charts = {};
     const months = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
@@ -103,7 +101,7 @@
             document.getElementById('pw_screen').style.display = 'none';
             document.getElementById('main_content').style.display = 'block';
             fetchAll();
-        } else { document.getElementById('err_msg').style.display = 'block'; }
+        }
     }
 
     function switchTab(tab) {
@@ -165,12 +163,12 @@
         const reg = document.getElementById('sales-region-select').value;
         const search = document.getElementById('sales-search').value.toLowerCase();
         
-        // 年度による列のズレ補正
-        const is2026 = year === "2026";
-        const idxNo = is2026 ? 3 : 3;
-        const idxName = is2026 ? 4 : 4;
-        const idxSal = is2026 ? 11 : 10;
-        const idxStart = is2026 ? 13 : 12;
+        // 年度による列補正：2026年は「生年月日」列が挿入されたため1列ずれる
+        const is2026 = (year === "2026");
+        const idxNo   = is2026 ? 2 : 3;
+        const idxName = is2026 ? 3 : 4;
+        const idxSal  = is2026 ? 11 : 10;
+        const idxDataStart = is2026 ? 13 : 12;
 
         const head = document.getElementById('sales-head');
         head.innerHTML = `<tr><th rowspan="2">所属</th><th rowspan="2">氏名/No</th><th rowspan="2">給料</th>${months.map(m=>`<th>${m}</th>`).join('')}<th>年間</th></tr><tr>${months.map(()=>`<th>売/利</th>`).join('')}<th>計</th></tr>`;
@@ -179,13 +177,13 @@
         body.innerHTML = '';
         salesRows.slice(11).forEach(row => {
             const name = String(row[idxName] || "");
-            if (!name || name === "0" || (search && !name.toLowerCase().includes(search))) return;
+            if (!name || name === "0" || name === "技術者名" || (search && !name.toLowerCase().includes(search))) return;
             if (reg !== "全国" && !String(row[1]).includes(reg)) return;
 
             let s1=0;
             let rowHtml = `<tr><td rowspan="2">${row[1]||""}</td><td>${name}</td><td class="text-right">${(parseFloat(row[idxSal])||0).toLocaleString()}</td>`;
             for(let i=0; i<12; i++) {
-                let v = parseFloat(row[idxStart + i*2]) || 0;
+                let v = parseFloat(row[idxDataStart + i*2]) || 0;
                 s1 += v;
                 rowHtml += `<td class="text-right">${v.toLocaleString()}</td>`;
             }
@@ -201,18 +199,18 @@
         if (!Array.isArray(statusRows)) return;
         let wait = 0, totalSal = 0;
         statusRows.slice(1).forEach((row, i) => {
-            if (reg !== "全国" && !String(row[2]).includes(reg)) return;
-            const isWait = String(row[3]).includes("待機");
+            const rowRegion = String(row[2] || "");
+            if (reg !== "全国" && !rowRegion.includes(reg)) return;
+            const status = String(row[3] || "");
+            const isWait = status.includes("待機");
             if (isWait) wait++;
-            let s = parseFloat(String(row[7]).replace(/,/g,'')) || 0;
+            let s = parseFloat(String(row[7]||"0").replace(/,/g,'')) || 0;
             totalSal += s;
-            tbody.innerHTML += `<tr class="${isWait?'status-wait':''}"><td>${i+1}</td><td>${row[2]||""}</td><td>${row[1]||""}</td><td>${row[3]||""}</td><td>${row[4]||""}</td><td>${row[5]||""}</td><td>${row[6]||""}</td><td class="text-right">${s.toLocaleString()}</td><td class="text-right">${row[8]||""}</td></tr>`;
+            tbody.innerHTML += `<tr class="${isWait?'status-wait':''}"><td>${i+1}</td><td>${rowRegion}</td><td>${row[1]||""}</td><td>${status}</td><td>${row[4]||""}</td><td>${row[5]||""}</td><td>${row[6]||""}</td><td class="text-right">${s.toLocaleString()}</td><td class="text-right">${row[8]||""}</td></tr>`;
         });
         document.getElementById('status-summary').innerText = `待機中: ${wait}名`;
         document.getElementById('status-salary-total').innerText = `給料合計: ${totalSal.toLocaleString()}円`;
     }
-
-    window.onload = () => { /* 読み込み完了後に実行 */ };
 </script>
 </body>
 </html>
