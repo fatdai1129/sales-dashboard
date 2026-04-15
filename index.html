@@ -93,7 +93,7 @@
     </div>
 </div>
 <script>
-    // ★ ご提示いただいた最新のデプロイURLです
+    // ★ いただいた最新のデプロイURLを埋め込み済みです
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbwasiItVpq9f_AVTv5Pe1tpyTmXvRYGOnfbaL4Q_b1Jlq-e-pnE4khUP_dZS1cPGhXVjQ/exec';
     let perfMap = {}, salesRows = [], statusRows = [], charts = {};
     const months = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
@@ -165,12 +165,12 @@
         const reg = document.getElementById('sales-region-select').value;
         const search = document.getElementById('sales-search').value.toLowerCase();
         
-        // 年度による列構成の違いを吸収
+        // 年度による列のズレ補正
         const is2026 = year === "2026";
-        const idxNo = is2026 ? 2 : 3;
-        const idxName = is2026 ? 3 : 4;
+        const idxNo = is2026 ? 3 : 3;
+        const idxName = is2026 ? 4 : 4;
         const idxSal = is2026 ? 11 : 10;
-        const idxStart = 12 + (is2026 ? 1 : 0);
+        const idxStart = is2026 ? 13 : 12;
 
         const head = document.getElementById('sales-head');
         head.innerHTML = `<tr><th rowspan="2">所属</th><th rowspan="2">氏名/No</th><th rowspan="2">給料</th>${months.map(m=>`<th>${m}</th>`).join('')}<th>年間</th></tr><tr>${months.map(()=>`<th>売/利</th>`).join('')}<th>計</th></tr>`;
@@ -211,6 +211,8 @@
         document.getElementById('status-summary').innerText = `待機中: ${wait}名`;
         document.getElementById('status-salary-total').innerText = `給料合計: ${totalSal.toLocaleString()}円`;
     }
+
+    window.onload = () => { /* 読み込み完了後に実行 */ };
 </script>
 </body>
 </html>
