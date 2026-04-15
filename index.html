@@ -97,7 +97,6 @@
     </div>
 
     <div class="container">
-        
         <div style="margin-bottom: 20px; background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); display: flex; align-items: center;">
             <label style="font-size: 1.2rem; font-weight: bold; margin-right: 15px; color: #2d3748;">対象期を選択：</label>
             <select id="year-select" style="font-size: 1.4rem; font-weight: bold; color: #1a202c; border: 2px solid #cbd5e0; border-radius: 8px; padding: 8px 15px; cursor: pointer; background-color: white; outline: none; min-width: 280px;" onchange="changeYear()">
@@ -166,9 +165,7 @@
                         <option value="全国">全国</option><option value="東海">東海</option><option value="首都圏">首都圏</option><option value="東日本">東日本</option><option value="西日本">西日本</option>
                     </select>
                     <span id="status-summary" style="margin-left: 30px; font-size: 1.2rem; font-weight: bold; color: #2d3748;"></span>
-                    
                     <span id="status-salary-total" style="margin-left: auto; margin-right: 30px; font-size: 1.2rem; font-weight: bold; color: #2d3748;"></span>
-                    
                     <span id="status-update-date" style="font-size: 1.2rem; font-weight: bold; color: #4a5568;"></span>
                 </div>
                 <div style="overflow-x: auto;">
@@ -196,20 +193,18 @@
 
 <script>
     // =========================================================================
-    // ★ 公開日時のタイマー設定
-    const RELEASE_DATE = "2026/04/01 00:00:00"; 
+    // ★ 修正：2つに分かれていたURLを、先ほど更新した大元のGAS 1つに統一します
+    // ※必ずご自身の「デプロイを管理」画面からコピーしたURLに書き換えてください！
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwjExOVHeeFmFB9I90Q6-5dEZMXRTduaFpDe91eEFghZoclcmnDRs7mlEQ2fJY/exec'; 
     // =========================================================================
 
-    const URL_2025 = 'https://script.google.com/macros/s/AKfycbzLPhdnyAo1D7SH-T3uv0EOb5aWekcfnFRtReGhsnkQ5_sLbi36fTc6o5eVYukeliVJIA/exec';
-    const URL_2026 = 'https://script.google.com/macros/s/AKfycby5av71J0t1w97mq4FHPNFyWq7Ekrw7P_bcPIOHHnEecGkTLgIleBvegyRAUrMVnjEv/exec';
+    const RELEASE_DATE = "2026/04/01 00:00:00"; 
     
-    let currentGAS_URL = URL_2025;
     let perfMap = {}, salesRows = [], statusRows = [], charts = {};
 
     window.onload = () => {
         checkReleaseTimer();
         loadCache();
-        currentGAS_URL = document.getElementById('year-select').value === "2026" ? URL_2026 : URL_2025;
         fetchAll();
     };
 
@@ -246,7 +241,6 @@
     function changeYear() {
         const year = document.getElementById('year-select').value;
         localStorage.setItem('f_current_year', year);
-        currentGAS_URL = year === "2026" ? URL_2026 : URL_2025;
         document.getElementById('sync_status').innerText = '年度切替：データ取得中...';
         loadCache();
         renderAll();
@@ -271,18 +265,18 @@
 
     async function fetchAll() {
         try {
-            // ★ WebからGASへ送るリクエストに「&t=年」のパラメータを追加
             const year = document.getElementById('year-select').value;
             const tParam = `&t=${year}`;
 
+            // URLをGAS_URLに統一してリクエスト
             const [rP, rS] = await Promise.all([
-                fetch(`${currentGAS_URL}?p=freeeks2022&s=実績データ${tParam}`),
-                fetch(`${currentGAS_URL}?p=freeeks2022&s=営業推進管理表${tParam}`)
+                fetch(`${GAS_URL}?p=freeeks2022&s=実績データ${tParam}`),
+                fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表${tParam}`)
             ]);
-            let rSt = await fetch(`${currentGAS_URL}?p=freeeks2022&s=売込状況一覧${tParam}`);
+            let rSt = await fetch(`${GAS_URL}?p=freeeks2022&s=売込状況一覧${tParam}`);
             let stData = await rSt.json();
             if (!stData || stData.length <= 1 || stData.error) {
-                const rStFallback = await fetch(`${currentGAS_URL}?p=freeeks2022&s=売込状況${tParam}`);
+                const rStFallback = await fetch(`${GAS_URL}?p=freeeks2022&s=売込状況${tParam}`);
                 stData = await rStFallback.json();
             }
             const rowsP = await rP.json(); perfMap = {};
@@ -396,13 +390,22 @@
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
         
+        // ★追加：2026年に「生年月日」列が追加されたことによる列ズレを吸収する設定
+        const year = document.getElementById('year-select').value;
+        const is2026 = year.includes("2026");
+        const idxNo   = is2026 ? 2 : 3;  // 技術者Noの列
+        const idxName = is2026 ? 3 : 4;  // 技術者名の列
+        const idxSal  = is2026 ? 11 : 10; // 給料の列
+        const idxCos  = is2026 ? 12 : 11; // 原価の列
+        const colOff  = is2026 ? 1 : 0;  // 6月以降の列のズレ幅
+
         let hHtml = "<tr><th rowspan='2' class='col-sales-aff'>所属</th><th rowspan='2' class='col-sales-name'>氏名<br>No</th><th rowspan='2' class='col-sales-info'>給料<br>コスト</th>";
         for (let i = 12; i < 36; i += 2) {
             let cls = "";
             if (i === 12 || i === 24) cls = "br-3px-sales";
             else if ((i >= 14 && i <= 20) || (i >= 26 && i <= 32)) cls = "bl-3px-sales br-3px-sales";
             else if (i === 22 || i === 34) cls = "bl-3px-sales";
-            hHtml += `<th class="${cls}">${headers[i] || ""}</th>`;
+            hHtml += `<th class="${cls}">${headers[i + colOff] || ""}</th>`;
             if (i === 22) hHtml += `<th rowspan="2" class="col-total bl-3px-sales">上期</th>`;
             if (i === 34) hHtml += `<th rowspan="2" class="col-total bl-3px-sales">下期</th><th rowspan="2" class="col-total bl-3px-sales">年間</th>`;
         }
@@ -417,7 +420,7 @@
         hHtml += "</tr>"; head.innerHTML = hHtml;
         
         let filteredRows = rawData.filter(row => {
-            const name = String(row[4] || "").trim();
+            const name = String(row[idxName] || "").trim();
             const aff1 = String(row[1] || "").trim();
             if (!name || name === "技術者名" || name === "0" || name === "総合計") return false;
             if (aff1.includes("売上") || aff1.includes("原価") || aff1.includes("利益") || aff1.includes("計")) return false;
@@ -433,8 +436,9 @@
         let monthlyTotals = [];
         for (let i = 12; i < 36; i += 2) {
             let sSum = 0, pSum = 0;
+            let dI = i + colOff;
             filteredRows.forEach(row => {
-                let sRaw = row[i]; let cRaw = row[i+1];
+                let sRaw = row[dI]; let cRaw = row[dI+1];
                 if (sRaw !== null && sRaw !== undefined && String(sRaw).trim() !== "") {
                     const s = Math.floor(parseNum(sRaw)); const c = Math.floor(parseNum(cRaw));
                     sSum += s; pSum += (s - c);
@@ -442,7 +446,11 @@
             });
             monthlyTotals.push({ sales: sSum, profit: pSum });
         }
-        let totalSal = 0, totalCos = 0; filteredRows.forEach(row => { totalSal += Math.floor(parseNum(row[10])); totalCos += Math.floor(parseNum(row[11])); });
+        let totalSal = 0, totalCos = 0; 
+        filteredRows.forEach(row => { 
+            totalSal += Math.floor(parseNum(row[idxSal])); 
+            totalCos += Math.floor(parseNum(row[idxCos])); 
+        });
 
         const b2T = "border-bottom: 2px solid black !important;", b2B = "border-top: 2px solid black !important;";
         let bHtml = `<tr><td colspan='2' rowspan='2' class='text-center col-sales-aff' style='font-weight:bold;'>総合計</td><td class="text-right col-sales-info" style="font-weight:bold; ${b2T}">${totalSal.toLocaleString()}</td>`;
@@ -476,30 +484,32 @@
 
         filteredRows.forEach(row => {
             let aff = row[1] || ""; if ((aff === '東海' || aff === '首都圏') && row[2] === 'BP') aff = 'BP' + aff;
-            bHtml += `<tr><td rowspan="2" class="text-center col-sales-aff">${aff}</td><td class="text-center col-sales-name" style="${b2T}">${row[4] || ""}</td>`;
-            const sal = Math.floor(parseNum(row[10])); bHtml += `<td class="text-right col-sales-info" style="${b2T}">${sal === 0 && !row[10] ? "-" : sal.toLocaleString()}</td>`;
+            bHtml += `<tr><td rowspan="2" class="text-center col-sales-aff">${aff}</td><td class="text-center col-sales-name" style="${b2T}">${row[idxName] || ""}</td>`;
+            const sal = Math.floor(parseNum(row[idxSal])); bHtml += `<td class="text-right col-sales-info" style="${b2T}">${sal === 0 && !row[idxSal] ? "-" : sal.toLocaleString()}</td>`;
             let s1=0, s2=0;
             for (let i = 12; i < 36; i += 2) {
+                let dI = i + colOff;
                 let ns = 0; let sStr = "-"; 
                 let cls = "";
                 if (i === 12 || i === 24) cls = "br-3px-sales";
                 else if ((i >= 14 && i <= 20) || (i >= 26 && i <= 32)) cls = "bl-3px-sales br-3px-sales";
                 else if (i === 22 || i === 34) cls = "bl-3px-sales";
-                if (String(row[i]||"").trim()!=="") { ns=Math.floor(parseNum(row[i])); sStr=ns.toLocaleString(); if(i<=22)s1+=ns; else s2+=ns; }
+                if (String(row[dI]||"").trim()!=="") { ns=Math.floor(parseNum(row[dI])); sStr=ns.toLocaleString(); if(i<=22)s1+=ns; else s2+=ns; }
                 bHtml += `<td class="text-right ${cls}" style="${b2T}">${sStr}</td>`;
                 if(i===22) bHtml += `<td class="text-right col-total bl-3px-sales" style="${b2T}">${s1.toLocaleString()}</td>`;
                 if(i===34) bHtml += `<td class="text-right col-total bl-3px-sales" style="${b2T}">${s2.toLocaleString()}</td><td class="text-right col-total bl-3px-sales" style="${b2T}">${(s1+s2).toLocaleString()}</td>`;
             }
-            bHtml += `</tr><tr><td class="text-center col-sales-name" style="${b2B}">${row[3] || ""}</td>`;
-            const cos = Math.floor(parseNum(row[11])); bHtml += `<td class="text-right col-sales-info" style="${b2B}">${cos === 0 && !row[11] ? "-" : cos.toLocaleString()}</td>`;
+            bHtml += `</tr><tr><td class="text-center col-sales-name" style="${b2B}">${row[idxNo] || ""}</td>`;
+            const cos = Math.floor(parseNum(row[idxCos])); bHtml += `<td class="text-right col-sales-info" style="${b2B}">${cos === 0 && !row[idxCos] ? "-" : cos.toLocaleString()}</td>`;
             let p1=0, p2=0;
             for (let i = 12; i < 36; i += 2) {
+                let dI = i + colOff;
                 let pStr = "-"; 
                 let cls = "";
                 if (i === 12 || i === 24) cls = "br-3px-sales";
                 else if ((i >= 14 && i <= 20) || (i >= 26 && i <= 32)) cls = "bl-3px-sales br-3px-sales";
                 else if (i === 22 || i === 34) cls = "bl-3px-sales";
-                if (String(row[i]||"").trim()!=="") { let np=Math.floor(parseNum(row[i]))-Math.floor(parseNum(row[i+1])); pStr=np.toLocaleString(); if(i<=22)p1+=np; else p2+=np; }
+                if (String(row[dI]||"").trim()!=="") { let np=Math.floor(parseNum(row[dI]))-Math.floor(parseNum(row[dI+1])); pStr=np.toLocaleString(); if(i<=22)p1+=np; else p2+=np; }
                 bHtml += `<td class="text-right ${cls}" style="${b2B}">${pStr}</td>`;
                 if(i===22) bHtml += `<td class="text-right col-total bl-3px-sales" style="${b2B}">${p1.toLocaleString()}</td>`;
                 if(i===34) bHtml += `<td class="text-right col-total bl-3px-sales" style="${b2B}">${p2.toLocaleString()}</td><td class="text-right col-total bl-3px-sales" style="${b2B}">${(p1+p2).toLocaleString()}</td>`;
