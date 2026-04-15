@@ -101,7 +101,6 @@
             <label style="font-size: 1.2rem; font-weight: bold; margin-right: 15px; color: #2d3748;">対象期を選択：</label>
             <select id="year-select" style="font-size: 1.4rem; font-weight: bold; color: #1a202c; border: 2px solid #cbd5e0; border-radius: 8px; padding: 8px 15px; cursor: pointer; background-color: white; outline: none; min-width: 280px;" onchange="changeYear()">
                 <option value="2025">2025年06月期（第4期）</option>
-                <option value="2026">2026年06月期（第5期）</option>
             </select>
         </div>
 
@@ -196,18 +195,40 @@
 
 <script>
     // =========================================================================
-    // ★ GASデプロイURL
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwasiItVpq9f_AVTv5Pe1tpyTmXvRYGOnfbaL4Q_b1Jlq-e-pnE4khUP_dZS1cPGhXVjQ/exec';
+    // ★ 公開日時のタイマー設定
+    const RELEASE_DATE = "2026/04/01 00:00:00"; 
     // =========================================================================
+
+    // ★指定された最新のデプロイURL
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwasiItVpq9f_AVTv5Pe1tpyTmXvRYGOnfbaL4Q_b1Jlq-e-pnE4khUP_dZS1cPGhXVjQ/exec';
     
     let perfMap = {}, salesRows = [], statusRows = [], charts = {};
 
     window.onload = () => {
-        const savedYear = localStorage.getItem('f_current_year');
-        if (savedYear === "2026") { document.getElementById('year-select').value = "2026"; }
+        checkReleaseTimer();
         loadCache();
         fetchAll();
     };
+
+    function checkReleaseTimer() {
+        const now = new Date();
+        const releaseTime = new Date(RELEASE_DATE);
+        const yearSelect = document.getElementById('year-select');
+        
+        if (now >= releaseTime && yearSelect.options.length === 1) {
+            const option2026 = document.createElement('option');
+            option2026.value = "2026";
+            option2026.text = "2026年06月期（第5期）";
+            yearSelect.appendChild(option2026);
+        }
+
+        const savedYear = localStorage.getItem('f_current_year');
+        if (savedYear === "2026" && now >= releaseTime) {
+            yearSelect.value = "2026";
+        } else {
+            yearSelect.value = "2025";
+        }
+    }
 
     function loadCache() {
         const year = document.getElementById('year-select').value;
@@ -247,7 +268,7 @@
     async function fetchAll() {
         try {
             const year = document.getElementById('year-select').value;
-            const tParam = `&t=${year}`;
+            const tParam = `&t=${year}`; // ★GASに「年」を渡す
 
             const [rP, rS] = await Promise.all([
                 fetch(`${GAS_URL}?p=freeeks2022&s=実績データ${tParam}`),
@@ -370,25 +391,23 @@
         const head = document.getElementById('sales-head'), body = document.getElementById('sales-body');
         const allData = salesRows.slice(9), headers = allData[0], rawData = allData.slice(1);
         
-        // ★修正箇所：2026年（第5期）の列ズレ補正
+        // ★修正箇所：あなたのオリジナルコードをベースに、列のズレだけを吸収
         const year = document.getElementById('year-select').value;
         const is2026 = year.includes("2026");
-        const idxNo   = is2026 ? 2 : 3;
-        const idxName = is2026 ? 3 : 4;
-        const idxSal  = is2026 ? 11 : 10;
+        const idxNo   = 2; // C列（No）は両年共通
+        const idxName = 3; // D列（氏名）は両年共通
+        const idxSal  = is2026 ? 11 : 10; // 生年月日の追加で給料以降が1列ズレる
         const idxCos  = is2026 ? 12 : 11;
         const colOff  = is2026 ? 1 : 0;
 
         let hHtml = "<tr><th rowspan='2' class='col-sales-aff'>所属</th><th rowspan='2' class='col-sales-name'>氏名<br>No</th><th rowspan='2' class='col-sales-info'>給料<br>コスト</th>";
-        
-        // 月のラベルを固定
         const monthLabels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
         for (let i = 12; i < 36; i += 2) {
             let cls = "";
             if (i === 12 || i === 24) cls = "br-3px-sales";
             else if ((i >= 14 && i <= 20) || (i >= 26 && i <= 32)) cls = "bl-3px-sales br-3px-sales";
             else if (i === 22 || i === 34) cls = "bl-3px-sales";
-            hHtml += `<th class="${cls}">${monthLabels[(i - 12) / 2]}</th>`;
+            hHtml += `<th class="${cls}">${monthLabels[(i - 12) / 2]}</th>`; // 月名を固定化
             if (i === 22) hHtml += `<th rowspan="2" class="col-total bl-3px-sales">上期</th>`;
             if (i === 34) hHtml += `<th rowspan="2" class="col-total bl-3px-sales">下期</th><th rowspan="2" class="col-total bl-3px-sales">年間</th>`;
         }
@@ -403,7 +422,7 @@
         hHtml += "</tr>"; head.innerHTML = hHtml;
         
         let filteredRows = rawData.filter(row => {
-            const name = String(row[idxName] || "").trim();
+            const name = String(row[idxName] || "").trim(); // ★列調整
             const aff1 = String(row[1] || "").trim();
             if (!name || name === "技術者名" || name === "0" || name === "総合計") return false;
             if (aff1.includes("売上") || aff1.includes("原価") || aff1.includes("利益") || aff1.includes("計")) return false;
@@ -419,7 +438,7 @@
         let monthlyTotals = [];
         for (let i = 12; i < 36; i += 2) {
             let sSum = 0, pSum = 0;
-            let dI = i + colOff;
+            let dI = i + colOff; // ★列調整
             filteredRows.forEach(row => {
                 let sRaw = row[dI]; let cRaw = row[dI+1];
                 if (sRaw !== null && sRaw !== undefined && String(sRaw).trim() !== "") {
@@ -431,8 +450,8 @@
         }
         let totalSal = 0, totalCos = 0; 
         filteredRows.forEach(row => { 
-            totalSal += Math.floor(parseNum(row[idxSal])); 
-            totalCos += Math.floor(parseNum(row[idxCos])); 
+            totalSal += Math.floor(parseNum(row[idxSal])); // ★列調整
+            totalCos += Math.floor(parseNum(row[idxCos])); // ★列調整
         });
 
         const b2T = "border-bottom: 2px solid black !important;", b2B = "border-top: 2px solid black !important;";
@@ -467,11 +486,11 @@
 
         filteredRows.forEach(row => {
             let aff = row[1] || ""; if ((aff === '東海' || aff === '首都圏') && row[2] === 'BP') aff = 'BP' + aff;
-            bHtml += `<tr><td rowspan="2" class="text-center col-sales-aff">${aff}</td><td class="text-center col-sales-name" style="${b2T}">${row[idxName] || ""}</td>`;
-            const sal = Math.floor(parseNum(row[idxSal])); bHtml += `<td class="text-right col-sales-info" style="${b2T}">${sal === 0 && !row[idxSal] ? "-" : sal.toLocaleString()}</td>`;
+            bHtml += `<tr><td rowspan="2" class="text-center col-sales-aff">${aff}</td><td class="text-center col-sales-name" style="${b2T}">${row[idxName] || ""}</td>`; // ★列調整
+            const sal = Math.floor(parseNum(row[idxSal])); bHtml += `<td class="text-right col-sales-info" style="${b2T}">${sal === 0 && !row[idxSal] ? "-" : sal.toLocaleString()}</td>`; // ★列調整
             let s1=0, s2=0;
             for (let i = 12; i < 36; i += 2) {
-                let dI = i + colOff;
+                let dI = i + colOff; // ★列調整
                 let ns = 0; let sStr = "-"; 
                 let cls = "";
                 if (i === 12 || i === 24) cls = "br-3px-sales";
@@ -482,11 +501,11 @@
                 if(i===22) bHtml += `<td class="text-right col-total bl-3px-sales" style="${b2T}">${s1.toLocaleString()}</td>`;
                 if(i===34) bHtml += `<td class="text-right col-total bl-3px-sales" style="${b2T}">${s2.toLocaleString()}</td><td class="text-right col-total bl-3px-sales" style="${b2T}">${(s1+s2).toLocaleString()}</td>`;
             }
-            bHtml += `</tr><tr><td class="text-center col-sales-name" style="${b2B}">${row[idxNo] || ""}</td>`;
-            const cos = Math.floor(parseNum(row[idxCos])); bHtml += `<td class="text-right col-sales-info" style="${b2B}">${cos === 0 && !row[idxCos] ? "-" : cos.toLocaleString()}</td>`;
+            bHtml += `</tr><tr><td class="text-center col-sales-name" style="${b2B}">${row[idxNo] || ""}</td>`; // ★列調整
+            const cos = Math.floor(parseNum(row[idxCos])); bHtml += `<td class="text-right col-sales-info" style="${b2B}">${cos === 0 && !row[idxCos] ? "-" : cos.toLocaleString()}</td>`; // ★列調整
             let p1=0, p2=0;
             for (let i = 12; i < 36; i += 2) {
-                let dI = i + colOff;
+                let dI = i + colOff; // ★列調整
                 let pStr = "-"; 
                 let cls = "";
                 if (i === 12 || i === 24) cls = "br-3px-sales";
@@ -563,6 +582,7 @@
             if (st === "待機中") waitCount++;
             else if (st === "休業中") leaveCount++;
             else if (st === "稼働中") activeCount++;
+            
             totalSalary += parseNum(r[7]) || 0;
         });
         
