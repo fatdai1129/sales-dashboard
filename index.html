@@ -192,14 +192,11 @@
 </div>
 
 <script>
-    // =========================================================================
-    // ★ 大元のデプロイURLをそのまま設定済みです。何も書き換えなくてOKです！
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwjExOVHeeFmFB9I90Q6-5dEZMXRTduaFpDe91eEFghZoclcmnDRs7mlEQ2fJY/exec'; 
-    // =========================================================================
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbzLPhdnyAo1D7SH-T3uv0EOb5aWekcfnFRtReGhsnkQ5_sLbi36fTc6o5eVYukeliVJIA/exec'; 
 
     const RELEASE_DATE = "2026/04/01 00:00:00"; 
     
-    let perfMap = {}, salesRows = [], statusRows = [];
+    let perfMap = {}, salesRows = [], statusRows = [], charts = {};
 
     window.onload = () => {
         checkReleaseTimer();
@@ -267,30 +264,22 @@
             const year = document.getElementById('year-select').value;
             const tParam = `&t=${year}`;
 
-            // Googleの同時アクセス制限を回避するため、2回に分けて通信します
             const [rP, rS] = await Promise.all([
                 fetch(`${GAS_URL}?p=freeeks2022&s=実績データ${tParam}`),
                 fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表${tParam}`)
             ]);
-            
-            // 2つのデータが取れたら、最後に売込状況のデータを取りに行く
             let rSt = await fetch(`${GAS_URL}?p=freeeks2022&s=売込状況一覧${tParam}`);
-
-            const rowsP = await rP.json(); 
-            perfMap = {};
-            if (Array.isArray(rowsP)) {
-                rowsP.slice(1).forEach(r => { perfMap[`${r[0]}-${r[1]}-${r[2]}`] = r.slice(3, 15).map(v => (v===""||v==null)?null:parseFloat(String(v).replace(/,/g,''))||0); });
-            }
-            
-            salesRows = await rS.json();
-            if (!Array.isArray(salesRows)) salesRows = [];
-
             let stData = await rSt.json();
-            if (!Array.isArray(stData) || stData.length <= 1 || stData.error) {
+            if (!stData || stData.length <= 1 || stData.error) {
                 const rStFallback = await fetch(`${GAS_URL}?p=freeeks2022&s=売込状況${tParam}`);
                 stData = await rStFallback.json();
             }
-            statusRows = Array.isArray(stData) ? stData : [];
+            const rowsP = await rP.json(); perfMap = {};
+            if (rowsP && Array.isArray(rowsP)) {
+                rowsP.slice(1).forEach(r => { perfMap[`${r[0]}-${r[1]}-${r[2]}`] = r.slice(3, 15).map(v => (v===""||v==null)?null:parseFloat(String(v).replace(/,/g,''))||0); });
+            }
+            salesRows = await rS.json();
+            statusRows = stData;
             
             localStorage.setItem('f_perf_' + year, JSON.stringify(perfMap)); 
             localStorage.setItem('f_sales_' + year, JSON.stringify(salesRows));
@@ -298,10 +287,7 @@
             
             document.getElementById('sync_status').innerText = '最新データ同期完了'; 
             renderAll();
-        } catch (e) {
-            console.error(e);
-            document.getElementById('sync_status').innerText = '同期失敗'; 
-        }
+        } catch (e) { document.getElementById('sync_status').innerText = '同期失敗'; }
     }
 
     function renderAll() {
@@ -408,6 +394,7 @@
         const colOff  = is2026 ? 1 : 0;
 
         let hHtml = "<tr><th rowspan='2' class='col-sales-aff'>所属</th><th rowspan='2' class='col-sales-name'>氏名<br>No</th><th rowspan='2' class='col-sales-info'>給料<br>コスト</th>";
+        
         const monthLabels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
         for (let i = 12; i < 36; i += 2) {
             let cls = "";
@@ -526,14 +513,20 @@
             bHtml += "</tr>";
         });
         body.innerHTML = bHtml;
-        
-        let chartsObj = window.charts || {};
+        updateSalesCharts(monthlyTotals);
+    }
+
+    function updateSalesCharts(monthlyTotals) {
         const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
         const salesData = monthlyTotals.map(t => t.sales);
         const profitData = monthlyTotals.map(t => t.profit);
+
         const formatThousand = (val) => Math.round((val || 0) / 1000).toLocaleString();
+
         const opt = (title) => ({
-            responsive: true, maintainAspectRatio: false, layout: { padding: { top: 30 } },
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { top: 30 } },
             plugins: {
                 title: { display: true, text: title + ' (単位: 千円)', font: { size: 18, weight: 'bold' }, padding: { bottom: 20 } },
                 datalabels: { anchor: 'end', align: 'top', formatter: (value) => formatThousand(value), font: { weight: 'bold', size: 12 }, color: '#4a5568' },
@@ -541,24 +534,30 @@
             },
             scales: { y: { ticks: { callback: (value) => formatThousand(value) } } }
         });
-        if (chartsObj.st) chartsObj.st.destroy();
-        chartsObj.st = new Chart(document.getElementById('salesTotalChart').getContext('2d'), { type: 'bar', plugins: [ChartDataLabels], data: { labels, datasets: [{ label: '売上', data: salesData, backgroundColor: '#3182ce' }] }, options: opt('月別売上合計推移') });
-        if (chartsObj.pt) chartsObj.pt.destroy();
-        chartsObj.pt = new Chart(document.getElementById('profitTotalChart').getContext('2d'), { type: 'bar', plugins: [ChartDataLabels], data: { labels, datasets: [{ label: '利益', data: profitData, backgroundColor: '#48bb78' }] }, options: opt('月別利益合計推移') });
-        window.charts = chartsObj;
+
+        if (charts.st) charts.st.destroy();
+        charts.st = new Chart(document.getElementById('salesTotalChart').getContext('2d'), {
+            type: 'bar', plugins: [ChartDataLabels],
+            data: { labels, datasets: [{ label: '売上', data: salesData, backgroundColor: '#3182ce' }] },
+            options: opt('月別売上合計推移')
+        });
+
+        if (charts.pt) charts.pt.destroy();
+        charts.pt = new Chart(document.getElementById('profitTotalChart').getContext('2d'), {
+            type: 'bar', plugins: [ChartDataLabels],
+            data: { labels, datasets: [{ label: '利益', data: profitData, backgroundColor: '#48bb78' }] },
+            options: opt('月別利益合計推移')
+        });
     }
 
     function renderStatus() {
         const tbody = document.getElementById('status-body'), reg = document.getElementById('status-region-select').value; tbody.innerHTML = '';
-        
-        if (!Array.isArray(statusRows) || statusRows.length <= 1) { 
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center" style="color:#a0aec0; padding:20px;">データ未登録</td></tr>'; 
+        if (!statusRows || statusRows.length <= 1) { 
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center">なし</td></tr>'; 
             document.getElementById('status-summary').innerText = "";
-            document.getElementById('status-salary-total').innerText = "給料合計：0 円"; 
-            document.getElementById('status-update-date').innerText = "更新日: -";
+            document.getElementById('status-salary-total').innerText = ""; 
             return; 
         }
-
         let updateDateVal = (statusRows[0] && statusRows[0][10]) ? statusRows[0][10] : "-";
         document.getElementById('status-update-date').innerText = "更新日: " + formatStatusDate(updateDateVal);
         let filtered = statusRows.slice(1).filter(r => {
@@ -601,7 +600,6 @@
     function formatStatusDate(val) { if (!val || val === "-") return "-"; let d = typeof val === 'number' ? new Date((val - 25569) * 86400 * 1000) : new Date(val); return isNaN(d.getTime()) ? val : `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`; }
 
     function updateCharts(region) {
-        let chartsObj = window.charts || {};
         const labels = ['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
         const fmt = (v) => (v === null || v === 0 || v === undefined || isNaN(v)) ? '' : Math.round(v).toLocaleString();
         const commonPlugins = (title) => ({
@@ -609,8 +607,8 @@
             tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + fmt(ctx.raw) } }
         });
 
-        if (chartsObj.s) chartsObj.s.destroy(); 
-        chartsObj.s = new Chart(document.getElementById('salesChart').getContext('2d'), { 
+        if (charts.s) charts.s.destroy(); 
+        charts.s = new Chart(document.getElementById('salesChart').getContext('2d'), { 
             type: 'bar', plugins: [ChartDataLabels],
             data: { 
                 labels, 
@@ -622,8 +620,8 @@
             options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 30 } }, plugins: { ...commonPlugins('売上推移'), datalabels: { formatter: fmt } } }
         });
 
-        if (chartsObj.e) chartsObj.e.destroy(); 
-        chartsObj.e = new Chart(document.getElementById('engChart').getContext('2d'), { 
+        if (charts.e) charts.e.destroy(); 
+        charts.e = new Chart(document.getElementById('engChart').getContext('2d'), { 
             type: 'bar', plugins: [ChartDataLabels],
             data: { 
                 labels, 
@@ -640,8 +638,8 @@
             }
         });
 
-        if (chartsObj.w) chartsObj.w.destroy(); 
-        chartsObj.w = new Chart(document.getElementById('waitCostChart').getContext('2d'), { 
+        if (charts.w) charts.w.destroy(); 
+        charts.w = new Chart(document.getElementById('waitCostChart').getContext('2d'), { 
             type: 'line', plugins: [ChartDataLabels],
             data: { 
                 labels, 
@@ -649,7 +647,6 @@
             }, 
             options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 30 } }, plugins: { ...commonPlugins('待機原価推移'), datalabels: { formatter: fmt } } }
         });
-        window.charts = chartsObj;
     }
 </script>
 </body>
