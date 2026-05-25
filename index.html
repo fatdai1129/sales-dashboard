@@ -231,7 +231,7 @@
     }
 
     function checkPW() {
-        // ★HTML側のログインチェックを「Dai565656」に変更
+        // ★PW変更：Dai565656
         if (document.getElementById('pass_val').value === "Dai565656") {
             document.getElementById('pw_screen').style.display = 'none';
             document.getElementById('main_content').style.display = 'block';
@@ -250,9 +250,10 @@
     async function fetchAll() {
         try {
             const year = document.getElementById('year-select').value;
-            const tParam = `&t=${year}`;
+            // ★ブラウザのキャッシュ（記憶）を強制的に無視する処理
+            const cb = Date.now(); 
+            const tParam = `&t=${year}&cb=${cb}`;
 
-            // ★GASへ送る認証パスワードを「Dai565656」に変更
             const [rP, rS] = await Promise.all([
                 fetch(`${currentGAS_URL}?p=Dai565656&s=実績データ${tParam}`),
                 fetch(`${currentGAS_URL}?p=Dai565656&s=営業推進管理表${tParam}`)
@@ -269,10 +270,11 @@
             }
             
             let rawSales = await rS.json();
-            if (year === "2026" && rawSales && rawSales.length > 10) {
+            if (year === "2026" && Array.isArray(rawSales) && rawSales.length > 10) {
                 rawSales.splice(9, 1);
                 rawSales.forEach(row => {
-                    if (row.length > 4) row.splice(4, 1);
+                    // ★一番の反省点：消すのはインデックス4(氏名)ではなく、5(生年月日)
+                    if (row.length > 5) row.splice(5, 1);
                 });
             }
             salesRows = rawSales;
