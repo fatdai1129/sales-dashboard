@@ -11,8 +11,7 @@
         #pw_box { background: white; padding: 80px 60px; border-radius: 16px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.5); transform: scale(0.84); }
         #pass_val { padding: 15px; width: 280px; font-size: 1.2rem; text-align: center; border: 2px solid #cbd5e0; border-radius: 8px; }
         #pw_box h2 { font-size: 2rem; margin-bottom: 30px; }
-        #pw_box button { padding: 15px 50px; font-size: 1.2rem; border-radius: 8px; }
-
+        #pw_box button { padding: 15px 50px; font-size: 1.2rem; border-radius: 8px; background:#3182ce; color:white; border:none; cursor:pointer; font-weight:bold; }
         #main_content { display: none; }
         .nav-bar { background: #2d3748; display: flex; align-items: center; position: sticky; top: 0; z-index: 1000; height: 60px; }
         .nav-item { padding: 0 25px; height: 60px; line-height: 60px; color: #a0aec0; cursor: pointer; font-weight: bold; border-bottom: 3px solid transparent; }
@@ -84,7 +83,7 @@
 <div id="pw_screen"><div id="pw_box">
     <h2 style="margin:0 0 30px 0;">営業管理システム</h2>
     <input type="password" id="pass_val" onkeydown="if(event.keyCode==13)checkPW()"><br><br>
-    <button onclick="checkPW()" style="background:#3182ce; color:white; border:none; cursor:pointer; font-weight:bold;">ログイン</button>
+    <button onclick="checkPW()">ログイン</button>
     <p id="err_msg" style="color:red; display:none; font-size:1.2rem; margin-top:20px;">パスワードが違います</p>
 </div></div>
 
@@ -193,7 +192,7 @@
 </div>
 
 <script>
-    const currentGAS_URL = 'https://script.google.com/macros/s/AKfycbwasiItVpq9f_AVTv5Pe1tpyTmXvRYGOnfbaL4Q_b1Jlq-e-pnE4khUP_dZS1cPGhXVjQ/exec';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwasiItVpq9f_AVTv5Pe1tpyTmXvRYGOnfbaL4Q_b1Jlq-e-pnE4khUP_dZS1cPGhXVjQ/exec';
     
     let perfMap = {}, salesRows = [], statusRows = [], charts = {};
 
@@ -218,21 +217,13 @@
         const year = document.getElementById('year-select').value;
         localStorage.setItem('f_current_year', year);
         document.getElementById('sync_status').innerText = '年度切替：データ取得中...';
-        
-        perfMap = {}; salesRows = []; statusRows = [];
-        document.getElementById('perf-body').innerHTML = '';
-        document.getElementById('sales-head').innerHTML = '';
-        document.getElementById('sales-body').innerHTML = '';
-        document.getElementById('status-body').innerHTML = '';
-
         loadCache();
         renderAll();
         fetchAll();
     }
 
     function checkPW() {
-        // ★PW変更：Dai565656
-        if (document.getElementById('pass_val').value === "Dai565656") {
+        if (document.getElementById('pass_val').value === "freeeks2022") {
             document.getElementById('pw_screen').style.display = 'none';
             document.getElementById('main_content').style.display = 'block';
             renderAll();
@@ -250,34 +241,23 @@
     async function fetchAll() {
         try {
             const year = document.getElementById('year-select').value;
-            // ★ブラウザのキャッシュ（記憶）を強制的に無視する処理
-            const cb = Date.now(); 
-            const tParam = `&t=${year}&cb=${cb}`;
+            const tParam = `&t=${year}`;
 
             const [rP, rS] = await Promise.all([
-                fetch(`${currentGAS_URL}?p=Dai565656&s=実績データ${tParam}`),
-                fetch(`${currentGAS_URL}?p=Dai565656&s=営業推進管理表${tParam}`)
+                fetch(`${GAS_URL}?p=freeeks2022&s=実績データ${tParam}`),
+                fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表${tParam}`)
             ]);
-            let rSt = await fetch(`${currentGAS_URL}?p=Dai565656&s=売込状況一覧${tParam}`);
+            let rSt = await fetch(`${GAS_URL}?p=freeeks2022&s=売込状況一覧${tParam}`);
             let stData = await rSt.json();
             if (!stData || stData.length <= 1 || stData.error) {
-                const rStFallback = await fetch(`${currentGAS_URL}?p=Dai565656&s=売込状況${tParam}`);
+                const rStFallback = await fetch(`${GAS_URL}?p=freeeks2022&s=売込状況${tParam}`);
                 stData = await rStFallback.json();
             }
             const rowsP = await rP.json(); perfMap = {};
             if (rowsP && Array.isArray(rowsP)) {
                 rowsP.slice(1).forEach(r => { perfMap[`${r[0]}-${r[1]}-${r[2]}`] = r.slice(3, 15).map(v => (v===""||v==null)?null:parseFloat(String(v).replace(/,/g,''))||0); });
             }
-            
-            let rawSales = await rS.json();
-            if (year === "2026" && Array.isArray(rawSales) && rawSales.length > 10) {
-                rawSales.splice(9, 1);
-                rawSales.forEach(row => {
-                    // ★一番の反省点：消すのはインデックス4(氏名)ではなく、5(生年月日)
-                    if (row.length > 5) row.splice(5, 1);
-                });
-            }
-            salesRows = rawSales;
+            salesRows = await rS.json();
             statusRows = stData;
             
             localStorage.setItem('f_perf_' + year, JSON.stringify(perfMap)); 
