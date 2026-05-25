@@ -98,12 +98,6 @@
     <div class="container">
         <div id="section-perf">
             <div class="card">
-                <div style="margin-bottom: 15px;">
-                    <select id="year-select" style="font-size: 1.6rem; font-weight: bold; color: #1a202c; border: 2px solid #cbd5e0; border-radius: 8px; padding: 5px 15px; cursor: pointer; background-color: white; outline: none;" onchange="changeYear()">
-                        <option value="2025">2025年06月期（第4期）</option>
-                    </select>
-                </div>
-                
                 <div style="display:flex; align-items:center; margin-bottom:20px;">
                     <h2 style="margin:0; border-left:5px solid #3182ce; padding-left:15px; margin-right: 25px;">拠点別実績・予算</h2>
                     <select id="region-select" style="padding:10px 20px; border-radius:6px; font-size:1.1rem; cursor:pointer;" onchange="renderPerf()">
@@ -190,32 +184,25 @@
 </div>
 
 <script>
+    // ★最新の正しいデプロイURL
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbwasiItVpq9f_AVTv5Pe1tpyTmXvRYGOnfbaL4Q_b1Jlq-e-pnE4khUP_dZS1cPGhXVjQ/exec';
     
     let perfMap = {}, salesRows = [], statusRows = [], charts = {};
 
     window.onload = () => {
+        // ★バグったデータの記憶を強制消去
+        localStorage.clear(); 
         loadCache();
         fetchAll();
     };
 
     function loadCache() {
-        const year = document.getElementById('year-select').value;
-        const cP = localStorage.getItem('f_perf_' + year);
-        const cS = localStorage.getItem('f_sales_' + year);
-        const cSt = localStorage.getItem('f_status_' + year);
+        const cP = localStorage.getItem('f_perf_');
+        const cS = localStorage.getItem('f_sales_');
+        const cSt = localStorage.getItem('f_status_');
         perfMap = cP ? JSON.parse(cP) : {};
         salesRows = cS ? JSON.parse(cS) : [];
         statusRows = cSt ? JSON.parse(cSt) : [];
-    }
-
-    function changeYear() {
-        const year = document.getElementById('year-select').value;
-        localStorage.setItem('f_current_year', year);
-        document.getElementById('sync_status').innerText = '年度切替：データ取得中...';
-        loadCache();
-        renderAll();
-        fetchAll();
     }
 
     function checkPW() {
@@ -236,7 +223,8 @@
 
     async function fetchAll() {
         try {
-            const cb = Date.now(); 
+            // ★通信履歴も強制リセットする処理を追加
+            const cb = new Date().getTime(); 
             const [rP, rS] = await Promise.all([
                 fetch(`${GAS_URL}?p=freeeks2022&s=実績データ&cb=${cb}`),
                 fetch(`${GAS_URL}?p=freeeks2022&s=営業推進管理表&cb=${cb}`)
@@ -254,10 +242,9 @@
             salesRows = await rS.json();
             statusRows = stData;
             
-            const year = document.getElementById('year-select').value;
-            localStorage.setItem('f_perf_' + year, JSON.stringify(perfMap)); 
-            localStorage.setItem('f_sales_' + year, JSON.stringify(salesRows));
-            localStorage.setItem('f_status_' + year, JSON.stringify(statusRows));
+            localStorage.setItem('f_perf_', JSON.stringify(perfMap)); 
+            localStorage.setItem('f_sales_', JSON.stringify(salesRows));
+            localStorage.setItem('f_status_', JSON.stringify(statusRows));
             
             document.getElementById('sync_status').innerText = '最新データ同期完了'; 
             renderAll();
