@@ -231,7 +231,8 @@
     }
 
     function checkPW() {
-        if (document.getElementById('pass_val').value === "freeeks2022") {
+        // ★HTML側のログインチェックを「Dai565656」に変更
+        if (document.getElementById('pass_val').value === "Dai565656") {
             document.getElementById('pw_screen').style.display = 'none';
             document.getElementById('main_content').style.display = 'block';
             renderAll();
@@ -251,14 +252,15 @@
             const year = document.getElementById('year-select').value;
             const tParam = `&t=${year}`;
 
+            // ★GASへ送る認証パスワードを「Dai565656」に変更
             const [rP, rS] = await Promise.all([
-                fetch(`${currentGAS_URL}?p=freeeks2022&s=実績データ${tParam}`),
-                fetch(`${currentGAS_URL}?p=freeeks2022&s=営業推進管理表${tParam}`)
+                fetch(`${currentGAS_URL}?p=Dai565656&s=実績データ${tParam}`),
+                fetch(`${currentGAS_URL}?p=Dai565656&s=営業推進管理表${tParam}`)
             ]);
-            let rSt = await fetch(`${currentGAS_URL}?p=freeeks2022&s=売込状況一覧${tParam}`);
+            let rSt = await fetch(`${currentGAS_URL}?p=Dai565656&s=売込状況一覧${tParam}`);
             let stData = await rSt.json();
             if (!stData || stData.length <= 1 || stData.error) {
-                const rStFallback = await fetch(`${currentGAS_URL}?p=freeeks2022&s=売込状況${tParam}`);
+                const rStFallback = await fetch(`${currentGAS_URL}?p=Dai565656&s=売込状況${tParam}`);
                 stData = await rStFallback.json();
             }
             const rowsP = await rP.json(); perfMap = {};
